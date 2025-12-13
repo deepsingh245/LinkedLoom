@@ -1,0 +1,24 @@
+# Task: LinkedLoom Implementation
+
+- [ ] **Phase 1: Project Initialization & Cleanup** <!-- id: 0 -->
+    - [x] Clean up existing Vite project files <!-- id: 1 -->
+    - [ ] Initialize `frontend` (Next.js 14) <!-- id: 2 -->
+    - [ ] Initialize `backend` (NestJS) <!-- id: 3 -->
+    - [ ] Configure root `.gitignore` <!-- id: 4 -->
+- [ ] **Phase 2: Backend Setup (NestJS + Supabase)** <!-- id: 5 -->
+    - [ ] Install dependencies (`@nestjs/config`, `prisma`, `supabase-js`, etc.) <!-- id: 6 -->
+    - [ ] Configure Prisma with Supabase connection <!-- id: 7 -->
+    - [ ] Implement `AuthModule` with Supabase Guard <!-- id: 8 -->
+    - [ ] Create `User` and `Post` modules <!-- id: 9 -->
+- [ ] **Phase 3: Frontend Setup (Next.js + Shadcn)** <!-- id: 10 -->
+    - [ ] Setup shadcn/ui and Tailwind theme <!-- id: 11 -->
+    - [ ] Implement Supabase Auth (Login/Signup pages) <!-- id: 12 -->
+    - [ ] Create Dashboard Layout <!-- id: 13 -->
+- [ ] **Phase 4: Core Features** <!-- id: 14 -->
+    - [ ] Implement AI Post Generation (Gemini) <!-- id: 15 -->
+    - [ ] Implement Post Editor & Saving <!-- id: 16 -->
+    - [ ] Implement LinkedIn OAuth & Posting <!-- id: 17 -->
+- [ ] **Phase 5: Scheduling & Workers** <!-- id: 18 -->
+    - [ ] Setup Redis & BullMQ <!-- id: 19 -->
+    - [ ] Implement Scheduler Producer & Worker <!-- id: 20 -->
+    - [ ] Verify End-to-End Scheduling Flow <!-- id: 21 -->
