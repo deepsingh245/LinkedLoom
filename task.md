@@ -10,15 +10,15 @@
     - [ ] Configure Prisma with Supabase connection <!-- id: 7 -->
     - [ ] Implement `AuthModule` with Supabase Guard <!-- id: 8 -->
     - [ ] Create `User` and `Post` modules <!-- id: 9 -->
-- [ ] **Phase 3: Frontend Setup (Next.js + Shadcn)** <!-- id: 10 -->
-    - [ ] Setup shadcn/ui and Tailwind theme <!-- id: 11 -->
-    - [ ] Implement Supabase Auth (Login/Signup pages) <!-- id: 12 -->
-    - [ ] Create Dashboard Layout <!-- id: 13 -->
-- [ ] **Phase 4: Core Features** <!-- id: 14 -->
-    - [ ] Implement AI Post Generation (Gemini) <!-- id: 15 -->
-    - [ ] Implement Post Editor & Saving <!-- id: 16 -->
-    - [ ] Implement LinkedIn OAuth & Posting <!-- id: 17 -->
-- [ ] **Phase 5: Scheduling & Workers** <!-- id: 18 -->
-    - [ ] Setup Redis & BullMQ <!-- id: 19 -->
-    - [ ] Implement Scheduler Producer & Worker <!-- id: 20 -->
-    - [ ] Verify End-to-End Scheduling Flow <!-- id: 21 -->
+- [x] **Phase 1: Frontend Architecture & Setup** <!-- id: 10 -->
+    - [x] Initialize `shadcn/ui` and core dependencies <!-- id: 11 -->
+    - [x] Create directory structure (`types`, `enums`, `constants`, `lib`) <!-- id: 12 -->
+    - [x] Implement foundational UI layouts (Dashboard, Auth) <!-- id: 13 -->
+
+- [ ] **Phase 2: Core Components & Features** <!-- id: 14 -->
+    - [x] Implement Top Navigation & Theme Toggle <!-- id: 15 -->
+    - [x] Build "Generate Post" Editor UI <!-- id: 16 -->
+    - [ ] Build "Scheduler" Calendar UI <!-- id: 17 -->
+    - [ ] Build "Analytics" Dashboard Widgets <!-- id: 18 -->
+
+- [ ] **Phase 3: Backend Integration (Future)** <!-- id: 19 -->
