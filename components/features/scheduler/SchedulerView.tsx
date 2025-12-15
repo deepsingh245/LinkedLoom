@@ -15,7 +15,14 @@ import { Plus, Clock, FileText } from "lucide-react"
 import { dangerToast } from "@/lib/toast"
 import { api } from "@/lib/api"
 import { Post } from "@/types"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+    Item,
+    ItemActions,
+    ItemContent,
+    ItemDescription,
+    ItemMedia,
+    ItemTitle,
+} from "@/components/ui/item"
 
 export function SchedulerView() {
     const [date, setDate] = React.useState<Date | undefined>(new Date())
@@ -89,21 +96,21 @@ export function SchedulerView() {
                                     <p className="text-sm text-muted-foreground">Select a draft to schedule for {date?.toLocaleDateString()}</p>
                                 </div>
                                 <div className="flex items-center justify-center">
-                                    <Select
-                                        value={selectedDraft}
-                                        onValueChange={(value) => { setSelectedDraft(value) }}
-                                    >
-                                        <SelectTrigger className="w-[180px]">
-                                            <SelectValue placeholder="Select a draft" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {drafts.map((draft) => (
-                                                <SelectItem key={draft.id} value={draft.id}>
+                                    {drafts.map((draft, index) => (
+                                        <Item variant="outline">
+                                            <ItemContent>
+                                                <ItemTitle>{`Draft ${index + 1}`}</ItemTitle>
+                                                <ItemDescription>
                                                     {draft.content}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                                </ItemDescription>
+                                            </ItemContent>
+                                            <ItemActions>
+                                                <Button variant="outline" size="sm" className="cursor-pointer" onClick={() => setSelectedDraft(draft.id)}>
+                                                    Schedule
+                                                </Button>
+                                            </ItemActions>
+                                        </Item>
+                                    ))}
                                 </div>
                             </DialogContent>
                         </DialogContent>
