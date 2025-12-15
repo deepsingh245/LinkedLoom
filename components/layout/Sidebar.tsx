@@ -11,10 +11,17 @@ import {
     Settings,
     LogOut
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> { }
 
 export function Sidebar({ className }: SidebarProps) {
+    const router = useRouter()
+    const handleLogout = () => {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        router.push('/login')
+    }
     return (
         <div className={cn("pb-12 h-screen border-r bg-sidebar", className)}>
             <div className="space-y-4 py-4">
@@ -45,7 +52,8 @@ export function Sidebar({ className }: SidebarProps) {
                         <NavItem href="/settings" icon={<Settings className="mr-2 h-4 w-4" />}>
                             Settings
                         </NavItem>
-                        <Button variant="ghost" className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10">
+                        <Button variant="ghost" className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={handleLogout}>
                             <LogOut className="mr-2 h-4 w-4" />
                             Logout
                         </Button>

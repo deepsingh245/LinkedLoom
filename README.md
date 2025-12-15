@@ -1,4 +1,4 @@
-# LinkedLoom (LinkGenie AI)
+# LinkedLoom
 
 🚀 **AI-Powered LinkedIn Post Generator & Scheduler**
 

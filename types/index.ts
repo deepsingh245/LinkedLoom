@@ -20,6 +20,10 @@ export interface Post {
     publishedAt?: Date;
     createdAt: Date;
     versions?: string[]; // History of AI generations
+    user_id: string;
+    mediaUrls: string[];
+    linkedinPostId: string;
+    analytics?: Analytics;
 }
 
 export interface Analytics {
