@@ -34,6 +34,8 @@ function Calendar({
         String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
         className
       )}
+      startMonth={new Date()}
+      endMonth={new Date(2030, 11)}
       captionLayout={captionLayout}
       formatters={{
         formatMonthDropdown: (date) =>

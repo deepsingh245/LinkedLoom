@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { api } from "@/lib/api"
 import { AuthResponse } from "@/types/auth"
+import { LinkedinIcon, Mail } from "lucide-react"
+import { dangerToast } from "@/lib/toast"
 
 export default function LoginPage() {
     const router = useRouter()
@@ -34,14 +36,26 @@ export default function LoginPage() {
         }
     }
 
+    const loginWithLinkedin = async () => {
+        try {
+            setLoading(true)
+            const { data } = await api.get("/auth/linkedin/url")
+            window.location.href = data.url
+        } catch (error) {
+            console.error(error)
+            dangerToast("Login failed")
+            setLoading(false)
+        }
+    }
+
     return (
         <div className="flex items-center justify-center min-h-screen bg-muted/40">
             <Card className="w-full max-w-md">
                 <CardHeader>
                     <CardTitle className="text-2xl">Login</CardTitle>
-                    <CardDescription>Enter your credentials to access your account</CardDescription>
+                    <CardDescription>Please Login With your Linkedin</CardDescription>
                 </CardHeader>
-                <form onSubmit={handleLogin}>
+                {/* <form onSubmit={handleLogin}>
                     <CardContent className="space-y-4">
                         {error && <div className="text-sm text-red-500">{error}</div>}
                         <div className="space-y-2">
@@ -65,17 +79,24 @@ export default function LoginPage() {
                                 onChange={(e) => setPassword(e.target.value)}
                             />
                         </div>
-                    </CardContent>
-                    <CardFooter className="flex flex-col space-y-2">
-                        <Button type="submit" className="w-full" disabled={loading}>
+                        <Button type="submit" className="w-full cursor-pointer" disabled={loading}>
                             {loading ? "Logging in..." : "Login"}
                         </Button>
-                        <div className="text-sm text-center text-muted-foreground">
-                            Don't have an account? <Link href="/register" className="underline">Sign up</Link>
-                        </div>
-                    </CardFooter>
-                </form>
+                    </CardContent>
+                </form> */}
+                <CardFooter className="flex flex-col space-y-3">
+                    <div className="flex gap-4">
+                        <Button variant="outline" className="cursor-pointer"
+                            onClick={loginWithLinkedin}
+                        ><LinkedinIcon />Linkedin</Button>
+                        {/* <Button variant="outline" className="cursor-pointer"><Mail />Google</Button  > */}
+                    </div>
+                    {/* <div className="text-sm text-center text-muted-foreground">
+                        Don't have an account? <Link href="/register" className="underline">Sign up</Link>
+                    </div> */}
+                </CardFooter>
+
             </Card>
-        </div>
+        </div >
     )
 }

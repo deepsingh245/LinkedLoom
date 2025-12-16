@@ -23,10 +23,13 @@ import {
     ItemMedia,
     ItemTitle,
 } from "@/components/ui/item"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 
 export function SchedulerView() {
     const [date, setDate] = React.useState<Date | undefined>(new Date())
-
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
     const user = JSON.parse(localStorage.getItem('user') || '{}')
     const [scheduledPosts, setScheduledPosts] = React.useState<Post[]>([]);
     const [drafts, setDrafts] = React.useState<Post[]>([]);
@@ -66,13 +69,29 @@ export function SchedulerView() {
                     <CardTitle>Content Calendar</CardTitle>
                     <CardDescription>Manage and schedule your LinkedIn content.</CardDescription>
                 </CardHeader>
-                <CardContent className="flex-1 flex justify-center p-4">
+                <CardContent className="flex-1 flex flex-col gap-4 justify-center p-4">
+                    <div className="flex flex-col gap-3 w-fit self-center">
+                        <Label htmlFor="time-picker" className="px-1">
+                            Time
+                        </Label>
+                        <Input
+                            type="time"
+                            id="time-picker"
+                            step="1"
+                            defaultValue="10:30:00"
+                            className="bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+                        />
+                    </div>
                     <Calendar
                         mode="single"
                         selected={date}
                         onSelect={setDate}
-                        className="rounded-md border w-full h-full flex items-center justify-center pointer-events-auto"
-
+                        className="rounded-md border shadow-sm w-full h-full"
+                        captionLayout="dropdown"
+                        startMonth={today}
+                        endMonth={new Date(2030, 11)}
+                        disabled={{ before: today }}
+                        defaultMonth={today}
                     />
                 </CardContent>
             </Card>

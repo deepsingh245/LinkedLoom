@@ -39,9 +39,9 @@ export function Sidebar({ className }: SidebarProps) {
                         <NavItem href="/schedule" icon={<Calendar className="mr-2 h-4 w-4" />}>
                             Schedule
                         </NavItem>
-                        <NavItem href="/analytics" icon={<BarChart3 className="mr-2 h-4 w-4" />}>
+                        {/* <NavItem href="/analytics" icon={<BarChart3 className="mr-2 h-4 w-4" />}>
                             Analytics
-                        </NavItem>
+                        </NavItem> */}
                     </div>
                 </div>
                 <div className="px-3 py-2">
