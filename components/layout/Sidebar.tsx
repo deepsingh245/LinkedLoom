@@ -37,7 +37,10 @@ export function Sidebar({ className }: SidebarProps) {
                             Create Post
                         </NavItem>
                         <NavItem href="/schedule" icon={<Calendar className="mr-2 h-4 w-4" />}>
-                            Schedule
+                            Content Library
+                        </NavItem>
+                        <NavItem href="/calendar" icon={<Calendar className="mr-2 h-4 w-4" />}>
+                            Calendar
                         </NavItem>
                         {/* <NavItem href="/analytics" icon={<BarChart3 className="mr-2 h-4 w-4" />}>
                             Analytics
