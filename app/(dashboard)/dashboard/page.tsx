@@ -1,44 +1,45 @@
-'use client'
-
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
-import { User } from "@/types";
-import { api } from "@/lib/api";
-import { useEffect, useState } from "react";
+import { User } from "firebase/auth";
+import { DashboardData } from "@/lib/firebase/interfaces";
 import { Post } from "@/types";
+import { Routes } from "@/lib/routes";
 
 export default function DashboardPage() {
-    const user = useAuth() as unknown as User;
+    const user = useAuth() as User;
+    const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
     const [scheduledPosts, setScheduledPosts] = useState<Post[]>([]);
-    const [dashboardData, setDashboardData] = useState({
-        totalPosts: 0,
-        totalLikes: 0,
-        totalComments: 0,
-        totalShares: 0
-    })
+    // ...existing code...
+
     const getDashboardData = async () => {
-        const data = await api.get('analytics/dashboard');
-        setDashboardData(data.data.overview);
+        if (!user?.uid) return;
+        const data = await api.firebaseService.getAnalyticsDashboardData(user.uid);
+        setDashboardData(data ? data : { totalPosts: 0, totalLikes: 0, totalComments: 0, totalShares: 0 });
     }
 
     const getScheduledPosts = async () => {
-        const data = await api.get('posts/scheduled');
-        setScheduledPosts(data.data);
+        if (!user?.uid) return;
+        const data = await api.firebaseService.getScheduledPosts(user.uid);
+        setScheduledPosts(data);
     }
 
     useEffect(() => {
-        getDashboardData()
-        getScheduledPosts()
-    }, [])
+        if (user?.uid) {
+            getDashboardData();
+            getScheduledPosts();
+        }
+    }, [user?.uid, getDashboardData, getScheduledPosts])
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
                 <Button asChild>
-                    <Link href="/create">
+                    <Link href={Routes.CREATE_POST}>
                         <Plus className="mr-2 h-4 w-4" /> Create New Post
                     </Link>
                 </Button>

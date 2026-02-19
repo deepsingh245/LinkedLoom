@@ -2,21 +2,26 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Post } from "@/types";
+import { Post } from "@/types"; // Import Post from types
+import { Routes } from "@/lib/routes";
 import { Loader } from "@/components/ui/loader";
 import { PostCard } from "@/components/features/dashboard/PostCard";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "@/components/auth-provider"; // Import useAuth
+import { User } from "firebase/auth"; // Import User type if not already globally available
 
 export default function SchedulePage() {
+    const user = useAuth() as User; // Get user from auth context
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchPosts = async () => {
         try {
             setLoading(true);
-            const { data } = await api.get("/posts/drafts");
+            // Use the new firebaseService function
+            const data = await api.firebaseService.getDraftPosts(user.uid);
             setPosts(data);
         } catch (error) {
             console.error("Failed to fetch posts", error);
@@ -26,8 +31,10 @@ export default function SchedulePage() {
     };
 
     useEffect(() => {
-        fetchPosts();
-    }, []);
+        if (user?.uid) { // Only fetch if user is available
+            fetchPosts();
+        }
+    }, [user.uid, fetchPosts]); // Re-run effect when user.uid or fetchPosts changes
 
     if (loading) {
         return (
@@ -56,7 +63,7 @@ export default function SchedulePage() {
                 <div className="text-center py-12 border rounded-lg bg-muted/10">
                     <h3 className="text-lg font-medium">No posts found</h3>
                     <p className="text-muted-foreground mb-4">Start creating content to see it here.</p>
-                    <Link href="/create">
+                    <Link href={Routes.CREATE_POST}>
                         <Button variant="outline">Create First Post</Button>
                     </Link>
                 </div>

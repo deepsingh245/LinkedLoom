@@ -2,22 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Post } from "@/types";
+import { Post } from "@/types"; // Import Post from types
 import { Loader } from "@/components/ui/loader";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { EditPostDialog } from "@/components/features/dashboard/EditPostDialog";
+import { useAuth } from "@/components/auth-provider"; // Import useAuth
+import { User } from "firebase/auth"; // Import User type if not already globally available
 
 export default function CalendarPage() {
+    const user = useAuth() as User;
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [selectedPost, setSelectedPost] = useState<Post | null>(null);
     const [showEdit, setShowEdit] = useState(false);
 
-    // Filter posts for the selected date
     const selectedPosts = posts.filter(post =>
         post.scheduledFor &&
         new Date(post.scheduledFor).toDateString() === date?.toDateString()
@@ -26,7 +28,7 @@ export default function CalendarPage() {
     const fetchPosts = async () => {
         try {
             setLoading(true);
-            const { data } = await api.get("/posts/scheduled"); // Or generic /posts if we want to show all
+            const data = await api.firebaseService.getScheduledPosts(user.uid);
             setPosts(data);
         } catch (error) {
             console.error("Failed to fetch posts", error);
@@ -36,8 +38,10 @@ export default function CalendarPage() {
     };
 
     useEffect(() => {
-        fetchPosts();
-    }, []);
+        if (user?.uid) {
+            fetchPosts();
+        }
+    }, [user.uid, fetchPosts]);
 
     if (loading) {
         return <Loader size="lg" />;

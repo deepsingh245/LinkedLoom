@@ -23,6 +23,8 @@ import { Calendar } from "@/components/ui/calendar"
 import { format } from "date-fns"
 import { User } from "@/types"
 
+import { useAuth } from "@/components/auth-provider";
+
 export function PostEditor() {
     const [content, setContent] = React.useState("")
     const [topic, setTopic] = React.useState("")
@@ -32,21 +34,29 @@ export function PostEditor() {
     const [saving, setSaving] = React.useState(false)
     const [date, setDate] = React.useState<Date>()
 
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const user = useAuth() as User;
 
     const handleGenerate = async () => {
         setGenerating(true)
         try {
-            const { data } = await api.post('/posts/generate', {
-                topic: topic,
-                style: tone
-            })
-            setContent(data.content)
+            const { getFunctions, httpsCallable } = await import("firebase/functions");
+            const { app } = await import("@/lib/firebase/utils");
+            const functions = getFunctions(app);
+            const generatePost = httpsCallable(functions, 'generatePost');
+            
+            const result = await generatePost({ 
+                topic, 
+                tone, 
+                length: length[0] 
+            });
+            
+            const data = result.data as { content: string };
+            setContent(data.content);
             successToast("Draft generated successfully!")
         } catch (error) {
             console.error("Generate failed", error)
             dangerToast("Failed to generate content.")
-            setContent("🚀 Just launched LinkGenie! \n\n[API Error: Using Fallback Content] \n\nIt's been a long journey building this tool...")
+            // Fallback content removed as we expect function to work or fail
         } finally {
             setGenerating(false)
         }
@@ -56,7 +66,16 @@ export function PostEditor() {
         if (!content) return dangerToast("Post content cannot be empty")
         setSaving(true)
         try {
-            await api.post('/posts', { content, status: "DRAFT", user_id: user.id })
+            await api.firebaseService.createPost({
+                content,
+                status: "DRAFT",
+                user_id: (user as any).uid,
+                tone: tone.toUpperCase() as any,
+                createdAt: new Date(),
+                mediaUrls: [],
+                linkedinPostId: "",
+                versions: []
+            })
             successToast("Draft saved successfully!")
         } catch (error) {
             console.error(error)
@@ -73,9 +92,18 @@ export function PostEditor() {
         setSaving(true)
         try {
             // 1. Create Post
-            const { data: post } = await api.post('/posts', { content, status: "DRAFT", user_id: user?.id })
+            const post = await api.firebaseService.createPost({
+                 content,
+                 status: "DRAFT",
+                 user_id: (user as any)?.uid,
+                 tone: tone.toUpperCase() as any,
+                 createdAt: new Date(),
+                 mediaUrls: [],
+                 linkedinPostId: "",
+                 versions: []
+            })
             // 2. Schedule it
-            await api.post(`/posts/${post.id}/schedule`, { scheduledAt: date.toISOString() })
+            await api.firebaseService.schedulePost(post.id, date.toISOString())
 
             successToast(`Post scheduled for ${format(date, 'PPP')}!`)
             setDate(undefined) // Reset date

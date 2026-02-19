@@ -45,7 +45,7 @@ export function SchedulePostDialog({
 
         try {
             setLoading(true);
-            await api.post(`/posts/${post.id}/schedule`, { scheduledFor: date.toISOString() });
+            await api.firebaseService.schedulePost(post.id, date.toISOString());
             toast.success("Post scheduled successfully");
             onPostUpdated();
             onOpenChange(false);

@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { api } from "@/lib/api"
-import { AuthResponse } from "@/types/auth"
-import { LinkedinIcon, Mail } from "lucide-react"
+import { LinkedinIcon } from "lucide-react"
+import { Routes } from "@/lib/routes"
 import { dangerToast } from "@/lib/toast"
 
 export default function LoginPage() {
@@ -25,12 +25,14 @@ export default function LoginPage() {
         setError("")
 
         try {
-            const { data } = await api.post<AuthResponse>('/auth/login', { email, password })
-            localStorage.setItem('token', data.access_token)
-            localStorage.setItem('user', JSON.stringify(data.user))
-            router.push('/dashboard')
+            const user = await api.firebaseService.loginWithEmailAndPassword(email, password)
+            if (user) {
+                router.push(Routes.DASHBOARD)
+            } else {
+                setError("Login failed: No user returned.")
+            }
         } catch (err: any) {
-            setError(err.response?.data?.message || "Login failed")
+            setError(err.message || "Login failed")
         } finally {
             setLoading(false)
         }
@@ -39,8 +41,8 @@ export default function LoginPage() {
     const loginWithLinkedin = async () => {
         try {
             setLoading(true)
-            const { data } = await api.get("/auth/linkedin/url")
-            window.location.href = data.url
+            const { url } = await api.firebaseService.getLinkedInAuthUrl()
+            window.location.href = url
         } catch (error) {
             console.error(error)
             dangerToast("Login failed")
@@ -55,7 +57,7 @@ export default function LoginPage() {
                     <CardTitle className="text-2xl">Login</CardTitle>
                     <CardDescription>Please Login With your Linkedin</CardDescription>
                 </CardHeader>
-                {/* <form onSubmit={handleLogin}>
+                <form onSubmit={handleLogin}>
                     <CardContent className="space-y-4">
                         {error && <div className="text-sm text-red-500">{error}</div>}
                         <div className="space-y-2">
@@ -83,7 +85,7 @@ export default function LoginPage() {
                             {loading ? "Logging in..." : "Login"}
                         </Button>
                     </CardContent>
-                </form> */}
+                </form>
                 <CardFooter className="flex flex-col space-y-3">
                     <div className="flex gap-4">
                         <Button variant="outline" className="cursor-pointer"
@@ -91,9 +93,9 @@ export default function LoginPage() {
                         ><LinkedinIcon />Linkedin</Button>
                         {/* <Button variant="outline" className="cursor-pointer"><Mail />Google</Button  > */}
                     </div>
-                    {/* <div className="text-sm text-center text-muted-foreground">
-                        Don't have an account? <Link href="/register" className="underline">Sign up</Link>
-                    </div> */}
+                    <div className="text-sm text-center text-muted-foreground">
+                        Don't have an account? <Link href={Routes.REGISTER} className="underline">Sign up</Link>
+                    </div>
                 </CardFooter>
 
             </Card>

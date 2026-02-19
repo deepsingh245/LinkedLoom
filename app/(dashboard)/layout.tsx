@@ -4,32 +4,11 @@ import DashboardLayout from "@/components/layout/Shell";
 import { api } from "@/lib/api";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import axios from "axios";
+// function removed
 
-export async function getCurrentUser() {
-    const tokenCookie = (await cookies()).get("token")?.value;
-    if (!tokenCookie) return null;
-
-    try {
-        const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/auth/current-user`, {
-            headers: {
-                Cookie: `token=${tokenCookie}`,
-            },
-        });
-        return res.data;
-    } catch (err) {
-        return null;
-    }
-}
-
-export default async function Layout({ children }: { children: React.ReactNode }) {
-    const user = await getCurrentUser();
-    if (!user) {
-        redirect("/login");
-    }
-
+export default function Layout({ children }: { children: React.ReactNode }) {
     return (
-        <AuthProvider user={user}>
+        <AuthProvider>
             <DashboardLayout>{children}</DashboardLayout>
         </AuthProvider>
     );

@@ -14,19 +14,25 @@ import {
     Bar
 } from 'recharts';
 
-import { api } from "@/lib/api"
-import * as React from "react"
+import { useAuth } from "@/components/auth-provider";
+import { User } from "firebase/auth";
+import { api } from "@/lib/api";
+import * as React from "react";
 
 export function AnalyticsView() {
+    const user = useAuth() as User;
     const [data, setData] = React.useState<any[]>([])
     const [metrics, setMetrics] = React.useState({ impressions: "0", followers: "0", engagement: "0%", views: "0" })
 
     React.useEffect(() => {
         const fetchData = async () => {
+            if (!user?.uid) return;
             try {
-                const res = await api.get('/analytics/dashboard')
-                setData(res.data.chartData)
-                setMetrics(res.data.metrics)
+                const dashboardData = await api.firebaseService.getAnalyticsDashboardData(user.uid)
+                if (dashboardData) {
+                    setData(dashboardData.chartData || [])
+                    setMetrics(dashboardData.metrics || { impressions: "0", followers: "0", engagement: "0%", views: "0" })
+                }
             } catch (e) {
                 console.error("Failed to load analytics", e)
                 // Keep default empty state or show error
@@ -34,7 +40,7 @@ export function AnalyticsView() {
             }
         }
         fetchData()
-    }, [])
+    }, [user])
 
     return (
         <div className="space-y-6">

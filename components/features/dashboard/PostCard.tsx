@@ -36,7 +36,7 @@ export function PostCard({ post, onUpdate }: PostCardProps) {
 
     const handleDelete = async () => {
         try {
-            await api.delete(`/posts/${post.id}`);
+            await api.firebaseService.deletePost(post.id);
             toast.success("Post deleted");
             onUpdate();
         } catch (error) {

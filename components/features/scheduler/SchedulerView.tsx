@@ -26,19 +26,23 @@ import {
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 
+import { useAuth } from "@/components/auth-provider";
+import { User } from "firebase/auth";
+
 export function SchedulerView() {
     const [date, setDate] = React.useState<Date | undefined>(new Date())
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const user = useAuth() as User;
     const [scheduledPosts, setScheduledPosts] = React.useState<Post[]>([]);
     const [drafts, setDrafts] = React.useState<Post[]>([]);
     const [selectedDraft, setSelectedDraft] = React.useState<string | undefined>(undefined)
 
     React.useEffect(() => {
         const fetchScheduledPosts = async () => {
+            if (!user?.uid) return;
             try {
-                const { data } = await api.get('/posts/scheduled')
+                const data = await api.firebaseService.getScheduledPosts(user.uid)
                 setScheduledPosts(data)
             } catch (error) {
                 console.error("Failed to fetch scheduled posts", error)
@@ -46,12 +50,13 @@ export function SchedulerView() {
             }
         }
         fetchScheduledPosts()
-    }, [user.id])
+    }, [user?.uid])
 
     React.useEffect(() => {
         const fetchDrafts = async () => {
+            if (!user?.uid) return;
             try {
-                const { data } = await api.get('/posts/drafts')
+                const data = await api.firebaseService.getDraftPosts(user.uid)
                 setDrafts(data)
             } catch (error) {
                 console.error("Failed to fetch drafts", error)
@@ -59,7 +64,7 @@ export function SchedulerView() {
             }
         }
         fetchDrafts()
-    }, [user.id])
+    }, [user?.uid])
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-7 gap-6 h-[calc(100vh-10rem)]">

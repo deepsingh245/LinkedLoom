@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { api } from "@/lib/api"
+import { Routes } from "@/lib/routes"
 
 export default function RegisterPage() {
     const router = useRouter()
@@ -23,8 +24,8 @@ export default function RegisterPage() {
         setError("")
 
         try {
-            await api.post('/auth/register', { email, password, name })
-            router.push('/login')
+            await api.firebaseService.registerWithEmailAndPassword(email, password, name)
+            router.push(Routes.LOGIN)
         } catch (err: any) {
             setError(err.response?.data?.message || "Registration failed")
         } finally {
@@ -79,7 +80,7 @@ export default function RegisterPage() {
                             {loading ? "Creating account..." : "Register"}
                         </Button>
                         <div className="text-sm text-center text-muted-foreground">
-                            Already have an account? <Link href="/login" className="underline">Login</Link>
+                            Already have an account? <Link href={Routes.LOGIN} className="underline">Login</Link>
                         </div>
                     </CardFooter>
                 </form>
