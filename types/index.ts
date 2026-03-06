@@ -1,10 +1,10 @@
 export type UserRole = "FOUNDER" | "CREATOR" | "JOB_SEEKER" | "SALES";
 
 export interface User {
-    id: string;
+    uid: string;
     name: string;
     email: string;
-    image?: string;
+    photoURL?: string;
     role: UserRole;
     credits: number;
 }

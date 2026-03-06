@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +14,7 @@ import { Routes } from "@/lib/routes";
 
 export default function DashboardPage() {
     const user = useAuth() as User;
+    console.log("🚀 ~ DashboardPage ~ user:", user)
     const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
     const [scheduledPosts, setScheduledPosts] = useState<Post[]>([]);
     // ...existing code...
@@ -33,7 +36,7 @@ export default function DashboardPage() {
             getDashboardData();
             getScheduledPosts();
         }
-    }, [user?.uid, getDashboardData, getScheduledPosts])
+    }, [user?.uid])
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">

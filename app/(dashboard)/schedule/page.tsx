@@ -13,7 +13,7 @@ import { useAuth } from "@/components/auth-provider"; // Import useAuth
 import { User } from "firebase/auth"; // Import User type if not already globally available
 
 export default function SchedulePage() {
-    const user = useAuth() as User; // Get user from auth context
+    const user = useAuth(); // Get user from auth context
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -34,7 +34,7 @@ export default function SchedulePage() {
         if (user?.uid) { // Only fetch if user is available
             fetchPosts();
         }
-    }, [user.uid, fetchPosts]); // Re-run effect when user.uid or fetchPosts changes
+    }, [user.uid]); // Re-run effect when user.uid or fetchPosts changes
 
     if (loading) {
         return (

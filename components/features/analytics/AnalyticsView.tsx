@@ -20,7 +20,8 @@ import { api } from "@/lib/api";
 import * as React from "react";
 
 export function AnalyticsView() {
-    const user = useAuth() as User;
+    const user = useAuth();
+    console.log("🚀 ~ AnalyticsView ~ user:", user)
     const [data, setData] = React.useState<any[]>([])
     const [metrics, setMetrics] = React.useState({ impressions: "0", followers: "0", engagement: "0%", views: "0" })
 

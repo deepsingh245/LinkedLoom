@@ -21,9 +21,9 @@ import { successToast, dangerToast } from "@/lib/toast"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { format } from "date-fns"
-import { User } from "@/types"
 
 import { useAuth } from "@/components/auth-provider";
+import { User } from "firebase/auth";
 
 export function PostEditor() {
     const [content, setContent] = React.useState("")
@@ -40,9 +40,10 @@ export function PostEditor() {
         setGenerating(true)
         try {
             const { getFunctions, httpsCallable } = await import("firebase/functions");
-            const { app } = await import("@/lib/firebase/utils");
+            const { app } = await import("@/lib/firebase");
+            const { FirebaseFunctions } = await import("@/lib/firebase/functions");
             const functions = getFunctions(app);
-            const generatePost = httpsCallable(functions, 'generatePost');
+            const generatePost = httpsCallable(functions, FirebaseFunctions.GENERATE_POST);
             
             const result = await generatePost({ 
                 topic, 
@@ -69,7 +70,7 @@ export function PostEditor() {
             await api.firebaseService.createPost({
                 content,
                 status: "DRAFT",
-                user_id: (user as any).uid,
+                user_id: user.uid,
                 tone: tone.toUpperCase() as any,
                 createdAt: new Date(),
                 mediaUrls: [],
@@ -95,7 +96,7 @@ export function PostEditor() {
             const post = await api.firebaseService.createPost({
                  content,
                  status: "DRAFT",
-                 user_id: (user as any)?.uid,
+                 user_id: user.uid,
                  tone: tone.toUpperCase() as any,
                  createdAt: new Date(),
                  mediaUrls: [],
@@ -213,11 +214,11 @@ export function PostEditor() {
 
             {/* Right: Preview */}
             <div className="hidden lg:block bg-muted/30 rounded-lg border p-8 flex items-center justify-center">
-                <div className="phone-mockup-or-card w-full max-w-md">
+                <div className="phone-mockup-or-card w-full">
                     <div className="mb-4 text-center text-sm text-muted-foreground font-medium uppercase tracking-wider">
                         LinkedIn Preview
                     </div>
-                    <PostPreview content={content} />
+                    <PostPreview content={content} user={user} />
                 </div>
             </div>
 
@@ -229,7 +230,7 @@ export function PostEditor() {
                         <TabsTrigger value="preview">Preview</TabsTrigger>
                     </TabsList>
                     <TabsContent value="preview" className="mt-4">
-                        <PostPreview content={content} />
+                        <PostPreview content={content} user={user} />
                     </TabsContent>
                 </Tabs>
             </div>

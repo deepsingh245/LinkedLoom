@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { onAuthStateChanged, User } from 'firebase/auth'
-import { auth } from '@/lib/firebase/utils'
+import { auth } from '@/lib/firebase'
 import { useRouter } from 'next/navigation'
 import { Routes } from "@/lib/routes"
 
@@ -19,13 +19,11 @@ export function AuthProvider({ children, user: initialUser }: { children: React.
             setUser(user)
             setLoading(false)
             if (!user) {
-                 router.push('/login')
+                 router.push(Routes.LOGIN)
             }
         })
         return () => unsubscribe()
     }, [router])
-
-    // if (loading) return <div>Loading...</div>; // Opt-out of global loading for now to avoid flickering if not desired
 
     return (
         <AuthContext.Provider value={user}>

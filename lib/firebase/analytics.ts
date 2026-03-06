@@ -1,11 +1,11 @@
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "./utils";
+import { db } from "../firebase";
 import { DashboardData } from "./interfaces";
 import { Collections } from "./collections";
+import { dangerToast } from "../toast";
 
 export const getAnalyticsDashboardData = async (userId: string): Promise<DashboardData | null> => {
   try {
-    // ... comments ...
     const docRef = doc(db, Collections.ANALYTICS, userId, "dashboard", "data");
     const docSnap = await getDoc(docRef);
     
@@ -13,13 +13,12 @@ export const getAnalyticsDashboardData = async (userId: string): Promise<Dashboa
       return { id: docSnap.id, ...docSnap.data() } as DashboardData;
     } else {
       console.log("No analytics dashboard data found. Returning default/empty data.");
-      // Return a default structure or null depending on component needs. 
-      // AnalyticsView expects chartData and metrics. 
-      // Let's return null here and handle fallback in component or return a default object.
+      dangerToast("No analytics dashboard data found. Returning default/empty data.");
       return null;
     }
   } catch (e) {
     console.error("Error getting analytics dashboard data: ", e);
+    dangerToast("Error getting analytics dashboard data. Please try again later.");
     throw e;
   }
 };

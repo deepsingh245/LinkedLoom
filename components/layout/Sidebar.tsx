@@ -27,7 +27,7 @@ export function Sidebar({ className }: SidebarProps) {
             <div className="space-y-4 py-4">
                 <div className="px-3 py-2">
                     <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight text-primary flex items-center gap-2">
-                        <span className="text-2xl">⚡</span> LinkGenie
+                        <span className="text-2xl">⚡</span> LinkedLoom
                     </h2>
                     <div className="space-y-1">
                         <NavItem href="/dashboard" icon={<LayoutDashboard className="mr-2 h-4 w-4" />}>
@@ -68,8 +68,6 @@ export function Sidebar({ className }: SidebarProps) {
 }
 
 function NavItem({ href, icon, children }: { href: string; icon: React.ReactNode; children: React.ReactNode }) {
-    // Simple mock of usePathname since we are in a server component mostly, but sidebar is client usually.
-    // Actually sidebar should be client to check active state.
     return (
         <Button asChild variant="ghost" className="w-full justify-start">
             <Link href={href}>

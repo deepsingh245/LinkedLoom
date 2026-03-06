@@ -41,7 +41,7 @@ export default function CalendarPage() {
         if (user?.uid) {
             fetchPosts();
         }
-    }, [user.uid, fetchPosts]);
+    }, [user.uid]);
 
     if (loading) {
         return <Loader size="lg" />;

@@ -1,5 +1,5 @@
 import { collection, query, where, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
-import { db } from "./utils";
+import { db } from "../firebase";
 import { Post } from "@/types";
 import { DashboardData } from "./interfaces";
 import { Collections } from "./collections";

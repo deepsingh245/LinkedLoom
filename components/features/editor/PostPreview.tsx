@@ -8,21 +8,25 @@ import { MoreHorizontal, ThumbsUp, MessageSquare, Share2, Send } from "lucide-re
 interface PostPreviewProps {
     content: string;
     image?: string;
+    user?: {
+        displayName: string | null;
+        photoURL: string | null;
+    } | null;
 }
 
-export function PostPreview({ content, image }: PostPreviewProps) {
+export function PostPreview({ content, image, user }: PostPreviewProps) {
     return (
         <Card className="w-full max-w-xl mx-auto border bg-card shadow-sm">
             <CardHeader className="flex flex-row items-start space-y-0 pb-2 p-3">
                 <Avatar className="h-12 w-12 mr-3 cursor-pointer">
-                    <AvatarImage src="/avatars/01.png" />
-                    <AvatarFallback>U</AvatarFallback>
+                    <AvatarImage src={user?.photoURL || "/avatars/01.png"} />
+                    <AvatarFallback>{user?.displayName?.charAt(0) || "U"}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h3 className="text-sm font-semibold hover:text-blue-600 hover:underline cursor-pointer">User Name</h3>
-                            <p className="text-xs text-muted-foreground">Founder @ LinkGenie • 2h • <span className="text-xs">🌐</span></p>
+                            <h3 className="text-sm font-semibold hover:text-blue-600 hover:underline cursor-pointer">{user?.displayName || "User Name"}</h3>
+                            <p className="text-xs text-muted-foreground">Founder @ LinkedLoom • Now • <span className="text-xs">🌐</span></p>
                         </div>
                         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
                             <MoreHorizontal className="h-5 w-5 text-muted-foreground" />

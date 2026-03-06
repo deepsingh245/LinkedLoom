@@ -88,10 +88,10 @@ export function PostCard({ post, onUpdate }: PostCardProps) {
                     {post.scheduledFor ? (
                         <div className="flex items-center">
                             <Calendar className="mr-1 h-3 w-3" />
-                            {format(new Date(post.scheduledFor), "PPP")}
+                            {format(post.scheduledFor instanceof Date ? post.scheduledFor : (post.scheduledFor as any).toDate(), "PPP")}
                         </div>
                     ) : (
-                        <span>Last updated: {new Date(post.updatedAt).toLocaleDateString()}</span>
+                        <span>Created: {(post.createdAt instanceof Date ? post.createdAt : (post.createdAt as any).toDate()).toLocaleDateString()}</span>
                     )}
                 </CardFooter>
             </Card>
