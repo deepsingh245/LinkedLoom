@@ -45,18 +45,35 @@ export default function SchedulePage() {
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
+        <div className="space-y-8 animate-fade-in pb-10">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Content Library</h2>
-                    <p className="text-muted-foreground">Manage your scheduled posts and drafts</p>
+                    <h2 className="text-3xl font-bold tracking-tight text-white mb-1">Content Library</h2>
+                    <p className="text-gray-400">Manage your scheduled posts and drafts</p>
                 </div>
-                <Link href="/create">
-                    <Button>
-                        <Plus className="mr-2 h-4 w-4" />
-                        New Post
-                    </Button>
-                </Link>
+                <div className="flex items-center gap-3">
+                    <Link href="/create">
+                        <Button className="btn-primary h-10 px-5 font-medium rounded-xl">
+                            <Plus className="mr-2 h-4 w-4" />
+                            New Post
+                        </Button>
+                    </Link>
+                </div>
+            </div>
+
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                <button className="px-4 py-2 rounded-lg text-sm font-medium bg-[#1e1e2a] text-white whitespace-nowrap transition-colors">
+                    All Posts
+                </button>
+                <button className="px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-[#1a1a24] whitespace-nowrap transition-colors">
+                    Scheduled
+                </button>
+                <button className="px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-[#1a1a24] whitespace-nowrap transition-colors">
+                    Drafts
+                </button>
+                <button className="px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-[#1a1a24] whitespace-nowrap transition-colors">
+                    Published
+                </button>
             </div>
 
             {posts.length === 0 ? (

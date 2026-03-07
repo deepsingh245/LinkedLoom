@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Library, Eye, Heart, Calendar } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
 import { User } from "firebase/auth";
@@ -14,10 +14,8 @@ import { Routes } from "@/lib/routes";
 
 export default function DashboardPage() {
     const user = useAuth() as User;
-    console.log("🚀 ~ DashboardPage ~ user:", user)
     const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
     const [scheduledPosts, setScheduledPosts] = useState<Post[]>([]);
-    // ...existing code...
 
     const getDashboardData = async () => {
         if (!user?.uid) return;
@@ -37,50 +35,58 @@ export default function DashboardPage() {
             getScheduledPosts();
         }
     }, [user?.uid])
+    
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-                <Button asChild>
+        <div className="space-y-8 p-4 md:p-8  mx-auto">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 className="text-[28px] font-display font-semibold tracking-[-0.5px] text-[#f0f0f8]">
+                         Good morning 👋
+                    </h2>
+                    <p className="text-[#5a5a78] text-[14px] mt-1">Here's what's happening with your LinkedIn presence today.</p>
+                </div>
+                <Button className="bg-gradient-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-[1px] hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-semibold border-none h-auto px-[20px] py-[10px] text-[14px] rounded-[10px]" asChild>
                     <Link href={Routes.CREATE_POST}>
-                        <Plus className="mr-2 h-4 w-4" /> Create New Post
+                        <Plus className="mr-2 h-[15px] w-[15px]" /> Create New Post
                     </Link>
                 </Button>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <StatsCard title="Total Posts" value={`${dashboardData?.totalPosts}`} change="" />
-                <StatsCard title="Total Views" value={`${dashboardData?.totalLikes}`} change="" />
-                <StatsCard title="Engagement Rate" value={`${dashboardData?.totalComments}`} change="" />
-                <StatsCard title="Scheduled" value={`${scheduledPosts?.length}`} change="" />
+                <StatsCard title="Total Posts" value={`${dashboardData?.totalPosts}`} change="+3 this week" color="#63d496" icon={Library} />
+                <StatsCard title="Total Views" value={`${dashboardData?.totalLikes}`} change="+18% vs last week" color="#6490d4" icon={Eye} />
+                <StatsCard title="Engagement Rate" value={`${dashboardData?.totalComments}%`} change="Avg across posts" color="#c890f0" icon={Heart} />
+                <StatsCard title="Scheduled" value={`${scheduledPosts?.length}`} change="Next: Mar 10" color="#f0b464" icon={Calendar} />
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                <Card className="col-span-4">
-                    <CardHeader>
-                        <CardTitle>Recent Activity</CardTitle>
-                    </CardHeader>
-                    <CardContent className="pl-2">
-                        <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
+                <Card className="col-span-3 lg:col-span-3 rounded-[16px] border border-[#1e1e2a] bg-[#13131a] p-6 shadow-sm transition-all hover:border-[#2a2a3a]">
+                    <div className="flex items-center justify-between mb-5">
+                        <h3 className="font-display text-[16px] font-semibold text-[#e0e0f0]">Views Over Time</h3>
+                        <span className="text-[11px] text-[#5a5a78] bg-[#1a1a24] px-[10px] py-[4px] rounded-md">Last 8 weeks</span>
+                    </div>
+                    <CardContent className="p-0">
+                        <div className="h-[200px] flex items-center justify-center text-[#5a5a78] border border-dashed border-[#2a2a3a] rounded-xl bg-[#0c0c12]">
                             Chart Placeholder (Recharts coming soon)
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="col-span-3">
-                    <CardHeader>
-                        <CardTitle>Upcoming Posts</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {scheduledPosts?.map((post) => (
-                                <div className="flex items-center">
-                                    <div className="ml-4 space-y-1">
-                                        <p className="text-sm font-medium leading-none">{post.content}</p>
-                                        <p className="text-xs text-muted-foreground">{post.scheduledFor?.toDateString()}</p>
+                
+                <Card className="col-span-2 lg:col-span-2 rounded-[16px] border border-[#1e1e2a] bg-[#13131a] p-6 shadow-sm transition-all hover:border-[#2a2a3a]">
+                    <h3 className="font-display text-[16px] font-semibold text-[#e0e0f0] mb-4">Upcoming Posts</h3>
+                    <CardContent className="p-0">
+                        <div className="space-y-0">
+                            {scheduledPosts?.length > 0 ? scheduledPosts.map((post, i) => (
+                                <div key={i} className="flex items-start gap-3 py-3 border-b border-[#1a1a26] last:border-0">
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[12.5px] text-[#c0c0d8] leading-[1.4] mb-[5px] line-clamp-2">{post.content}</p>
+                                        <p className="text-[11px] text-[#4a4a68]">{/* post.scheduledFor?.toDateString() */}Mar 10, 2026</p>
                                     </div>
-                                    <div className="ml-auto font-medium text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full dark:bg-yellow-900 dark:text-yellow-100">Scheduled</div>
+                                    <div className="bg-[#0d1828] border border-[#1a2840] text-[#6490d4] text-[11px] font-semibold tracking-[0.3px] px-[10px] py-[3px] rounded-full flex-shrink-0">Scheduled</div>
                                 </div>
-                            ))}
+                            )) : (
+                                <div className="text-sm text-[#5a5a78] text-center mt-8">No upcoming posts</div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
@@ -89,16 +95,17 @@ export default function DashboardPage() {
     );
 }
 
-function StatsCard({ title, value, change }: { title: string, value: string, change: string }) {
+function StatsCard({ title, value, change, color, icon: IconComponent }: { title: string, value: string, change: string, color: string, icon: React.ElementType }) {
     return (
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">{value}</div>
-                <p className="text-xs text-muted-foreground">{change}</p>
-            </CardContent>
+        <Card className="rounded-[16px] border border-[#1e1e2a] bg-[#13131a] p-5 shadow-sm transition-all hover:border-[#2a2a3a] hover:-translate-y-[2px] hover:shadow-[0_8px_24px_rgba(0,0,0,0.2)]">
+            <div className="flex items-start justify-between mb-[14px]">
+                <span className="text-[12px] font-medium text-[#5a5a78] uppercase tracking-[0.8px]">{title}</span>
+                <div style={{ backgroundColor: `${color}15`, color: color }} className="w-[30px] h-[30px] rounded-lg flex items-center justify-center">
+                    <IconComponent className="h-4 w-4" />
+                </div>
+            </div>
+            <div className="font-display text-[30px] font-semibold text-[#f0f0f8] tracking-[-0.5px] mb-1">{value}</div>
+            <div style={{ color: color }} className="text-[12px]">{change}</div>
         </Card>
     )
 }

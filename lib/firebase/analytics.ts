@@ -11,8 +11,7 @@ export const getAnalyticsDashboardData = async (userId: string): Promise<Dashboa
     
     if (docSnap.exists()) {
       return { id: docSnap.id, ...docSnap.data() } as DashboardData;
-    } else {
-      console.log("No analytics dashboard data found. Returning default/empty data.");
+    } else {``
       dangerToast("No analytics dashboard data found. Returning default/empty data.");
       return null;
     }

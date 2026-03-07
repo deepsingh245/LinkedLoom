@@ -39,7 +39,6 @@ export default function LoginPage() {
     }
 
     const loginWithGoogle = async () => {
-        console.log("API KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
         try {
             setLoading(true)
             await api.firebaseService.loginWithGoogle();

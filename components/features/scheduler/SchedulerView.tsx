@@ -34,10 +34,9 @@ export function SchedulerView() {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const user = useAuth();
-    console.log("🚀 ~ SchedulerView ~ user:", user)
     const [scheduledPosts, setScheduledPosts] = React.useState<Post[]>([]);
     const [drafts, setDrafts] = React.useState<Post[]>([]);
-    const [selectedDraft, setSelectedDraft] = React.useState<string | undefined>(undefined)
+    const [selectedDraft, setSelectedDraft] = React.useState<string | number | undefined>(undefined)
 
     React.useEffect(() => {
         const fetchScheduledPosts = async () => {
@@ -169,7 +168,7 @@ export function SchedulerView() {
                         <Card key={post.id} className="cursor-pointer hover:bg-muted/50 transition-colors">
                             <CardContent className="p-3 flex items-start gap-3">
                                 <div className="mt-1">
-                                    {post.status === "SCHEDULED" ?
+                                    {post.status === "scheduled" ?
                                         <Clock className="h-4 w-4 text-blue-500" /> :
                                         <FileText className="h-4 w-4 text-gray-500" />
                                     }
@@ -177,9 +176,9 @@ export function SchedulerView() {
                                 <div className="space-y-1">
                                     <p className="text-sm font-medium leading-none">{post.content}</p>
                                     <p className="text-xs text-muted-foreground">
-                                        {(post.publishedAt ? (post.publishedAt instanceof Date ? post.publishedAt : (post.publishedAt as any).toDate()) : (post.scheduledFor ? (post.scheduledFor instanceof Date ? post.scheduledFor : (post.scheduledFor as any).toDate()) : new Date())).toLocaleDateString()}
+                                        {new Date(post.date).toLocaleDateString()}
                                     </p>
-                                    <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-sm ${post.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'}`}>
+                                    <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-sm ${post.status === 'scheduled' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'}`}>
                                         {post.status}
                                     </span>
                                 </div>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { PostPreview } from "./PostPreview"
 import {
     Select,
@@ -69,10 +70,10 @@ export function PostEditor() {
         try {
             await api.firebaseService.createPost({
                 content,
-                status: "DRAFT",
-                user_id: user.uid,
+                status: "draft",
+                authorId: user.uid,
                 tone: tone.toUpperCase() as any,
-                createdAt: new Date(),
+                date: new Date().toISOString(),
                 mediaUrls: [],
                 linkedinPostId: "",
                 versions: []
@@ -95,16 +96,16 @@ export function PostEditor() {
             // 1. Create Post
             const post = await api.firebaseService.createPost({
                  content,
-                 status: "DRAFT",
-                 user_id: user.uid,
+                 status: "draft",
+                 authorId: user.uid,
                  tone: tone.toUpperCase() as any,
-                 createdAt: new Date(),
+                 date: new Date().toISOString(),
                  mediaUrls: [],
                  linkedinPostId: "",
                  versions: []
             })
             // 2. Schedule it
-            await api.firebaseService.schedulePost(post.id, date.toISOString())
+            await api.firebaseService.schedulePost(String(post.id), date.toISOString())
 
             successToast(`Post scheduled for ${format(date, 'PPP')}!`)
             setDate(undefined) // Reset date
@@ -117,32 +118,39 @@ export function PostEditor() {
     }
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[calc(100vh-8rem)]">
-            {/* Left: Controls */}
-            <div className="flex flex-col space-y-4 h-full overflow-y-auto pr-2">
-                <div className="space-y-4 bg-card p-4 rounded-lg border">
-                    <h3 className="font-semibold text-lg flex items-center">
-                        <Wand2 className="mr-2 h-5 w-5 text-primary" />
-                        AI Generator
-                    </h3>
+        <div className="p-4 md:p-8 mx-auto">
+            <div className="animate-fadeUp mb-7">
+                <h1 className="font-display text-[26px] font-semibold text-[#f0f0f8] tracking-[-0.4px] mb-1.5">
+                    Create Post
+                </h1>
+                <p className="text-[#5a5a78] text-[14px]">Generate with AI or write from scratch.</p>
+            </div>
 
-                    <div className="space-y-2">
-                        <Label>Topic or Rough Idea</Label>
-                        <Input
-                            value={topic}
-                            onChange={(e) => setTopic(e.target.value)}
-                            placeholder="e.g. Lessons from scaling a B2B SaaS..."
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label>Tone</Label>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Controls */}
+                <div className="flex flex-col gap-4 lg:col-span-1">
+                    <Card className="animate-fadeUp animation-delay-100 p-5 rounded-[16px] border border-[#1e1e2a] bg-[#13131a] shadow-sm transition-all hover:border-[#2a2a3a]">
+                        <h3 className="text-[13px] font-semibold text-[#7070a0] uppercase tracking-[0.8px] mb-4">
+                            AI Generation
+                        </h3>
+                        
+                        <div className="mb-3.5">
+                            <Label className="text-[12.5px] text-[#8888a0] mb-1.5 block font-medium">Topic *</Label>
+                            <Input
+                                value={topic}
+                                onChange={(e) => setTopic(e.target.value)}
+                                placeholder="e.g. Leading remote teams"
+                                className="w-full h-11 bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[13.5px] rounded-[10px] px-3.5 py-2.5 transition-all focus:border-[#63d496] focus:shadow-[0_0_0_1px_rgba(99,212,150,0.5)] outline-none placeholder:text-[#4a4a68]"
+                            />
+                        </div>
+                        
+                        <div className="mb-3.5">
+                            <Label className="text-[12.5px] text-[#8888a0] mb-1.5 block font-medium">Tone</Label>
                             <Select value={tone} onValueChange={setTone}>
-                                <SelectTrigger>
+                                <SelectTrigger className="w-full h-11 bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[13.5px] rounded-[10px] px-3.5 focus:ring-1 focus:ring-[#63d496]">
                                     <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="bg-[#13131a] border-[#1e1e2a] text-[#e0e0f0]">
                                     <SelectItem value="professional">Professional</SelectItem>
                                     <SelectItem value="casual">Casual</SelectItem>
                                     <SelectItem value="viral">Viral / Hook-heavy</SelectItem>
@@ -150,86 +158,130 @@ export function PostEditor() {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="space-y-2">
-                            <Label>Length (Short - Long)</Label>
+                        
+                        <div className="mb-[18px]">
+                            <Label className="text-[12.5px] text-[#8888a0] mb-3 block font-medium">Post Length</Label>
                             <Slider
                                 value={length}
                                 onValueChange={setLength}
                                 max={100}
                                 step={1}
-                                className="pt-2"
+                                className="w-full"
                             />
                         </div>
-                    </div>
 
-                    <Button onClick={handleGenerate} className="w-full" disabled={generating}>
-                        {generating ? <Wand2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-                        {generating ? "Generating..." : "Generate Draft"}
-                    </Button>
-                </div>
-
-                <div className="flex-1 space-y-2 flex flex-col">
-                    <Label>Editor</Label>
-                    <Textarea
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        className="flex-1 min-h-[300px] resize-none font-mono text-sm leading-relaxed"
-                        placeholder="Write your post here..."
-                    />
-                </div>
-
-                <div className="flex items-center justify-between pt-2">
-                    <div className="text-xs text-muted-foreground">
-                        {content.length} chars
-                    </div>
-                    <div className="flex gap-2">
-                        <Button variant="outline" onClick={handleSave} disabled={saving}>
-                            <Save className="mr-2 h-4 w-4" /> Save Draft
+                        <Button 
+                            onClick={handleGenerate} 
+                            disabled={generating}
+                            className="w-full flex items-center justify-center bg-gradient-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-[1px] hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-semibold border-none h-11 px-[20px] rounded-[10px]"
+                        >
+                            {generating ? <Wand2 className="mr-2 h-[14px] w-[14px] animate-spin" /> : <Wand2 className="mr-2 h-[14px] w-[14px]" />}
+                            {generating ? "Generating..." : "Generate with AI"}
                         </Button>
+                    </Card>
 
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button disabled={saving} variant={date ? "default" : "secondary"}>
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {date ? format(date, "MMM d") : "Schedule"}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="end">
-                                <Calendar
-                                    mode="single"
-                                    selected={date}
-                                    onSelect={setDate}
-                                    initialFocus
-                                />
-                                <div className="p-3 border-t">
-                                    <Button size="sm" className="w-full" onClick={handleSchedule}>
-                                        Confirm Schedule
+                    <Card className="animate-fadeUp animation-delay-200 p-5 rounded-[16px] border border-[#1e1e2a] bg-[#13131a] shadow-sm transition-all hover:border-[#2a2a3a]">
+                        <h3 className="text-[13px] font-semibold text-[#7070a0] uppercase tracking-[0.8px] mb-3.5">
+                            Post Settings
+                        </h3>
+                        <div>
+                            <Label className="text-[12.5px] text-[#8888a0] mb-1.5 block font-medium">Status Date</Label>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button disabled={saving} className="w-full h-11 justify-start text-left font-normal bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[13.5px] rounded-[10px] hover:bg-[#1a1a24] hover:border-[#2a2a3a]">
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {date ? format(date, "MMM d, yyyy") : "Pick a date (Optional)"}
                                     </Button>
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-                    </div>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0 bg-[#13131a] border-[#1e1e2a] text-[#e0e0f0]" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={date}
+                                        onSelect={setDate}
+                                        initialFocus
+                                        className="bg-[#13131a] border-[#1e1e2a] text-[#e0e0f0]"
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                    </Card>
                 </div>
-            </div>
 
-            {/* Right: Preview */}
-            <div className="hidden lg:block bg-muted/30 rounded-lg border p-8 flex items-center justify-center">
-                <div className="phone-mockup-or-card w-full">
-                    <div className="mb-4 text-center text-sm text-muted-foreground font-medium uppercase tracking-wider">
-                        LinkedIn Preview
+                {/* Editor & Preview */}
+                <div className="animate-fadeUp animation-delay-200 lg:col-span-2 flex flex-col gap-3.5">
+                    <Card className="flex-1 p-5 rounded-[16px] border border-[#1e1e2a] bg-[#13131a] shadow-sm transition-all hover:border-[#2a2a3a] flex flex-col">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+                            
+                            {/* Editor Side */}
+                            <div className="flex flex-col h-full min-h-[320px]">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-[13px] font-semibold text-[#7070a0] uppercase tracking-[0.8px]">Content</h3>
+                                </div>
+                                <div className="relative flex-1 flex flex-col">
+                                    <Textarea
+                                        value={content}
+                                        onChange={(e) => setContent(e.target.value)}
+                                        placeholder="Start typing or generate with AI..."
+                                        className="flex-1 w-full h-full min-h-[320px] bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[14px] leading-[1.7] font-sans rounded-[10px] p-4 transition-all focus:border-[#63d496] focus:shadow-[0_0_0_1px_rgba(99,212,150,0.5)] outline-none placeholder:text-[#4a4a68] resize-none"
+                                    />
+                                </div>
+                                
+                                <div className="h-1 bg-[#1a1a26] rounded-full overflow-hidden mt-3 mb-1.5 transition-all">
+                                    <div 
+                                        className="h-full bg-gradient-to-r from-[#63d496] to-[#3db87a] transition-all" 
+                                        style={{width:`${Math.min(100,(content.length/3000)*100)}%`}}
+                                    />
+                                </div>
+                                <div className="flex justify-between items-center text-[11px]">
+                                    <span className="text-[#5a5a78]">{content.length}/3000 chars</span>
+                                    <span className={content.length > 3000 ? "text-[#f06464]" : "text-[#5a5a78]"}>
+                                        {content.length > 3000 ? `${content.length - 3000} over limit` : `${3000 - content.length} remaining`}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            {/* Preview Side */}
+                            <div className="hidden lg:flex flex-col border-l border-[#1e1e2a] pl-6 h-full">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-[13px] font-semibold text-[#7070a0] uppercase tracking-[0.8px]">Preview</h3>
+                                </div>
+                                <div className="flex-1 bg-[#0e0e16] rounded-[10px] border border-[#1e1e2a] flex justify-center p-4 min-h-[460px]">
+                                    <div className="w-full h-full overflow-y-auto pr-1">
+                                        <PostPreview content={content} user={user} />
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </Card>
+
+                    <div className="flex gap-2.5 justify-end mt-1">
+                        <Button 
+                            className="bg-[#13131a] border border-[#2a2a3a] text-[#cccccc] hover:bg-[#1a1a24] hover:border-[#3a3a4a] transition-all font-sans font-medium h-10 px-4 rounded-lg" 
+                            onClick={handleSave} 
+                            disabled={saving}
+                        >
+                            Save Draft
+                        </Button>
+                        <Button 
+                            className="bg-gradient-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-[1px] hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-semibold border-none h-10 px-[20px] rounded-lg" 
+                            onClick={handleSchedule} 
+                            disabled={saving || !date}
+                        >
+                            <Save className="mr-2 h-[14px] w-[14px]" /> Schedule Post
+                        </Button>
                     </div>
-                    <PostPreview content={content} user={user} />
                 </div>
             </div>
 
             {/* Mobile Tabs for Preview */}
-            <div className="lg:hidden">
-                <Tabs defaultValue="edit">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="edit">Editor</TabsTrigger>
-                        <TabsTrigger value="preview">Preview</TabsTrigger>
+            <div className="lg:hidden mt-6">
+                <Tabs defaultValue="preview">
+                    <TabsList className="grid w-full grid-cols-2 mb-4 bg-[#1e1e2a] border border-[#2a2a35] p-1 rounded-xl">
+                        <TabsTrigger value="preview" className="rounded-lg data-[state=active]:bg-[#2a2a35] data-[state=active]:text-white transition-all">Show Preview</TabsTrigger>
+                        <TabsTrigger value="hide" className="rounded-lg data-[state=active]:bg-[#2a2a35] data-[state=active]:text-white transition-all">Hide Preview</TabsTrigger>
                     </TabsList>
-                    <TabsContent value="preview" className="mt-4">
+                    <TabsContent value="preview" className="mt-2 bg-[#0e0e16] rounded-[10px] border border-[#1e1e2a] p-4">
                         <PostPreview content={content} user={user} />
                     </TabsContent>
                 </Tabs>
