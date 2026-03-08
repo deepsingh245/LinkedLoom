@@ -48,7 +48,7 @@ export function Sidebar({ className }: SidebarProps) {
             </div>
             
             <div className="pt-6 border-t border-[#1e1e2a] mt-auto">
-                <NavItem href="/settings" active={pathname === "/settings"} icon={<Settings className="h-[18px] w-[18px]" />}>
+                <NavItem href="/settings/profile" active={pathname.startsWith("/settings")} icon={<Settings className="h-[18px] w-[18px]" />}>
                     Settings
                 </NavItem>
                 <button

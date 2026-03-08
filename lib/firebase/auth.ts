@@ -63,6 +63,6 @@ export const loginWithGoogle = async (): Promise<User | null> => {
 
 export const getLinkedInAuthUrl = async () => {
     return {
-        url: "https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI&state=YOUR_STATE&scope=r_liteprofile%20r_emailaddress",
+        url: `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${process.env.NEXT_PUBLIC_LINKEDIN_CLIENT_ID}&redirect_uri=${process.env.NEXT_PUBLIC_LINKEDIN_REDIRECT_URI}&state=${crypto.randomUUID()}&scope=r_liteprofile%20r_emailaddress`,
     };
 };

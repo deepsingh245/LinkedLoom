@@ -52,8 +52,21 @@ export default function LoginPage() {
     }
 
     const loginWithLinkedin = async () => {
-        // Disabled for now
-        dangerToast("LinkedIn login is currently disabled.")
+        try {
+            setLoading(true)
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/getLinkedInAuthUrl`)
+            const data = await res.json()
+            if (data.url) {
+                window.location.href = data.url
+            } else {
+                dangerToast("Failed to initialize LinkedIn login.")
+            }
+        } catch (error) {
+            console.error(error)
+            dangerToast("LinkedIn Login failed")
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (
@@ -88,7 +101,7 @@ export default function LoginPage() {
                             </svg>
                             Google
                         </Button>
-                        <Button variant="outline" onClick={loginWithLinkedin} disabled={true} className="opacity-50 cursor-not-allowed">
+                        <Button variant="outline" onClick={loginWithLinkedin} disabled={loading}>
                             <LinkedinIcon className="mr-2 h-4 w-4" />
                             Linkedin
                         </Button>

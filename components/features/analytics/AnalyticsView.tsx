@@ -41,7 +41,7 @@ export function AnalyticsView() {
     }, [user])
 
     return (
-        <div className="space-y-8 animate-fade-in pb-10">
+        <div className="p-6 space-y-8 animate-fade-in pb-10">
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                 <MetricCard title="Total Impressions" value={metrics?.impressions} change="+12% from last week" />
                 <MetricCard title="New Followers" value={metrics?.followers} change="+4% from last week" />

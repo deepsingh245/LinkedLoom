@@ -11,6 +11,7 @@ export const generatePost = onCall(
         }
 
         const apiKey = process.env.GEMINI_API_KEY;
+        console.log("🚀 ~ apiKey:", apiKey)
         if (!apiKey) {
             throw new HttpsError(
                 "failed-precondition",
@@ -40,7 +41,7 @@ export const generatePost = onCall(
         try {
             const genAI = new GoogleGenerativeAI(apiKey);
             const model = genAI.getGenerativeModel({
-                model: "gemini-1.5-flash",
+                model: "gemini-2.5-flash-lite",
             });
 
             const result = await model.generateContent(prompt);

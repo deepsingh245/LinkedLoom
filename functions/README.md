@@ -73,3 +73,14 @@ npm run serve
 # or
 firebase emulators:start
 ```
+
+### Local Authentication Emulation
+If you are testing Firebase Authentication flows locally that require signing custom tokens (like the LinkedIn OAuth flow via `admin.auth().createCustomToken()`), the local emulator will throw an `ENOTFOUND metadata` error unless it has access to a service account.
+
+To fix this for local development:
+1. Go to your **Firebase Console** -> Project Settings -> **Service Accounts**
+2. Click **Generate new private key**
+3. Save the downloaded `.json` file into your `functions` directory as `serviceAccountKey.json`
+4. Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable to point to this file before starting the emulator, or securely import it in your index initialization.
+
+*(Note: Production deployments handle this automatically via Google Cloud's Default Service Account and do not require this manual step).*

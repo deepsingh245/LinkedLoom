@@ -45,7 +45,7 @@ export default function SchedulePage() {
     }
 
     return (
-        <div className="space-y-8 animate-fade-in pb-10">
+        <div className="p-6 space-y-8 animate-fade-in pb-10">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 className="text-3xl font-bold tracking-tight text-white mb-1">Content Library</h2>

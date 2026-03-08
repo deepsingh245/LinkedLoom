@@ -39,42 +39,40 @@ export const checkScheduledPosts = onSchedule("every 10 minutes", async (event) 
 async function publishPost(userId: string, post: any) {
   // 1. Get user connections
   const db = admin.firestore();
-  const userDoc = await db.collection("users").doc(userId).collection("connections").doc("socials").get();
   
-  if (!userDoc.exists) {
-    throw new Error("User has no social connections linked.");
-  }
+  // Fetch specific platforms
+  const linkedinDoc = await db.collection("users").doc(userId).collection("connections").doc("linkedin").get();
   
-  const connections = userDoc.data();
-  
-  // 2. Publish based on connected platforms (Placeholders)
   const results = [];
+  let publishedAny = false;
   
-  if (connections?.linkedin) {
+  if (linkedinDoc.exists) {
+    const linkedinConnection = linkedinDoc.data();
     try {
-      const result = await publishToLinkedIn(connections.linkedin, post.content);
+      const result = await publishToLinkedIn(linkedinConnection, post.content);
       // Update post with LinkedIn URN if successful
       if (result && result.id) {
           console.log("LinkedIn Publish Success:", result.id);
       }
-      return result;
+      results.push(result);
+      publishedAny = true;
     } catch (e) {
       console.error("LinkedIn Publish Failed", e);
       throw e; // Rethrow to mark as failed in the caller
     }
   }
   
-  if (connections?.twitter) {
-    results.push(publishToTwitter(connections.twitter, post.content));
+  if (!publishedAny) {
+      throw new Error("User has no social connections linked, or all publishing attempts failed.");
   }
 
-  // Add other platforms here
+  
+  // Add other platforms here (like twitter) checking for doc.exists like above
   
   await Promise.all(results);
 }
 
-async function publishToTwitter(token: any, content: string) {
-  console.log("Publishing to Twitter...", content.substring(0, 20));
-  // TODO: Implement Twitter API v2 call
-  // Endpoint: https://api.twitter.com/2/tweets
-}
+// TODO: Implement Twitter API v2 call
+// async function publishToTwitter(token: any, content: string) {
+//   console.log("Publishing to Twitter...", content.substring(0, 20));
+// }

@@ -1,17 +1,23 @@
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../firebase";
 import { DashboardData } from "./interfaces";
-import { Collections } from "./collections";
 import { dangerToast } from "../toast";
 
 export const getAnalyticsDashboardData = async (userId: string): Promise<DashboardData | null> => {
+  console.log("🚀 ~ getAnalyticsDashboardData ~ userId:", userId)
   try {
-    const docRef = doc(db, Collections.ANALYTICS, userId, "dashboard", "data");
-    const docSnap = await getDoc(docRef);
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/getLinkedInAnalytics`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ userId }),
+    });
+
+    const body = await res.json();
+    console.log("🚀 ~ getAnalyticsDashboardData ~ response:", body)
     
-    if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() } as DashboardData;
-    } else {``
+    if (res.ok && body.success && body.data) {
+      return body.data as DashboardData;
+    } else {
       dangerToast("No analytics dashboard data found. Returning default/empty data.");
       return null;
     }

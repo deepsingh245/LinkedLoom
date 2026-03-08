@@ -118,7 +118,7 @@ export function PostEditor() {
     }
 
     return (
-        <div className="p-4 md:p-8 mx-auto">
+        <div className="p-4 md:p-8">
             <div className="animate-fadeUp mb-7">
                 <h1 className="font-display text-[26px] font-semibold text-[#f0f0f8] tracking-[-0.4px] mb-1.5">
                     Create Post
