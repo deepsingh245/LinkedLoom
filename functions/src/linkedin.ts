@@ -10,7 +10,7 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 // LinkedIn Configuration
-const LINKEDIN_SCOPE = "openid profile email";
+const LINKEDIN_SCOPE = "openid profile email w_member_social";
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID || '';
 const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET || '';
 const LINKEDIN_REDIRECT_URI = process.env.LINKEDIN_REDIRECT_URI || "http://localhost:3000/linkedin/callback";
@@ -196,32 +196,46 @@ export const exchangeLinkedInToken = onRequest({ cors: true }, async (req, res) 
 });
 
 /**
- * Publish Post to LinkedIn
+ * Internal helper for LinkedIn API submission
  */
-export async function publishToLinkedIn(connection: any, content: string) {
-  console.log("Publishing to LinkedIn...");
+export async function publishToLinkedInInternal(connection: any, content: string, articleUrl?: string, imageUrl?: string) {
+    let shareMediaCategory = "NONE";
+    const media: any[] = [];
+    
+    if (articleUrl) {
+      shareMediaCategory = "ARTICLE";
+      media.push({
+        status: "READY",
+        originalUrl: articleUrl,
+      });
+    } else if (imageUrl) {
+      shareMediaCategory = "IMAGE";
+      media.push({
+        status: "READY",
+        originalUrl: imageUrl,
+      });
+    }
 
-  if (!connection?.accessToken) {
-    throw new Error("Missing LinkedIn access token");
-  }
-
-  const payload = {
-    author: `urn:li:person:${connection.providerUserId}`,
-    lifecycleState: "PUBLISHED",
-    specificContent: {
-      "com.linkedin.ugc.ShareContent": {
-        shareCommentary: {
-          text: content,
+    const payload: any = {
+      author: `urn:li:person:${connection.providerUserId}`,
+      lifecycleState: "PUBLISHED",
+      specificContent: {
+        "com.linkedin.ugc.ShareContent": {
+          shareCommentary: {
+            text: content,
+          },
+          shareMediaCategory: shareMediaCategory,
         },
-        shareMediaCategory: "NONE",
       },
-    },
-    visibility: {
-      "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
-    },
-  };
+      visibility: {
+        "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
+      },
+    };
 
-  try {
+    if (media.length > 0) {
+        payload.specificContent["com.linkedin.ugc.ShareContent"].media = media;
+    }
+
     const response = await axios.post(
       "https://api.linkedin.com/v2/ugcPosts",
       payload,
@@ -235,23 +249,83 @@ export async function publishToLinkedIn(connection: any, content: string) {
       }
     );
 
-    console.log("LinkedIn post published successfully");
-
     return response.data;
+}
+
+/**
+ * Publish Post to LinkedIn (HTTP Endpoint)
+ */
+export const publishToLinkedIn = onRequest({ cors: true }, async (req, res) => {
+  res.set('Access-Control-Allow-Origin', 'http://localhost:3000');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    res.status(204).send('');
+    return;
+  }
+
+  const { userId, content, articleUrl, imageUrl } = req.body;
+
+  if (!userId || !content) {
+    throw new HttpsError("invalid-argument", "Missing userId or content parameter.");
+  }
+
+  try {
+    const connectionDoc = await db
+      .collection("users")
+      .doc(userId)
+      .collection("connections")
+      .doc("linkedin")
+      .get();
+
+    if (!connectionDoc.exists) {
+        throw new HttpsError("failed-precondition", "No LinkedIn connection found for this user.");
+    }
+
+    const connection = connectionDoc.data();
+    if (!connection?.accessToken) {
+        throw new HttpsError("failed-precondition", "Missing LinkedIn access token.");
+    }
+
+    console.log("Publishing to LinkedIn for user:", userId);
+
+    const responseData = await publishToLinkedInInternal(connection, content, articleUrl, imageUrl);
+    console.log("LinkedIn post published successfully! URN:", responseData.id);
+
+    res.json({
+        success: true,
+        data: responseData
+    });
+    return;
+
   } catch (error: any) {
     console.error(
       "LinkedIn Publish Error:",
       error.response?.data || error.message
     );
 
-    throw error;
+    throw new HttpsError(
+      "internal",
+      "Failed to publish to LinkedIn.",
+      error.response?.data?.message || error.message
+    );
   }
-}
+});
 
 /**
  * Fetch Analytics from LinkedIn
  */
 export const getLinkedInAnalytics = onRequest({ cors: true }, async (req, res) => {
+  res.set('Access-Control-Allow-Origin', 'http://localhost:3000');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    res.status(204).send('');
+    return;
+  }
+
   const { userId } = req.body;
 
   if (!userId) {
@@ -312,7 +386,12 @@ export const getLinkedInAnalytics = onRequest({ cors: true }, async (req, res) =
         // if real access is denied by LinkedIn's strict API boundaries.
         
     } catch (linkedInApiError: any) {
-        console.warn("Could not fetch LinkedIn posts directly, falling back to basic data. Error:", linkedInApiError.response?.data || linkedInApiError.message);
+        if (linkedInApiError.response?.status === 403) {
+            console.log("ℹ️ LinkedIn API restricted read access to posts (requires Marketing API approval). Falling back to local database stats.");
+        } else {
+            console.warn("⚠️ Could not fetch LinkedIn posts directly. Error:", linkedInApiError.response?.data?.message || linkedInApiError.message);
+        }
+        
         // Fallback to searching our local database for published posts if LinkedIn API blocks read access
         const localPostsSnapshot = await db.collection("posts")
             .where("userId", "==", userId)

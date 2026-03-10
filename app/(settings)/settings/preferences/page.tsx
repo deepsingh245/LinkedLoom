@@ -1,11 +1,8 @@
 "use client"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Save, Loader2, Linkedin, Twitter, Mail } from "lucide-react"
 import { useState } from "react"
-import { toast } from "sonner"
 
 function CustomSwitch({ checked, defaultChecked }: { checked?: boolean, defaultChecked?: boolean }) {
     const [isOn, setIsOn] = useState(checked ?? defaultChecked ?? false);
@@ -22,202 +19,194 @@ function CustomSwitch({ checked, defaultChecked }: { checked?: boolean, defaultC
     )
 }
 
-export default function PreferencesPage() {
-    const [isSaving, setIsSaving] = useState(false)
-    const [isConnecting, setIsConnecting] = useState(false)
-
-    const handleConnectLinkedIn = async () => {
-        try {
-            setIsConnecting(true)
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/getLinkedInAuthUrl`);
-            const data = await res.json();
-            if (data.url) {
-                 window.location.href = data.url;
-            } else {
-                 toast.error("Failed to initialize LinkedIn connection.");
-            }
-        } catch (error) {
-            console.error(error);
-            toast.error("LinkedIn Connection failed.");
-        } finally {
-            setIsConnecting(false)
-        }
-    }
-
-    const handleSave = async () => {
-        setIsSaving(true)
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 800))
-        setIsSaving(false)
-        toast("Preferences saved", {
-            description: "Your application preferences have been updated.",
-        })
-    }
-
+function SettingsRow({ title, description, control }: { title: string, description: string, control: React.ReactNode }) {
     return (
-        <div className="space-y-6 pb-20">
-             <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-display font-semibold tracking-tight text-[#f0f0f8] mb-1">Preferences</h1>
-                    <p className="text-[#8888a0]">Customize your application experience and connections.</p>
-                </div>
-                <Button 
-                    onClick={handleSave} 
-                    disabled={isSaving}
-                    className="bg-gradient-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)]"
-                >
-                    {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                    Save Preferences
-                </Button>
+        <div className="flex items-center justify-between py-4">
+            <div className="space-y-0.5">
+                <Label className="text-sm font-medium text-[#e0e0f0]">{title}</Label>
+                <p className="text-[13px] text-[#5a5a78]">{description}</p>
+            </div>
+            {control}
+        </div>
+    )
+}
+
+export default function SettingsPage() {
+    return (
+        <div className="space-y-8 pb-20">
+            <div>
+                <h1 className="text-3xl font-display font-semibold tracking-tight text-[#f0f0f8] mb-1">Settings</h1>
+                <p className="text-[15px] text-[#8888a0]">Customize your experience and preferences.</p>
             </div>
 
-            {/* Application Settings (Appearance & Behavior) */}
+            {/* Appearance */}
             <Card className="bg-[#13131a] border-[#1e1e2a] rounded-2xl">
-                <CardHeader className="p-6 pb-4">
+                <CardHeader className="p-6 pb-2">
                     <CardTitle className="text-base font-semibold text-[#f0f0f8]">Appearance</CardTitle>
-                    <CardDescription className="text-[#8888a0]">Manage how the application looks to you.</CardDescription>
                 </CardHeader>
-                <CardContent className="p-6 pt-0 space-y-6">
-                    <div className="flex items-center justify-between">
-                         <div className="space-y-0.5">
-                            <Label className="text-sm font-medium text-[#e0e0f0]">Theme</Label>
-                            <p className="text-xs text-[#5a5a78]">Select your preferred color interface.</p>
+                <CardContent className="p-6 pt-2 space-y-4">
+                    <div className="grid grid-cols-2 gap-6 w-full">
+                        <div className="space-y-2">
+                            <Label className="text-[13px] text-[#5a5a78]">Theme</Label>
+                            <Select defaultValue="dark">
+                                <SelectTrigger className="w-full bg-[#0e0e16] border-[#2a2a3a] text-[#f0f0f8] focus:ring-[#63d496] shadow-none h-10 rounded-lg">
+                                    <SelectValue placeholder="Theme" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#1a1a24] border-[#2a2a3a] text-[#f0f0f8]">
+                                    <SelectItem value="dark">Dark</SelectItem>
+                                    <SelectItem value="light">Light</SelectItem>
+                                    <SelectItem value="system">System</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
-                        <Select defaultValue="system">
-                            <SelectTrigger className="w-[180px] bg-[#0e0e16] border-[#2a2a3a] text-[#f0f0f8] focus:ring-[#63d496] shadow-none">
-                                <SelectValue placeholder="Select Theme" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-[#1a1a24] border-[#2a2a3a] text-[#f0f0f8]">
-                                <SelectItem value="dark">Dark (Premium)</SelectItem>
-                                <SelectItem value="light">Light</SelectItem>
-                                <SelectItem value="system">System Preference</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    
-                    <div className="flex items-center justify-between pt-4 border-t border-[#1e1e2a]">
-                         <div className="space-y-0.5">
-                            <Label className="text-sm font-medium text-[#e0e0f0]">Compact Mode</Label>
-                            <p className="text-xs text-[#5a5a78]">Reduces padding and font sizes across the app.</p>
+                        <div className="space-y-2">
+                            <Label className="text-[13px] text-[#5a5a78]">Density</Label>
+                            <Select defaultValue="comfortable">
+                                <SelectTrigger className="w-full bg-[#0e0e16] border-[#2a2a3a] text-[#f0f0f8] focus:ring-[#63d496] shadow-none h-10 rounded-lg">
+                                    <SelectValue placeholder="Density" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#1a1a24] border-[#2a2a3a] text-[#f0f0f8]">
+                                    <SelectItem value="comfortable">Comfortable</SelectItem>
+                                    <SelectItem value="compact">Compact</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
-                        <CustomSwitch />
                     </div>
 
-                    <div className="flex items-center justify-between pt-4 border-t border-[#1e1e2a]">
-                         <div className="space-y-0.5">
-                            <Label className="text-sm font-medium text-[#e0e0f0]">Animations</Label>
-                            <p className="text-xs text-[#5a5a78]">Enable or disable UI animations and transitions.</p>
+                    <div className="pt-2">
+                         <div className="flex items-center justify-between py-4">
+                            <div className="space-y-0.5">
+                                <Label className="text-sm font-medium text-[#e0e0f0]">Animations & Transitions</Label>
+                                <p className="text-[13px] text-[#5a5a78]">Disable for reduced-motion experience</p>
+                            </div>
+                            <CustomSwitch defaultChecked />
                         </div>
-                        <CustomSwitch defaultChecked />
                     </div>
                 </CardContent>
             </Card>
 
-            {/* AI Generation Settings */}
+            {/* Notifications */}
             <Card className="bg-[#13131a] border-[#1e1e2a] rounded-2xl">
-                <CardHeader className="p-6 pb-4">
-                    <CardTitle className="text-base font-semibold text-[#f0f0f8]">AI Assistant Settings</CardTitle>
-                    <CardDescription className="text-[#8888a0]">Configure defaults for the post generation AI.</CardDescription>
+                <CardHeader className="p-6 pb-2">
+                    <CardTitle className="text-base font-semibold text-[#f0f0f8]">Notifications</CardTitle>
                 </CardHeader>
-                <CardContent className="p-6 pt-0 space-y-6">
-                     <div className="flex items-center justify-between">
-                         <div className="space-y-0.5">
-                            <Label className="text-sm font-medium text-[#e0e0f0]">Default Tone</Label>
-                            <p className="text-xs text-[#5a5a78]">The default writing style for generated content.</p>
+                <CardContent className="p-6 pt-0">
+                    <SettingsRow 
+                        title="Post Published" 
+                        description="When your scheduled posts go live" 
+                        control={<CustomSwitch defaultChecked />} 
+                    />
+                    <SettingsRow 
+                        title="Weekly Digest" 
+                        description="Performance summary every Monday" 
+                        control={<CustomSwitch defaultChecked />} 
+                    />
+                    <SettingsRow 
+                        title="AI Suggestions" 
+                        description="New post ideas based on your best content" 
+                        control={<CustomSwitch defaultChecked={false} />} 
+                    />
+                    <SettingsRow 
+                        title="Comment Alerts" 
+                        description="Notify when posts receive comments" 
+                        control={<CustomSwitch defaultChecked />} 
+                    />
+                    <SettingsRow 
+                        title="Milestone Alerts" 
+                        description="When you hit follower or view milestones" 
+                        control={<CustomSwitch defaultChecked />} 
+                    />
+                    <SettingsRow 
+                        title="Product Updates" 
+                        description="LinkedLoom new features and announcements" 
+                        control={<CustomSwitch defaultChecked={false} />} 
+                    />
+                </CardContent>
+            </Card>
+
+            {/* AI Preferences */}
+            <Card className="bg-[#13131a] border-[#1e1e2a] rounded-2xl">
+                <CardHeader className="p-6 pb-2">
+                    <CardTitle className="text-base font-semibold text-[#f0f0f8]">AI Preferences</CardTitle>
+                </CardHeader>
+                <CardContent className="p-6 pt-2 space-y-4">
+                    <div className="grid grid-cols-2 gap-6 w-full">
+                        <div className="space-y-2">
+                            <Label className="text-[13px] text-[#5a5a78]">Default Tone</Label>
+                            <Select defaultValue="professional">
+                                <SelectTrigger className="w-full bg-[#0e0e16] border-[#2a2a3a] text-[#f0f0f8] focus:ring-[#63d496] shadow-none h-10 rounded-lg">
+                                    <SelectValue placeholder="Tone" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#1a1a24] border-[#2a2a3a] text-[#f0f0f8]">
+                                    <SelectItem value="professional">Professional</SelectItem>
+                                    <SelectItem value="casual">Casual</SelectItem>
+                                    <SelectItem value="enthusiastic">Enthusiastic</SelectItem>
+                                    <SelectItem value="informative">Informative</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
-                        <Select defaultValue="professional">
-                            <SelectTrigger className="w-[180px] bg-[#0e0e16] border-[#2a2a3a] text-[#f0f0f8] focus:ring-[#63d496] shadow-none">
-                                <SelectValue placeholder="Select Tone" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-[#1a1a24] border-[#2a2a3a] text-[#f0f0f8]">
-                                <SelectItem value="professional">Professional</SelectItem>
-                                <SelectItem value="casual">Casual</SelectItem>
-                                <SelectItem value="enthusiastic">Enthusiastic</SelectItem>
-                                <SelectItem value="informative">Informative</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <div className="space-y-2">
+                            <Label className="text-[13px] text-[#5a5a78]">Content Language</Label>
+                            <Select defaultValue="english">
+                                <SelectTrigger className="w-full bg-[#0e0e16] border-[#2a2a3a] text-[#f0f0f8] focus:ring-[#63d496] shadow-none h-10 rounded-lg">
+                                    <SelectValue placeholder="Language" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#1a1a24] border-[#2a2a3a] text-[#f0f0f8]">
+                                    <SelectItem value="english">English</SelectItem>
+                                    <SelectItem value="spanish">Spanish</SelectItem>
+                                    <SelectItem value="french">French</SelectItem>
+                                    <SelectItem value="german">German</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
 
-                     <div className="flex items-center justify-between pt-4 border-t border-[#1e1e2a]">
-                         <div className="space-y-0.5">
-                            <Label className="text-sm font-medium text-[#e0e0f0]">Auto-Add Hashtags</Label>
-                            <p className="text-xs text-[#5a5a78]">Automatically append relevant hashtags to posts.</p>
-                        </div>
-                        <CustomSwitch defaultChecked />
-                    </div>
-                     <div className="flex items-center justify-between pt-4 border-t border-[#1e1e2a]">
-                         <div className="space-y-0.5">
-                            <Label className="text-sm font-medium text-[#e0e0f0]">Include Emojis</Label>
-                            <p className="text-xs text-[#5a5a78]">Sprinkle relevant emojis based on the post tone.</p>
-                        </div>
-                        <CustomSwitch defaultChecked />
+                    <div className="pt-2">
+                        <SettingsRow 
+                            title="Auto-add Hashtags" 
+                            description="Automatically append relevant hashtags" 
+                            control={<CustomSwitch defaultChecked />} 
+                        />
+                        <SettingsRow 
+                            title="Smart Suggestions" 
+                            description="Show AI-powered topic ideas in your dashboard" 
+                            control={<CustomSwitch defaultChecked />} 
+                        />
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Connected Accounts */}
-             <Card className="bg-[#13131a] border-[#1e1e2a] rounded-2xl">
-                <CardHeader className="p-6 pb-4">
-                    <CardTitle className="text-base font-semibold text-[#f0f0f8]">Connected Accounts</CardTitle>
-                    <CardDescription className="text-[#8888a0]">Manage social profiles connected to LinkedLoom.</CardDescription>
+            {/* Privacy & Security */}
+            <Card className="bg-[#13131a] border-[#1e1e2a] rounded-2xl">
+                <CardHeader className="p-6 pb-2">
+                    <CardTitle className="text-base font-semibold text-[#f0f0f8]">Privacy & Security</CardTitle>
                 </CardHeader>
-                <CardContent className="p-6 pt-0 space-y-4">
-                    {/* LinkedIn */}
-                     <div className="flex items-center justify-between p-4 bg-[#0e0e16] border border-[#2a2a3a] rounded-xl group hover:border-[#3a3a4a] transition-all">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-[#0077b5]/10 rounded-lg border border-[#0077b5]/20 flex items-center justify-center">
-                                <Linkedin className="w-5 h-5 text-[#0077b5]" />
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-[#f0f0f8]">LinkedIn</p>
-                                <p className="text-xs text-[#5a5a78]">Not connected</p>
-                            </div>
+                <CardContent className="p-6 pt-0">
+                    <SettingsRow 
+                        title="Public Profile" 
+                        description="Allow others to view your LinkedLoom profile" 
+                        control={<CustomSwitch defaultChecked />} 
+                    />
+                    <SettingsRow 
+                        title="Analytics Sharing" 
+                        description="Share anonymized data to improve AI quality" 
+                        control={<CustomSwitch defaultChecked={false} />} 
+                    />
+                    <div className="flex items-center justify-between py-4">
+                        <div className="space-y-0.5">
+                            <Label className="text-sm font-medium text-[#e0e0f0]">Two-Factor Authentication</Label>
+                            <p className="text-[13px] text-[#5a5a78]">Add an extra layer of security</p>
                         </div>
-                        <Button 
-                            onClick={handleConnectLinkedIn} 
-                            disabled={isConnecting}
-                            variant="outline" 
-                            size="sm" 
-                            className="bg-[#1a1a24] border-[#2a2a3a] text-[#e0e0f0] hover:bg-[#2a2a3a] transition-colors"
-                        >
-                            {isConnecting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                            Connect
-                        </Button>
-                    </div>
-
-                    {/* Twitter */}
-                     <div className="flex items-center justify-between p-4 bg-[#0e0e16] border border-[#2a2a3a] rounded-xl group hover:border-[#3a3a4a] transition-all">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-[#1da1f2]/5 rounded-lg border border-[#1da1f2]/10 flex items-center justify-center">
-                                <Twitter className="w-5 h-5 text-[#5a5a78]" />
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1e1e2a] border border-[#2a2a3a]">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#ffb800]"></span>
+                                <span className="text-[11px] font-medium text-[#ffb800]">Disabled</span>
                             </div>
-                            <div>
-                                <p className="text-sm font-medium text-[#f0f0f8]">X (Twitter)</p>
-                                <p className="text-xs text-[#5a5a78]">Not connected</p>
-                            </div>
+                            <CustomSwitch defaultChecked={false} />
                         </div>
-                        <Button variant="outline" size="sm" className="bg-[#1a1a24] border-[#2a2a3a] text-[#e0e0f0] hover:bg-[#2a2a3a] transition-colors">
-                            Connect
-                        </Button>
-                    </div>
-
-                     {/* Substack/Newsletter */}
-                     <div className="flex items-center justify-between p-4 bg-[#0e0e16] border border-[#2a2a3a] rounded-xl group hover:border-[#3a3a4a] transition-all">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-[#ff6719]/5 rounded-lg border border-[#ff6719]/10 flex items-center justify-center">
-                                <Mail className="w-5 h-5 text-[#5a5a78]" />
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-[#f0f0f8]">Newsletter API</p>
-                                <p className="text-xs text-[#5a5a78]">Not connected</p>
-                            </div>
-                        </div>
-                        <Button variant="outline" size="sm" className="bg-[#1a1a24] border-[#2a2a3a] text-[#e0e0f0] hover:bg-[#2a2a3a] transition-colors">
-                            Configure
-                        </Button>
                     </div>
                 </CardContent>
-             </Card>
+            </Card>
         </div>
     )
 }

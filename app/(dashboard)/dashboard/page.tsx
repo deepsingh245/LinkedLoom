@@ -20,7 +20,7 @@ export default function DashboardPage() {
     const getDashboardData = async () => {
         if (!user?.uid) return;
         const data = await api.firebaseService.getAnalyticsDashboardData(user.uid);
-        setDashboardData(data ? data : { totalPosts: 0, totalLikes: 0, totalComments: 0, totalShares: 0 });
+        setDashboardData(data ? data : { totalPosts: 0, totalDrafts: 0, totalScheduled: 0, totalFailed: 0, totalLikes: 0, totalComments: 0, totalShares: 0 });
     }
 
     const getScheduledPosts = async () => {

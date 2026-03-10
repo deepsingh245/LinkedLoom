@@ -2,7 +2,10 @@
 
 export interface DashboardData {
     id?: string;
-    totalPosts: number;
+    totalPosts: number;    // Published posts
+    totalDrafts: number;
+    totalScheduled: number;
+    totalFailed: number;
     totalLikes: number;
     totalComments: number;
     totalShares: number;

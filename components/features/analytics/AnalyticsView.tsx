@@ -18,20 +18,19 @@ import { useAuth } from "@/components/auth-provider";
 import { User } from "firebase/auth";
 import { api } from "@/lib/api";
 import * as React from "react";
+import { DashboardData } from "@/lib/firebase/interfaces";
 
 export function AnalyticsView() {
-    const user = useAuth();
-    const [data, setData] = React.useState<any[]>([])
-    const [metrics, setMetrics] = React.useState({ impressions: "0", followers: "0", engagement: "0%", views: "0" })
+    const user = useAuth() as User;
+    const [dashboardData, setDashboardData] = React.useState<DashboardData | null>(null)
 
     React.useEffect(() => {
         const fetchData = async () => {
             if (!user?.uid) return;
             try {
-                const dashboardData = await api.firebaseService.getAnalyticsDashboardData(user.uid)
-                if (dashboardData) {
-                    setData(dashboardData.chartData || [])
-                    setMetrics(dashboardData.metrics || { impressions: "0", followers: "0", engagement: "0%", views: "0" })
+                const data = await api.firebaseService.getAnalyticsDashboardData(user.uid)
+                if (data) {
+                    setDashboardData(data)
                 }
             } catch (e) {
                 console.error("Failed to load analytics", e)
@@ -40,20 +39,21 @@ export function AnalyticsView() {
         fetchData()
     }, [user])
 
+    const chartData = dashboardData?.chartData || [];
+
     return (
         <div className="p-6 space-y-8 animate-fade-in pb-10">
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                <MetricCard title="Total Impressions" value={metrics?.impressions} change="+12% from last week" />
-                <MetricCard title="New Followers" value={metrics?.followers} change="+4% from last week" />
-                <MetricCard title="Engagement Rate" value={metrics?.engagement} change="-0.2% from last week" />
-                <MetricCard title="Profile Views" value={metrics?.views} change="+22% from last week" />
+                <MetricCard title="Total Published" value={String(dashboardData?.totalPosts || 0)} change="All time" isPositive={true} />
+                <MetricCard title="Scheduled Posts" value={String(dashboardData?.totalScheduled || 0)} change="Upcoming" isPositive={true} />
+                <MetricCard title="Draft Posts" value={String(dashboardData?.totalDrafts || 0)} change="In progress" isPositive={true} />
+                <MetricCard title="Failed Posts" value={String(dashboardData?.totalFailed || 0)} change="Require attention" isPositive={false} />
             </div>
 
             <Tabs defaultValue="overview" className="space-y-6">
                 <TabsList className="bg-[#1e1e2a] border border-[#2a2a35] p-1 rounded-xl">
-                    <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-[#2a2a35] data-[state=active]:text-white transition-all">Overview</TabsTrigger>
-                    <TabsTrigger value="engagement" className="rounded-lg data-[state=active]:bg-[#2a2a35] data-[state=active]:text-white transition-all">Engagement</TabsTrigger>
-                    <TabsTrigger value="demographics" className="rounded-lg data-[state=active]:bg-[#2a2a35] data-[state=active]:text-white transition-all">Demographics</TabsTrigger>
+                    <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-[#2a2a35] data-[state=active]:text-white transition-all">Publishing Overview</TabsTrigger>
+                    <TabsTrigger value="engagement" className="rounded-lg data-[state=active]:bg-[#2a2a35] data-[state=active]:text-white transition-all">Weekly Bar Chart</TabsTrigger>
                 </TabsList>
                 <TabsContent value="overview" className="space-y-6">
                     <div className="card bg-[#13131a] border-[#1e1e2a] rounded-xl overflow-hidden p-6 relative">
@@ -61,21 +61,20 @@ export function AnalyticsView() {
                         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[100px] pointer-events-none"></div>
 
                         <div className="mb-6 relative z-10">
-                            <h3 className="text-xl font-bold tracking-tight text-white mb-1">Performance Over Time</h3>
-                            <p className="text-sm text-gray-400">Views and Likes for the past 7 days.</p>
+                            <h3 className="text-xl font-bold tracking-tight text-white mb-1">Posts Published Over Time</h3>
+                            <p className="text-sm text-gray-400">Total number of published posts grouped by day of the week.</p>
                         </div>
                         <div className="h-[400px] relative z-10 w-full mt-4">
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={data}>
+                                <LineChart data={chartData}>
                                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                                     <XAxis dataKey="name" className="text-sm font-medium" />
-                                    <YAxis className="text-sm font-medium" />
+                                    <YAxis className="text-sm font-medium" allowDecimals={false} />
                                     <Tooltip
                                         contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)' }}
                                         itemStyle={{ color: 'hsl(var(--foreground))' }}
                                     />
-                                    <Line type="monotone" dataKey="views" stroke="hsl(var(--primary))" strokeWidth={2} />
-                                    <Line type="monotone" dataKey="likes" stroke="hsl(var(--chart-2))" strokeWidth={2} />
+                                    <Line type="monotone" dataKey="posts" name="Posts Published" stroke="hsl(var(--primary))" strokeWidth={2} />
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
@@ -87,19 +86,19 @@ export function AnalyticsView() {
                          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[100px] pointer-events-none"></div>
 
                         <div className="mb-6 relative z-10">
-                            <h3 className="text-xl font-bold tracking-tight text-white mb-1">Daily Engagement</h3>
+                            <h3 className="text-xl font-bold tracking-tight text-white mb-1">Daily Publishing Bar</h3>
                         </div>
                         <div className="h-[400px] relative z-10 w-full mt-4">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={data}>
+                                <BarChart data={chartData}>
                                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                                     <XAxis dataKey="name" />
-                                    <YAxis />
+                                    <YAxis allowDecimals={false} />
                                     <Tooltip
                                         cursor={{ fill: 'transparent' }}
                                         contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)' }}
                                     />
-                                    <Bar dataKey="likes" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="posts" name="Posts Published" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -110,9 +109,7 @@ export function AnalyticsView() {
     )
 }
 
-function MetricCard({ title, value, change }: { title: string, value: string, change: string }) {
-    const isPositive = change.startsWith('+');
-
+function MetricCard({ title, value, change, isPositive }: { title: string, value: string, change: string, isPositive: boolean }) {
     return (
         <div className="card p-6 bg-[#13131a] border-[#1e1e2a] rounded-xl hover:border-primary/50 transition-all duration-300 relative overflow-hidden group">
             {/* Glow Effect on Hover */}

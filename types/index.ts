@@ -1,18 +1,24 @@
 export interface Post {
-  id: number | string;
+  id: string;
   content: string;
-  status: "published" | "scheduled" | "draft";
-  views: number;
-  likes: number;
-  comments: number;
-  shares: number;
-  date: string;
+  status: "PUBLISHED" | "SCHEDULED" | "DRAFT" | "published" | "scheduled" | "draft" | string;
+  views?: number;
+  likes?: number;
+  comments?: number;
+  shares?: number;
+  date?: string;
   topic?: string;
   tone?: string;
   mediaUrls?: string[];
-  linkedinPostId?: string;
+  imageUrl?: string | null;
+  articleUrl?: string | null;
+  linkedinUrn?: string;
   versions?: any[];
-  authorId?: string;
+  user_id?: string;
+  scheduledFor?: Date | string | null;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+  publishedAt?: Date | string;
 }
 
 export interface Stats {

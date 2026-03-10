@@ -1,12 +1,15 @@
 "use client"
 
 import * as React from "react"
+import { format, set, isBefore } from "date-fns"
+import { User } from "firebase/auth"
+import { Wand2, Calendar as CalendarIcon, Save } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { PostPreview } from "./PostPreview"
+import { Card } from "@/components/ui/card"
 import {
     Select,
     SelectContent,
@@ -16,33 +19,41 @@ import {
 } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Wand2, Calendar as CalendarIcon, Save } from "lucide-react"
-import { api } from "@/lib/api"
-import { successToast, dangerToast } from "@/lib/toast"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { format } from "date-fns"
 
-import { useAuth } from "@/components/auth-provider";
-import { User } from "firebase/auth";
+import { api } from "@/lib/api"
+import { successToast, dangerToast } from "@/lib/toast"
+import { useAuth } from "@/components/auth-provider"
+import { PostPreview } from "./PostPreview"
+import { Post } from "@/types"
+
+const LINKEDIN_MAX_LENGTH = 3000;
 
 export function PostEditor() {
+    const user = useAuth() as User | null;
+
     const [content, setContent] = React.useState("")
     const [topic, setTopic] = React.useState("")
     const [tone, setTone] = React.useState("professional")
     const [length, setLength] = React.useState([50])
+    
+    const [date, setDate] = React.useState<Date | undefined>()
+    const [hour, setHour] = React.useState<string>("09")
+    const [minute, setMinute] = React.useState<string>("00")
+    
     const [generating, setGenerating] = React.useState(false)
     const [saving, setSaving] = React.useState(false)
-    const [date, setDate] = React.useState<Date>()
-
-    const user = useAuth() as User;
 
     const handleGenerate = async () => {
+        if (!topic.trim()) return dangerToast("Please enter a topic to generate content.");
+        
         setGenerating(true)
         try {
             const { getFunctions, httpsCallable } = await import("firebase/functions");
             const { app } = await import("@/lib/firebase");
             const { FirebaseFunctions } = await import("@/lib/firebase/functions");
+            
             const functions = getFunctions(app);
             const generatePost = httpsCallable(functions, FirebaseFunctions.GENERATE_POST);
             
@@ -53,34 +64,45 @@ export function PostEditor() {
             });
             
             const data = result.data as { content: string };
-            setContent(data.content);
-            successToast("Draft generated successfully!")
+            if (data.content) {
+                setContent(data.content);
+                successToast("Draft generated successfully!")
+            } else {
+                throw new Error("No content received");
+            }
         } catch (error) {
-            console.error("Generate failed", error)
+            console.error("Generate failed:", error)
             dangerToast("Failed to generate content.")
-            // Fallback content removed as we expect function to work or fail
         } finally {
             setGenerating(false)
         }
     }
 
+    const createBasePayload = (): Partial<Post> => {
+        if (!user?.uid) throw new Error("User not authenticated");
+        return {
+            content,
+            status: "draft",
+            user_id: user.uid,
+            tone: tone.toUpperCase() as any,
+            date: new Date().toISOString(),
+            mediaUrls: [],
+            linkedinUrn: "",
+            versions: []
+        };
+    }
+
     const handleSave = async () => {
-        if (!content) return dangerToast("Post content cannot be empty")
+        if (!user) return dangerToast("User not authenticated");
+        if (!content.trim()) return dangerToast("Post content cannot be empty")
+        
         setSaving(true)
         try {
-            await api.firebaseService.createPost({
-                content,
-                status: "draft",
-                authorId: user.uid,
-                tone: tone.toUpperCase() as any,
-                date: new Date().toISOString(),
-                mediaUrls: [],
-                linkedinPostId: "",
-                versions: []
-            })
+            const payload = createBasePayload() as any;
+            await api.firebaseService.createPost(payload)
             successToast("Draft saved successfully!")
         } catch (error) {
-            console.error(error)
+            console.error("Failed to save draft:", error)
             dangerToast("Failed to save draft.")
         } finally {
             setSaving(false)
@@ -88,34 +110,34 @@ export function PostEditor() {
     }
 
     const handleSchedule = async () => {
-        if (!content) return dangerToast("Post content cannot be empty")
+        if (!user) return dangerToast("User not authenticated");
+        if (!content.trim()) return dangerToast("Post content cannot be empty")
         if (!date) return dangerToast("Please select a date to schedule")
+
+        const finalDate = set(date, { hours: parseInt(hour), minutes: parseInt(minute), seconds: 0, milliseconds: 0 });
+
+        if (isBefore(finalDate, new Date())) {
+            return dangerToast("You cannot schedule a post in the past.")
+        }
 
         setSaving(true)
         try {
-            // 1. Create Post
-            const post = await api.firebaseService.createPost({
-                 content,
-                 status: "draft",
-                 authorId: user.uid,
-                 tone: tone.toUpperCase() as any,
-                 date: new Date().toISOString(),
-                 mediaUrls: [],
-                 linkedinPostId: "",
-                 versions: []
-            })
-            // 2. Schedule it
-            await api.firebaseService.schedulePost(String(post.id), date.toISOString())
+            const payload = createBasePayload() as any;
+            const post = await api.firebaseService.createPost(payload)
+            await api.firebaseService.schedulePost(String(post.id), finalDate.toISOString())
 
-            successToast(`Post scheduled for ${format(date, 'PPP')}!`)
-            setDate(undefined) // Reset date
+            successToast(`Post scheduled for ${format(finalDate, "PPP 'at' p")}!`)
+            setDate(undefined)
         } catch (error) {
-            console.error(error)
+            console.error("Failed to schedule post:", error)
             dangerToast("Failed to schedule post.")
         } finally {
             setSaving(false)
         }
     }
+
+    const isOverLimit = content.length > LINKEDIN_MAX_LENGTH;
+    const progressPercentage = Math.min(100, (content.length / LINKEDIN_MAX_LENGTH) * 100);
 
     return (
         <div className="p-4 md:p-8">
@@ -160,7 +182,10 @@ export function PostEditor() {
                         </div>
                         
                         <div className="mb-[18px]">
-                            <Label className="text-[12.5px] text-[#8888a0] mb-3 block font-medium">Post Length</Label>
+                            <Label className="text-[12.5px] text-[#8888a0] mb-3 block font-medium flex justify-between">
+                                <span>Post Length</span>
+                                <span className="text-[#63d496]">{length[0]}%</span>
+                            </Label>
                             <Slider
                                 value={length}
                                 onValueChange={setLength}
@@ -172,8 +197,8 @@ export function PostEditor() {
 
                         <Button 
                             onClick={handleGenerate} 
-                            disabled={generating}
-                            className="w-full flex items-center justify-center bg-gradient-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-[1px] hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-semibold border-none h-11 px-[20px] rounded-[10px]"
+                            disabled={generating || !topic.trim()}
+                            className="w-full flex items-center justify-center bg-gradient-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-[1px] hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-semibold border-none h-11 px-[20px] rounded-[10px] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {generating ? <Wand2 className="mr-2 h-[14px] w-[14px] animate-spin" /> : <Wand2 className="mr-2 h-[14px] w-[14px]" />}
                             {generating ? "Generating..." : "Generate with AI"}
@@ -190,17 +215,47 @@ export function PostEditor() {
                                 <PopoverTrigger asChild>
                                     <Button disabled={saving} className="w-full h-11 justify-start text-left font-normal bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[13.5px] rounded-[10px] hover:bg-[#1a1a24] hover:border-[#2a2a3a]">
                                         <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {date ? format(date, "MMM d, yyyy") : "Pick a date (Optional)"}
+                                        {date ? format(set(date, { hours: parseInt(hour), minutes: parseInt(minute) }), "MMM d, yyyy 'at' p") : "Pick a date (Optional)"}
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 bg-[#13131a] border-[#1e1e2a] text-[#e0e0f0]" align="start">
+                                <PopoverContent className="w-auto p-4 bg-[#13131a] border-[#1e1e2a] text-[#e0e0f0] flex flex-col gap-3" align="start">
                                     <Calendar
                                         mode="single"
                                         selected={date}
                                         onSelect={setDate}
                                         initialFocus
                                         className="bg-[#13131a] border-[#1e1e2a] text-[#e0e0f0]"
+                                        disabled={(d) => {
+                                            const today = new Date();
+                                            today.setHours(0, 0, 0, 0);
+                                            return d < today;
+                                        }}
                                     />
+                                    {date && (
+                                        <div className="flex items-center justify-center gap-2 mt-2 pt-2 border-t border-[#1e1e2a]">
+                                            <Select value={hour} onValueChange={setHour}>
+                                                <SelectTrigger className="w-[80px] bg-[#0e0e16] border-[#1e1e2a]">
+                                                    <SelectValue placeholder="HH" />
+                                                </SelectTrigger>
+                                                <SelectContent className="max-h-[200px] bg-[#13131a] border-[#1e1e2a] text-[#e0e0f0]">
+                                                    {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0')).map((h) => (
+                                                        <SelectItem key={h} value={h}>{h}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <span className="text-xl font-bold">:</span>
+                                            <Select value={minute} onValueChange={setMinute}>
+                                                <SelectTrigger className="w-[80px] bg-[#0e0e16] border-[#1e1e2a]">
+                                                    <SelectValue placeholder="MM" />
+                                                </SelectTrigger>
+                                                <SelectContent className="max-h-[200px] bg-[#13131a] border-[#1e1e2a] text-[#e0e0f0]">
+                                                    {Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0')).map((m) => (
+                                                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
                                 </PopoverContent>
                             </Popover>
                         </div>
@@ -228,14 +283,14 @@ export function PostEditor() {
                                 
                                 <div className="h-1 bg-[#1a1a26] rounded-full overflow-hidden mt-3 mb-1.5 transition-all">
                                     <div 
-                                        className="h-full bg-gradient-to-r from-[#63d496] to-[#3db87a] transition-all" 
-                                        style={{width:`${Math.min(100,(content.length/3000)*100)}%`}}
+                                        className={`h-full transition-all ${isOverLimit ? 'bg-[#f06464]' : 'bg-gradient-to-r from-[#63d496] to-[#3db87a]'}`} 
+                                        style={{width: `${progressPercentage}%`}}
                                     />
                                 </div>
                                 <div className="flex justify-between items-center text-[11px]">
-                                    <span className="text-[#5a5a78]">{content.length}/3000 chars</span>
-                                    <span className={content.length > 3000 ? "text-[#f06464]" : "text-[#5a5a78]"}>
-                                        {content.length > 3000 ? `${content.length - 3000} over limit` : `${3000 - content.length} remaining`}
+                                    <span className="text-[#5a5a78]">{content.length}/{LINKEDIN_MAX_LENGTH} chars</span>
+                                    <span className={isOverLimit ? "text-[#f06464]" : "text-[#5a5a78]"}>
+                                        {isOverLimit ? `${content.length - LINKEDIN_MAX_LENGTH} over limit` : `${LINKEDIN_MAX_LENGTH - content.length} remaining`}
                                     </span>
                                 </div>
                             </div>
@@ -247,7 +302,7 @@ export function PostEditor() {
                                 </div>
                                 <div className="flex-1 bg-[#0e0e16] rounded-[10px] border border-[#1e1e2a] flex justify-center p-4 min-h-[460px]">
                                     <div className="w-full h-full overflow-y-auto pr-1">
-                                        <PostPreview content={content} user={user} />
+                                        {user && <PostPreview content={content} user={user as any} />}
                                     </div>
                                 </div>
                             </div>
@@ -257,16 +312,16 @@ export function PostEditor() {
 
                     <div className="flex gap-2.5 justify-end mt-1">
                         <Button 
-                            className="bg-[#13131a] border border-[#2a2a3a] text-[#cccccc] hover:bg-[#1a1a24] hover:border-[#3a3a4a] transition-all font-sans font-medium h-10 px-4 rounded-lg" 
+                            className="bg-[#13131a] border border-[#2a2a3a] text-[#cccccc] hover:bg-[#1a1a24] hover:border-[#3a3a4a] transition-all font-sans font-medium h-10 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed" 
                             onClick={handleSave} 
-                            disabled={saving}
+                            disabled={saving || !content.trim()}
                         >
                             Save Draft
                         </Button>
                         <Button 
-                            className="bg-gradient-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-[1px] hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-semibold border-none h-10 px-[20px] rounded-lg" 
+                            className="bg-gradient-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-[1px] hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-semibold border-none h-10 px-[20px] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed" 
                             onClick={handleSchedule} 
-                            disabled={saving || !date}
+                            disabled={saving || !content.trim() || !date}
                         >
                             <Save className="mr-2 h-[14px] w-[14px]" /> Schedule Post
                         </Button>
@@ -282,7 +337,7 @@ export function PostEditor() {
                         <TabsTrigger value="hide" className="rounded-lg data-[state=active]:bg-[#2a2a35] data-[state=active]:text-white transition-all">Hide Preview</TabsTrigger>
                     </TabsList>
                     <TabsContent value="preview" className="mt-2 bg-[#0e0e16] rounded-[10px] border border-[#1e1e2a] p-4">
-                        <PostPreview content={content} user={user} />
+                        {user && <PostPreview content={content} user={user as any} />}
                     </TabsContent>
                 </Tabs>
             </div>

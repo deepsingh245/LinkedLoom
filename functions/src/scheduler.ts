@@ -1,6 +1,6 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import * as admin from "firebase-admin";
-import { publishToLinkedIn } from "./linkedin";
+import { publishToLinkedInInternal } from "./linkedin";
 
 export const checkScheduledPosts = onSchedule("every 10 minutes", async (event) => {
   const now = admin.firestore.Timestamp.now();
@@ -49,7 +49,7 @@ async function publishPost(userId: string, post: any) {
   if (linkedinDoc.exists) {
     const linkedinConnection = linkedinDoc.data();
     try {
-      const result = await publishToLinkedIn(linkedinConnection, post.content);
+      const result = await publishToLinkedInInternal(linkedinConnection, post.content);
       // Update post with LinkedIn URN if successful
       if (result && result.id) {
           console.log("LinkedIn Publish Success:", result.id);
