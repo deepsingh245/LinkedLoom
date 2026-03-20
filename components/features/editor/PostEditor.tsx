@@ -3,7 +3,7 @@
 import * as React from "react"
 import { format, set, isBefore } from "date-fns"
 import { User } from "firebase/auth"
-import { Wand2, Calendar as CalendarIcon, Save } from "lucide-react"
+import { Wand2, Calendar as CalendarIcon, Save, Image as ImageIcon, Sparkles, X, RefreshCw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -27,6 +27,9 @@ import { successToast, dangerToast } from "@/lib/toast"
 import { useAuth } from "@/components/auth-provider"
 import { PostPreview } from "./PostPreview"
 import { Post } from "@/types"
+import { httpsCallable } from "firebase/functions"
+import { functions } from "@/lib/firebase"
+import { FirebaseFunctions } from "@/lib/firebase/functions"
 
 const LINKEDIN_MAX_LENGTH = 3000;
 
@@ -43,18 +46,18 @@ export function PostEditor() {
     const [minute, setMinute] = React.useState<string>("00")
     
     const [generating, setGenerating] = React.useState(false)
+    const [generatingImage, setGeneratingImage] = React.useState(false)
     const [saving, setSaving] = React.useState(false)
+
+    const [imagePrompt, setImagePrompt] = React.useState("")
+    const [imageUrl, setImageUrl] = React.useState<string | null>(null)
+    const [showImageOptions, setShowImageOptions] = React.useState(false)
 
     const handleGenerate = async () => {
         if (!topic.trim()) return dangerToast("Please enter a topic to generate content.");
         
         setGenerating(true)
         try {
-            const { getFunctions, httpsCallable } = await import("firebase/functions");
-            const { app } = await import("@/lib/firebase");
-            const { FirebaseFunctions } = await import("@/lib/firebase/functions");
-            
-            const functions = getFunctions(app);
             const generatePost = httpsCallable(functions, FirebaseFunctions.GENERATE_POST);
             
             const result = await generatePost({ 
@@ -78,6 +81,37 @@ export function PostEditor() {
         }
     }
 
+    const handleGenerateImage = async () => {
+        // Use imagePrompt if provided, otherwise fallback to the post content or topic
+        const prompt = imagePrompt.trim() || content.trim() || topic.trim();
+        if (!prompt) return dangerToast("Please enter an image prompt, generate post content, or provide a topic.");
+        
+        setGeneratingImage(true)
+        try {
+            const generateImage = httpsCallable(functions, FirebaseFunctions.GENERATE_IMAGE);
+            
+            // If prompt is from content, truncate it to keep it efficient for the AI
+            const finalPrompt = prompt.length > 500 ? prompt.substring(0, 500) + "..." : prompt;
+
+            const result = await generateImage({ 
+                prompt: finalPrompt
+            });
+            
+            const data = result.data as { imageUrl: string };
+            if (data.imageUrl) {
+                setImageUrl(data.imageUrl);
+                successToast("Image generated successfully!")
+            } else {
+                throw new Error("No image URL received");
+            }
+        } catch (error) {
+            console.error("Image generation failed:", error)
+            dangerToast("Failed to generate image.")
+        } finally {
+            setGeneratingImage(false)
+        }
+    }
+
     const createBasePayload = (): Partial<Post> => {
         if (!user?.uid) throw new Error("User not authenticated");
         return {
@@ -86,7 +120,8 @@ export function PostEditor() {
             user_id: user.uid,
             tone: tone.toUpperCase() as any,
             date: new Date().toISOString(),
-            mediaUrls: [],
+            mediaUrls: imageUrl ? [imageUrl] : [],
+            imageUrl: imageUrl || null,
             linkedinUrn: "",
             versions: []
         };
@@ -200,10 +235,82 @@ export function PostEditor() {
                             disabled={generating || !topic.trim()}
                             className="w-full flex items-center justify-center bg-gradient-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-[1px] hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-semibold border-none h-11 px-[20px] rounded-[10px] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {generating ? <Wand2 className="mr-2 h-[14px] w-[14px] animate-spin" /> : <Wand2 className="mr-2 h-[14px] w-[14px]" />}
-                            {generating ? "Generating..." : "Generate with AI"}
+                            {generating ? <RefreshCw className="mr-2 h-[14px] w-[14px] animate-spin" /> : <Wand2 className="mr-2 h-[14px] w-[14px]" />}
+                            {generating ? "Generating..." : "Generate Post"}
                         </Button>
+
+                        <div className="mt-5 pt-4 border-t border-[#1e1e2a] flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <ImageIcon className={`h-4 w-4 ${showImageOptions ? 'text-[#63d496]' : 'text-[#5a5a78]'}`} />
+                                <span className={`text-[12.5px] font-medium transition-colors ${showImageOptions ? 'text-[#e0e0f0]' : 'text-[#5a5a78]'}`}>
+                                    Add AI Image
+                                </span>
+                            </div>
+                            <button 
+                                onClick={() => setShowImageOptions(!showImageOptions)}
+                                className={`relative w-10 min-w-10 h-[22px] rounded-full transition-all duration-300 ${showImageOptions ? 'bg-[#63d496]' : 'bg-[#1e1e2a] border border-[#2a2a3a]'}`}
+                            >
+                                <div className={`absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-all duration-300 shadow-sm ${showImageOptions ? 'translate-x-[18px]' : 'translate-x-0'}`} />
+                            </button>
+                        </div>
                     </Card>
+
+                    {showImageOptions && (
+                        <Card className="animate-in fade-in slide-in-from-top-2 duration-300 p-5 rounded-[16px] border border-[#1e1e2a] bg-[#13131a] shadow-sm transition-all hover:border-[#2a2a3a]">
+                            <h3 className="text-[13px] font-semibold text-[#7070a0] uppercase tracking-[0.8px] mb-4 flex items-center gap-2">
+                                <Sparkles className="h-3.5 w-3.5 text-[#63d496]" />
+                                Visual Asset
+                            </h3>
+                            
+                            <div className="mb-3.5">
+                                <Label className="text-[12.5px] text-[#8888a0] mb-1.5 block font-medium">Image Prompt (Optional)</Label>
+                                <Input
+                                    value={imagePrompt}
+                                    onChange={(e) => setImagePrompt(e.target.value)}
+                                    placeholder="Describe the image you want..."
+                                    className="w-full h-11 bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[13.5px] rounded-[10px] px-3.5 py-2.5 transition-all focus:border-[#63d496] focus:shadow-[0_0_0_1px_rgba(99,212,150,0.5)] outline-none placeholder:text-[#4a4a68]"
+                                />
+                                {!imagePrompt.trim() && (content.trim() || topic.trim()) && (
+                                    <p className="text-[11px] text-[#5a5a78] mt-1.5">Using post content as context for generation.</p>
+                                )}
+                            </div>
+
+                            {imageUrl ? (
+                                <div className="relative group mb-4 rounded-xl overflow-hidden border border-[#1e1e2a] aspect-video">
+                                    <img src={imageUrl} alt="Generated asset" className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                        <Button 
+                                            onClick={handleGenerateImage}
+                                            disabled={generatingImage}
+                                            variant="secondary"
+                                            size="sm"
+                                            className="bg-white/10 hover:bg-white/20 text-white border-none rounded-lg h-8"
+                                        >
+                                            <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${generatingImage ? 'animate-spin' : ''}`} />
+                                            {generatingImage ? "Generating..." : "Regenerate"}
+                                        </Button>
+                                        <Button 
+                                            onClick={() => setImageUrl(null)}
+                                            variant="destructive"
+                                            size="icon"
+                                            className="h-8 w-8 rounded-lg"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <Button 
+                                    onClick={handleGenerateImage} 
+                                    disabled={generatingImage || (!topic.trim() && !content.trim() && !imagePrompt.trim())}
+                                    className="w-full flex items-center justify-center bg-[#1a1a24] border border-[#2a2a3a] text-[#e0e0f0] hover:bg-[#20202c] hover:border-[#63d496]/40 transition-all font-sans font-medium h-11 px-[20px] rounded-[10px] disabled:opacity-50"
+                                >
+                                    {generatingImage ? <RefreshCw className="mr-2 h-[14px] w-[14px] animate-spin" /> : <ImageIcon className="mr-2 h-[14px] w-[14px] text-[#63d496]" />}
+                                    {generatingImage ? "Generating Image..." : "Generate Image"}
+                                </Button>
+                            )}
+                        </Card>
+                    )}
 
                     <Card className="animate-fadeUp animation-delay-200 p-5 rounded-[16px] border border-[#1e1e2a] bg-[#13131a] shadow-sm transition-all hover:border-[#2a2a3a]">
                         <h3 className="text-[13px] font-semibold text-[#7070a0] uppercase tracking-[0.8px] mb-3.5">
@@ -302,7 +409,7 @@ export function PostEditor() {
                                 </div>
                                 <div className="flex-1 bg-[#0e0e16] rounded-[10px] border border-[#1e1e2a] flex justify-center p-4 min-h-[460px]">
                                     <div className="w-full h-full overflow-y-auto pr-1">
-                                        {user && <PostPreview content={content} user={user as any} />}
+                                        {user && <PostPreview content={content} image={imageUrl || undefined} user={user as any} />}
                                     </div>
                                 </div>
                             </div>
@@ -337,7 +444,7 @@ export function PostEditor() {
                         <TabsTrigger value="hide" className="rounded-lg data-[state=active]:bg-[#2a2a35] data-[state=active]:text-white transition-all">Hide Preview</TabsTrigger>
                     </TabsList>
                     <TabsContent value="preview" className="mt-2 bg-[#0e0e16] rounded-[10px] border border-[#1e1e2a] p-4">
-                        {user && <PostPreview content={content} user={user as any} />}
+                        {user && <PostPreview content={content} image={imageUrl || undefined} user={user as any} />}
                     </TabsContent>
                 </Tabs>
             </div>

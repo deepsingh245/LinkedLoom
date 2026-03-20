@@ -3,7 +3,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore, collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, DocumentData, QueryFieldFilterConstraint, QuerySnapshot } from "firebase/firestore";
-import { getFunctions } from "firebase/functions";
+import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 import { getStorage } from "firebase/storage";
 
 // TODO: Replace the following with your app's Firebase project configuration
@@ -23,6 +23,12 @@ export const auth = getAuth(app);
 // Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
 export const functions = getFunctions(app);
+
+// Use Firebase Cloud Functions emulator if connecting to local backend
+if (process.env.NEXT_PUBLIC_API_URL?.includes("127.0.0.1") || process.env.NEXT_PUBLIC_API_URL?.includes("localhost")) {
+  connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+}
+
 export const storage = getStorage(app);
 
 
