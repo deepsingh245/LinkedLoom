@@ -49,7 +49,7 @@ async function publishPost(userId: string, post: any) {
   if (linkedinDoc.exists) {
     const linkedinConnection = linkedinDoc.data();
     try {
-      const result = await publishToLinkedInInternal(linkedinConnection, post.content);
+      const result = await publishToLinkedInInternal(linkedinConnection, post.content, undefined, post.imageUrl);
       // Update post with LinkedIn URN if successful
       if (result && result.id) {
           console.log("LinkedIn Publish Success:", result.id);

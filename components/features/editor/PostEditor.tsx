@@ -3,7 +3,7 @@
 import * as React from "react"
 import { format, set, isBefore } from "date-fns"
 import { User } from "firebase/auth"
-import { Wand2, Calendar as CalendarIcon, Save, Image as ImageIcon, Sparkles, X, RefreshCw } from "lucide-react"
+import { Wand2, Calendar as CalendarIcon, Save, Image as ImageIcon, Sparkles, X, RefreshCw, Upload } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,8 +30,22 @@ import { Post } from "@/types"
 import { httpsCallable } from "firebase/functions"
 import { functions } from "@/lib/firebase"
 import { FirebaseFunctions } from "@/lib/firebase/functions"
+import { uploadPostAttachment } from "@/lib/firebase/storage"
 
 const LINKEDIN_MAX_LENGTH = 3000;
+
+/** Convert a base64 data URI to a Blob for uploading to Storage */
+function base64ToBlob(dataUri: string): Blob {
+    const [meta, base64] = dataUri.split(",");
+    const mime = meta.match(/:(.*?);/)?.[1] || "image/png";
+    const byteString = atob(base64);
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ab], { type: mime });
+}
 
 export function PostEditor() {
     const user = useAuth() as User | null;
@@ -47,11 +61,35 @@ export function PostEditor() {
     
     const [generating, setGenerating] = React.useState(false)
     const [generatingImage, setGeneratingImage] = React.useState(false)
+    const [enhancingPrompt, setEnhancingPrompt] = React.useState(false)
     const [saving, setSaving] = React.useState(false)
 
     const [imagePrompt, setImagePrompt] = React.useState("")
     const [imageUrl, setImageUrl] = React.useState<string | null>(null)
     const [showImageOptions, setShowImageOptions] = React.useState(false)
+    const [editingPostId, setEditingPostId] = React.useState<string | null>(null)
+    const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+    // Load draft from localStorage when navigating from Edit button
+    React.useEffect(() => {
+        try {
+            const saved = localStorage.getItem("draft_post");
+            if (saved) {
+                const draft = JSON.parse(saved);
+                if (draft.content) setContent(draft.content);
+                if (draft.tone) setTone(draft.tone.toLowerCase());
+                if (draft.topic) setTopic(draft.topic);
+                if (draft.imageUrl) {
+                    setImageUrl(draft.imageUrl);
+                    setShowImageOptions(true);
+                }
+                if (draft.id) setEditingPostId(draft.id);
+                localStorage.removeItem("draft_post");
+            }
+        } catch (e) {
+            console.error("Failed to load draft:", e);
+        }
+    }, []);
 
     const handleGenerate = async () => {
         if (!topic.trim()) return dangerToast("Please enter a topic to generate content.");
@@ -112,6 +150,52 @@ export function PostEditor() {
         }
     }
 
+    const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !user?.uid) return;
+
+        if (!file.type.startsWith("image/")) {
+            return dangerToast("Please select an image file.");
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            return dangerToast("Image must be under 5MB.");
+        }
+
+        setGeneratingImage(true);
+        try {
+            const url = await uploadPostAttachment(user.uid, file);
+            setImageUrl(url);
+            successToast("Image uploaded successfully!");
+        } catch (error) {
+            console.error("Upload failed:", error);
+            dangerToast("Failed to upload image.");
+        } finally {
+            setGeneratingImage(false);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    }
+
+    const handleEnhancePrompt = async () => {
+        const prompt = imagePrompt.trim() || content.trim() || topic.trim();
+        if (!prompt) return dangerToast("Enter a prompt to enhance.");
+
+        setEnhancingPrompt(true);
+        try {
+            const enhance = httpsCallable(functions, FirebaseFunctions.ENHANCE_IMAGE_PROMPT);
+            const result = await enhance({ prompt });
+            const data = result.data as { enhancedPrompt: string };
+            if (data.enhancedPrompt) {
+                setImagePrompt(data.enhancedPrompt);
+                successToast("Prompt enhanced!");
+            }
+        } catch (error) {
+            console.error("Enhance prompt failed:", error);
+            dangerToast("Failed to enhance prompt.");
+        } finally {
+            setEnhancingPrompt(false);
+        }
+    }
+
     const createBasePayload = (): Partial<Post> => {
         if (!user?.uid) throw new Error("User not authenticated");
         return {
@@ -127,15 +211,34 @@ export function PostEditor() {
         };
     }
 
+    /** Upload base64 image to Storage, return the download URL (or null) */
+    const uploadImageIfNeeded = async (): Promise<string | null> => {
+        if (!imageUrl || !user?.uid) return null;
+        if (!imageUrl.startsWith("data:image")) return imageUrl; // already a URL
+
+        const blob = base64ToBlob(imageUrl);
+        const file = new File([blob], `ai-generated-${Date.now()}.png`, { type: "image/png" });
+        return await uploadPostAttachment(user.uid, file);
+    }
+
     const handleSave = async () => {
         if (!user) return dangerToast("User not authenticated");
         if (!content.trim()) return dangerToast("Post content cannot be empty")
         
         setSaving(true)
         try {
+            const storageUrl = await uploadImageIfNeeded();
             const payload = createBasePayload() as any;
-            await api.firebaseService.createPost(payload)
-            successToast("Draft saved successfully!")
+            payload.imageUrl = storageUrl;
+            payload.mediaUrls = storageUrl ? [storageUrl] : [];
+
+            if (editingPostId) {
+                await api.firebaseService.updatePost(editingPostId, payload);
+                successToast("Post updated successfully!");
+            } else {
+                await api.firebaseService.createPost(payload);
+                successToast("Draft saved successfully!");
+            }
         } catch (error) {
             console.error("Failed to save draft:", error)
             dangerToast("Failed to save draft.")
@@ -157,7 +260,10 @@ export function PostEditor() {
 
         setSaving(true)
         try {
+            const storageUrl = await uploadImageIfNeeded();
             const payload = createBasePayload() as any;
+            payload.imageUrl = storageUrl;
+            payload.mediaUrls = storageUrl ? [storageUrl] : [];
             const post = await api.firebaseService.createPost(payload)
             await api.firebaseService.schedulePost(String(post.id), finalDate.toISOString())
 
@@ -264,12 +370,23 @@ export function PostEditor() {
                             
                             <div className="mb-3.5">
                                 <Label className="text-[12.5px] text-[#8888a0] mb-1.5 block font-medium">Image Prompt (Optional)</Label>
-                                <Input
-                                    value={imagePrompt}
-                                    onChange={(e) => setImagePrompt(e.target.value)}
-                                    placeholder="Describe the image you want..."
-                                    className="w-full h-11 bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[13.5px] rounded-[10px] px-3.5 py-2.5 transition-all focus:border-[#63d496] focus:shadow-[0_0_0_1px_rgba(99,212,150,0.5)] outline-none placeholder:text-[#4a4a68]"
-                                />
+                                <div className="flex gap-2">
+                                    <Input
+                                        value={imagePrompt}
+                                        onChange={(e) => setImagePrompt(e.target.value)}
+                                        placeholder="Describe the image you want..."
+                                        className="flex-1 h-11 bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[13.5px] rounded-[10px] px-3.5 py-2.5 transition-all focus:border-[#63d496] focus:shadow-[0_0_0_1px_rgba(99,212,150,0.5)] outline-none placeholder:text-[#4a4a68]"
+                                    />
+                                    <Button
+                                        onClick={handleEnhancePrompt}
+                                        disabled={enhancingPrompt || (!imagePrompt.trim() && !content.trim() && !topic.trim())}
+                                        variant="outline"
+                                        className="h-11 px-3 bg-[#0e0e16] border-[#1e1e2a] hover:border-[#63d496]/40 hover:bg-[#1a1a24] text-[#8888a0] hover:text-[#63d496] rounded-[10px] transition-all disabled:opacity-50"
+                                        title="Enhance prompt with AI"
+                                    >
+                                        {enhancingPrompt ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                                    </Button>
+                                </div>
                                 {!imagePrompt.trim() && (content.trim() || topic.trim()) && (
                                     <p className="text-[11px] text-[#5a5a78] mt-1.5">Using post content as context for generation.</p>
                                 )}
@@ -300,14 +417,32 @@ export function PostEditor() {
                                     </div>
                                 </div>
                             ) : (
-                                <Button 
-                                    onClick={handleGenerateImage} 
-                                    disabled={generatingImage || (!topic.trim() && !content.trim() && !imagePrompt.trim())}
-                                    className="w-full flex items-center justify-center bg-[#1a1a24] border border-[#2a2a3a] text-[#e0e0f0] hover:bg-[#20202c] hover:border-[#63d496]/40 transition-all font-sans font-medium h-11 px-[20px] rounded-[10px] disabled:opacity-50"
-                                >
-                                    {generatingImage ? <RefreshCw className="mr-2 h-[14px] w-[14px] animate-spin" /> : <ImageIcon className="mr-2 h-[14px] w-[14px] text-[#63d496]" />}
-                                    {generatingImage ? "Generating Image..." : "Generate Image"}
-                                </Button>
+                                <div className="flex gap-2">
+                                    <Button 
+                                        onClick={handleGenerateImage} 
+                                        disabled={generatingImage || (!topic.trim() && !content.trim() && !imagePrompt.trim())}
+                                        className="flex-1 flex items-center justify-center bg-[#1a1a24] border border-[#2a2a3a] text-[#e0e0f0] hover:bg-[#20202c] hover:border-[#63d496]/40 transition-all font-sans font-medium h-11 px-[20px] rounded-[10px] disabled:opacity-50"
+                                    >
+                                        {generatingImage ? <RefreshCw className="mr-2 h-[14px] w-[14px] animate-spin" /> : <ImageIcon className="mr-2 h-[14px] w-[14px] text-[#63d496]" />}
+                                        {generatingImage ? "Generating..." : "Generate Image"}
+                                    </Button>
+                                    <Button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={generatingImage}
+                                        variant="outline"
+                                        className="h-11 px-4 bg-[#1a1a24] border-[#2a2a3a] hover:border-[#63d496]/40 hover:bg-[#20202c] text-[#e0e0f0] font-medium rounded-[10px] transition-all disabled:opacity-50"
+                                    >
+                                        <Upload className="mr-2 h-[14px] w-[14px] text-[#63d496]" />
+                                        Upload
+                                    </Button>
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleMediaUpload}
+                                        className="hidden"
+                                    />
+                                </div>
                             )}
                         </Card>
                     )}
@@ -325,13 +460,13 @@ export function PostEditor() {
                                         {date ? format(set(date, { hours: parseInt(hour), minutes: parseInt(minute) }), "MMM d, yyyy 'at' p") : "Pick a date (Optional)"}
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-4 bg-[#13131a] border-[#1e1e2a] text-[#e0e0f0] flex flex-col gap-3" align="start">
+                                <PopoverContent className="w-70 p-3 bg-[#13131a] border-[#1e1e2a] text-[#e0e0f0] flex flex-col gap-3" align="start">
                                     <Calendar
                                         mode="single"
                                         selected={date}
                                         onSelect={setDate}
                                         initialFocus
-                                        className="bg-[#13131a] border-[#1e1e2a] text-[#e0e0f0]"
+                                        className="bg-[#13131a] border-[#1e1e2a] text-[#e0e0f0] w-full"
                                         disabled={(d) => {
                                             const today = new Date();
                                             today.setHours(0, 0, 0, 0);
@@ -423,7 +558,7 @@ export function PostEditor() {
                             onClick={handleSave} 
                             disabled={saving || !content.trim()}
                         >
-                            Save Draft
+                            {editingPostId ? "Update Post" : "Save Draft"}
                         </Button>
                         <Button 
                             className="bg-gradient-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-[1px] hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-semibold border-none h-10 px-[20px] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed" 

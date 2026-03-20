@@ -99,6 +99,39 @@ export const generateImage = onCall(
     }
 );
 
+export const enhanceImagePrompt = onCall(
+    async (request) => {
+        if (!request.auth) {
+            throw new HttpsError("unauthenticated", "User must be logged in.");
+        }
+
+        const { prompt } = request.data;
+        if (!prompt || typeof prompt !== "string") {
+            throw new HttpsError("invalid-argument", "Prompt is required.");
+        }
+
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+            throw new HttpsError("failed-precondition", "GEMINI_API_KEY is not configured.");
+        }
+
+        try {
+            const genAI = new GoogleGenerativeAI(apiKey);
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+
+            const result = await model.generateContent(
+                `You are an expert AI image prompt engineer. Rewrite the following image prompt to be more detailed, vivid, and optimized for AI image generation. Add specific details about style, lighting, composition, colors, and mood. Keep it under 200 words. Do NOT use any markdown formatting. Return ONLY the enhanced prompt text, nothing else.\n\nOriginal prompt: "${prompt}"`
+            );
+
+            const enhanced = result.response.text().trim();
+            return { enhancedPrompt: enhanced };
+        } catch (error: any) {
+            console.error("Enhance Prompt Error:", error);
+            throw new HttpsError("internal", "Failed to enhance prompt.");
+        }
+    }
+);
+
 export const generatePost = onCall(
     async (request) => {
         if (!request.auth) {

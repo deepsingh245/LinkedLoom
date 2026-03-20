@@ -17,7 +17,7 @@ import { Post } from "@/types";
 import { format } from "date-fns";
 import { Calendar, Edit, MoreVertical, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { EditPostDialog } from "./EditPostDialog";
+import { useRouter } from "next/navigation";
 import { SchedulePostDialog } from "./SchedulePostDialog";
 import { SharedAlertDialog } from "@/components/shared/SharedAlertDialog";
 import { api } from "@/lib/api";
@@ -30,9 +30,14 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, onUpdate }: PostCardProps) {
-    const [showEdit, setShowEdit] = useState(false);
     const [showSchedule, setShowSchedule] = useState(false);
     const [showDelete, setShowDelete] = useState(false);
+    const router = useRouter();
+
+    const handleEdit = () => {
+        localStorage.setItem("draft_post", JSON.stringify(post));
+        router.push("/create");
+    };
 
     const handleDelete = async () => {
         try {
@@ -69,7 +74,7 @@ export function PostCard({ post, onUpdate }: PostCardProps) {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setShowEdit(true)}>
+                            <DropdownMenuItem onClick={handleEdit}>
                                 <Edit className="mr-2 h-4 w-4" />
                                 Edit
                             </DropdownMenuItem>
@@ -87,6 +92,13 @@ export function PostCard({ post, onUpdate }: PostCardProps) {
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
+                {post.imageUrl && (
+                    <div className="px-4 pt-3">
+                        <div className="rounded-lg overflow-hidden border border-[#1e1e2a] aspect-video">
+                            <img src={post.imageUrl} alt="Post image" className="w-full h-full object-cover" />
+                        </div>
+                    </div>
+                )}
                 <div className="flex-1 p-4">
                     <p className="line-clamp-4 text-sm text-gray-400 whitespace-pre-wrap">
                         {post.content || "No content..."}
@@ -106,13 +118,6 @@ export function PostCard({ post, onUpdate }: PostCardProps) {
                     )}
                 </div>
             </div>
-
-            <EditPostDialog
-                post={post}
-                open={showEdit}
-                onOpenChange={setShowEdit}
-                onPostUpdated={onUpdate}
-            />
 
             <SchedulePostDialog
                 post={post}
