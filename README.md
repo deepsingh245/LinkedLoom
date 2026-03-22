@@ -15,6 +15,9 @@ LinkedLoom is a modern SaaS application designed to help founders and creators s
 ## 🛠️ Tech Stack
 
 -   **Framework**: [Next.js 14](https://nextjs.org/) (App Router)
+-   **Backend**: [Firebase Cloud Functions](https://firebase.google.com/docs/functions) (2nd Gen)
+-   **Database**: [Firebase Firestore](https://firebase.google.com/docs/firestore)
+-   **Authentication**: [Firebase Auth](https://firebase.google.com/docs/auth)
 -   **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 -   **Components**: [shadcn/ui](https://ui.shadcn.com/) (Radix UI)
 -   **Icons**: [Lucide React](https://lucide.dev/)
@@ -33,16 +36,20 @@ Follow these steps to run the project locally:
 2.  **Install dependencies**
     ```bash
     npm install
-    # or
-    yarn install
     ```
 
-3.  **Run the development server**
+3.  **Firebase Setup**
+    - Create a Firebase project at [https://console.firebase.google.com/](https://console.firebase.google.com/).
+    - Enable **Authentication**, **Firestore**, and **Functions**.
+    - **Important**: Upgrade project to **Blaze (Pay-as-you-go)** plan to use Cloud Functions and external APIs (Gemini).
+    - Copy your Firebase config keys to `.env.local` (see `.env.example`).
+
+4.  **Run the development server**
     ```bash
     npm run dev
     ```
 
-4.  **Open your browser**
+5.  **Open your browser**
     Navigate to [http://localhost:3000](http://localhost:3000) to see the application.
 
 ## 📂 Project Structure

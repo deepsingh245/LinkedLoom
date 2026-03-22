@@ -37,7 +37,7 @@ export function EditPostDialog({
     const handleSave = async () => {
         try {
             setLoading(true);
-            await api.put(`/posts/${post.id}`, { content });
+            await api.firebaseService.updatePost(post.id, { content });
             toast.success("Post updated successfully");
             onPostUpdated();
             onOpenChange(false);

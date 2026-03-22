@@ -17,7 +17,7 @@ import { Post } from "@/types";
 import { format } from "date-fns";
 import { Calendar, Edit, MoreVertical, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { EditPostDialog } from "./EditPostDialog";
+import { useRouter } from "next/navigation";
 import { SchedulePostDialog } from "./SchedulePostDialog";
 import { SharedAlertDialog } from "@/components/shared/SharedAlertDialog";
 import { api } from "@/lib/api";
@@ -30,13 +30,18 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, onUpdate }: PostCardProps) {
-    const [showEdit, setShowEdit] = useState(false);
     const [showSchedule, setShowSchedule] = useState(false);
     const [showDelete, setShowDelete] = useState(false);
+    const router = useRouter();
+
+    const handleEdit = () => {
+        localStorage.setItem("draft_post", JSON.stringify(post));
+        router.push("/create");
+    };
 
     const handleDelete = async () => {
         try {
-            await api.delete(`/posts/${post.id}`);
+            await api.firebaseService.deletePost(String(post.id));
             toast.success("Post deleted");
             onUpdate();
         } catch (error) {
@@ -44,24 +49,32 @@ export function PostCard({ post, onUpdate }: PostCardProps) {
         }
     };
 
+    const getBadgeVariant = (status: string): "default" | "outline" | "published" | "scheduled" | "draft" => {
+        const lower = status.toLowerCase();
+        if (lower === 'published') return 'published';
+        if (lower === 'scheduled') return 'scheduled';
+        if (lower === 'draft') return 'draft';
+        return 'outline';
+    };
+
     return (
         <>
-            <Card className="flex flex-col h-full">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div className="card hover-effect flex flex-col h-full bg-[#13131a] border-[#1e1e2a] rounded-xl overflow-hidden group">
+                <div className="flex flex-row items-center justify-between p-4 pb-2 border-b border-[#1e1e2a]/50">
                     <div className="flex gap-2">
-                        <Badge variant={post.status === 'PUBLISHED' ? 'default' : post.status === 'SCHEDULED' ? 'secondary' : 'outline'}>
+                        <Badge variant={getBadgeVariant(post.status)}>
                             {post.status}
                         </Badge>
                     </div>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
+                            <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-white">
                                 <span className="sr-only">Open menu</span>
                                 <MoreVertical className="h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setShowEdit(true)}>
+                            <DropdownMenuItem onClick={handleEdit}>
                                 <Edit className="mr-2 h-4 w-4" />
                                 Edit
                             </DropdownMenuItem>
@@ -78,30 +91,33 @@ export function PostCard({ post, onUpdate }: PostCardProps) {
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
-                </CardHeader>
-                <CardContent className="flex-1 pt-4">
-                    <p className="line-clamp-4 text-sm text-muted-foreground whitespace-pre-wrap">
+                </div>
+                {post.imageUrl && (
+                    <div className="px-4 pt-3">
+                        <div className="rounded-lg overflow-hidden border border-[#1e1e2a] aspect-video">
+                            <img src={post.imageUrl} alt="Post image" className="w-full h-full object-cover" />
+                        </div>
+                    </div>
+                )}
+                <div className="flex-1 p-4">
+                    <p className="line-clamp-4 text-sm text-gray-400 whitespace-pre-wrap">
                         {post.content || "No content..."}
                     </p>
-                </CardContent>
-                <CardFooter className="text-xs text-muted-foreground pt-4 border-t">
-                    {post.scheduledFor ? (
-                        <div className="flex items-center">
-                            <Calendar className="mr-1 h-3 w-3" />
-                            {format(new Date(post.scheduledFor), "PPP")}
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground p-4 border-t border-[#1e1e2a]/50 bg-[#0e0e16]/50 mt-auto">
+                    {post.status.toLowerCase() === 'scheduled' ? (
+                        <div className="flex items-center text-primary">
+                            <Calendar className="mr-1.5 h-3.5 w-3.5" />
+                            {post.date ? format(new Date(post.date), "MMM d, yyyy \u2022 h:mm a") : 'Date not set'}
                         </div>
                     ) : (
-                        <span>Last updated: {new Date(post.updatedAt).toLocaleDateString()}</span>
+                        <div className="flex items-center">
+                            <Calendar className="mr-1.5 h-3.5 w-3.5 opacity-70" />
+                            <span>{post.date ? new Date(post.date).toLocaleDateString() : 'Date not set'}</span>
+                        </div>
                     )}
-                </CardFooter>
-            </Card>
-
-            <EditPostDialog
-                post={post}
-                open={showEdit}
-                onOpenChange={setShowEdit}
-                onPostUpdated={onUpdate}
-            />
+                </div>
+            </div>
 
             <SchedulePostDialog
                 post={post}

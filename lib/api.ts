@@ -1,29 +1,13 @@
-import axios from 'axios';
+import * as FirebaseAuth from './firebase/auth';
+import * as FirebasePosts from './firebase/posts';
+import * as FirebaseAnalytics from './firebase/analytics';
+import * as FirebaseIntegrations from './firebase/integrations';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
-
-export const api = axios.create({
-    baseURL: API_URL,
-    headers: {
-        'Content-Type': 'application/json',
-    },
-});
-
-// Request Interceptor: Attach Token
-api.interceptors.request.use((config) => {
-    config.withCredentials = true;
-    return config;
-});
-
-// Response Interceptor: Handle 401
-api.interceptors.response.use(
-    (response) => response,
-    (error) => {
-        if (error.response?.status === 401) {
-            if (typeof window !== 'undefined') {
-                window.location.href = '/login';
-            }
-        }
-        return Promise.reject(error);
-    }
-);
+export const api = {
+  firebaseService: {
+    ...FirebaseAuth,
+    ...FirebasePosts,
+    ...FirebaseAnalytics,
+    ...FirebaseIntegrations,
+  },
+};

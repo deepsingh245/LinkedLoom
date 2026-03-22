@@ -26,19 +26,23 @@ import {
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 
+import { useAuth } from "@/components/auth-provider";
+import { User } from "firebase/auth";
+
 export function SchedulerView() {
     const [date, setDate] = React.useState<Date | undefined>(new Date())
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const user = useAuth();
     const [scheduledPosts, setScheduledPosts] = React.useState<Post[]>([]);
     const [drafts, setDrafts] = React.useState<Post[]>([]);
-    const [selectedDraft, setSelectedDraft] = React.useState<string | undefined>(undefined)
+    const [selectedDraft, setSelectedDraft] = React.useState<string | number | undefined>(undefined)
 
     React.useEffect(() => {
         const fetchScheduledPosts = async () => {
+            if (!user?.uid) return;
             try {
-                const { data } = await api.get('/posts/scheduled')
+                const data = await api.firebaseService.getScheduledPosts(user.uid)
                 setScheduledPosts(data)
             } catch (error) {
                 console.error("Failed to fetch scheduled posts", error)
@@ -46,12 +50,13 @@ export function SchedulerView() {
             }
         }
         fetchScheduledPosts()
-    }, [user.id])
+    }, [user?.uid])
 
     React.useEffect(() => {
         const fetchDrafts = async () => {
+            if (!user?.uid) return;
             try {
-                const { data } = await api.get('/posts/drafts')
+                const data = await api.firebaseService.getDraftPosts(user.uid)
                 setDrafts(data)
             } catch (error) {
                 console.error("Failed to fetch drafts", error)
@@ -59,7 +64,17 @@ export function SchedulerView() {
             }
         }
         fetchDrafts()
-    }, [user.id])
+    }, [user?.uid])
+
+    const handleConnectLinkedIn = async () => {
+        try {
+            const { url } = await api.firebaseService.getLinkedInAuthUrl();
+            window.location.href = url;
+        } catch (error) {
+            console.error("Failed to get LinkedIn auth URL", error);
+            dangerToast("Failed to initiate LinkedIn connection");
+        }
+    };
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-7 gap-6 h-[calc(100vh-10rem)]">
@@ -98,6 +113,9 @@ export function SchedulerView() {
 
             {/* Sidebar Section */}
             <div className="col-span-1 lg:col-span-2 space-y-4">
+                <Button variant="outline" className="w-full mb-4" onClick={handleConnectLinkedIn}>
+                    <span className="mr-2">🔗</span> Connect LinkedIn
+                </Button>
                 <div className="flex items-center justify-between">
                     <h3 className="font-semibold">Events</h3>
                     <Dialog>
@@ -110,28 +128,36 @@ export function SchedulerView() {
                             <DialogHeader>
                                 <DialogTitle>Schedule Post</DialogTitle>
                             </DialogHeader>
-                            <DialogContent>
+
+                            <div>
                                 <div className="py-4">
-                                    <p className="text-sm text-muted-foreground">Select a draft to schedule for {date?.toLocaleDateString()}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        Select a draft to schedule for {date?.toLocaleDateString()}
+                                    </p>
                                 </div>
-                                <div className="flex items-center justify-center">
+
+                                <div className="flex flex-col gap-2">
                                     {drafts.map((draft, index) => (
-                                        <Item variant="outline">
+                                        <Item key={draft.id} variant="outline">
                                             <ItemContent>
                                                 <ItemTitle>{`Draft ${index + 1}`}</ItemTitle>
-                                                <ItemDescription>
-                                                    {draft.content}
-                                                </ItemDescription>
+                                                <ItemDescription>{draft.content}</ItemDescription>
                                             </ItemContent>
+
                                             <ItemActions>
-                                                <Button variant="outline" size="sm" className="cursor-pointer" onClick={() => setSelectedDraft(draft.id)}>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="cursor-pointer"
+                                                    onClick={() => setSelectedDraft(draft.id)}
+                                                >
                                                     Schedule
                                                 </Button>
                                             </ItemActions>
                                         </Item>
                                     ))}
                                 </div>
-                            </DialogContent>
+                            </div>
                         </DialogContent>
                     </Dialog>
 
@@ -142,7 +168,7 @@ export function SchedulerView() {
                         <Card key={post.id} className="cursor-pointer hover:bg-muted/50 transition-colors">
                             <CardContent className="p-3 flex items-start gap-3">
                                 <div className="mt-1">
-                                    {post.status === "SCHEDULED" ?
+                                    {post.status === "scheduled" ?
                                         <Clock className="h-4 w-4 text-blue-500" /> :
                                         <FileText className="h-4 w-4 text-gray-500" />
                                     }
@@ -150,9 +176,9 @@ export function SchedulerView() {
                                 <div className="space-y-1">
                                     <p className="text-sm font-medium leading-none">{post.content}</p>
                                     <p className="text-xs text-muted-foreground">
-                                        {post.publishedAt?.toLocaleDateString()}
+                                        {new Date(post.date).toLocaleDateString()}
                                     </p>
-                                    <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-sm ${post.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'}`}>
+                                    <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-sm ${post.status === 'scheduled' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'}`}>
                                         {post.status}
                                     </span>
                                 </div>
