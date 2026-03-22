@@ -3,7 +3,7 @@
 import * as React from "react"
 import { format, set, isBefore } from "date-fns"
 import { User } from "firebase/auth"
-import { Wand2, Calendar as CalendarIcon, Save } from "lucide-react"
+import { Wand2, Calendar as CalendarIcon, Save, Image as ImageIcon, Sparkles, X, RefreshCw, Upload } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -27,8 +27,25 @@ import { successToast, dangerToast } from "@/lib/toast"
 import { useAuth } from "@/components/auth-provider"
 import { PostPreview } from "./PostPreview"
 import { Post } from "@/types"
+import { httpsCallable } from "firebase/functions"
+import { functions } from "@/lib/firebase"
+import { FirebaseFunctions } from "@/lib/firebase/functions"
+import { uploadPostAttachment } from "@/lib/firebase/storage"
 
 const LINKEDIN_MAX_LENGTH = 3000;
+
+/** Convert a base64 data URI to a Blob for uploading to Storage */
+function base64ToBlob(dataUri: string): Blob {
+    const [meta, base64] = dataUri.split(",");
+    const mime = meta.match(/:(.*?);/)?.[1] || "image/png";
+    const byteString = atob(base64);
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ab], { type: mime });
+}
 
 export function PostEditor() {
     const user = useAuth() as User | null;
@@ -43,18 +60,45 @@ export function PostEditor() {
     const [minute, setMinute] = React.useState<string>("00")
     
     const [generating, setGenerating] = React.useState(false)
+    const [generatingImage, setGeneratingImage] = React.useState(false)
+    const [enhancingPrompt, setEnhancingPrompt] = React.useState(false)
     const [saving, setSaving] = React.useState(false)
+
+    const [imagePrompt, setImagePrompt] = React.useState("")
+    const [imageUrl, setImageUrl] = React.useState<string | null>(null)
+    const [referenceImageUrl, setReferenceImageUrl] = React.useState<string | null>(null)
+    const [referenceImageBase64, setReferenceImageBase64] = React.useState<string | null>(null)
+    const [showImageOptions, setShowImageOptions] = React.useState(false)
+    const [editingPostId, setEditingPostId] = React.useState<string | null>(null)
+    const fileInputRef = React.useRef<HTMLInputElement>(null)
+    const referenceFileInputRef = React.useRef<HTMLInputElement>(null)
+
+    // Load draft from localStorage when navigating from Edit button
+    React.useEffect(() => {
+        try {
+            const saved = localStorage.getItem("draft_post");
+            if (saved) {
+                const draft = JSON.parse(saved);
+                if (draft.content) setContent(draft.content);
+                if (draft.tone) setTone(draft.tone.toLowerCase());
+                if (draft.topic) setTopic(draft.topic);
+                if (draft.imageUrl) {
+                    setImageUrl(draft.imageUrl);
+                    setShowImageOptions(true);
+                }
+                if (draft.id) setEditingPostId(draft.id);
+                localStorage.removeItem("draft_post");
+            }
+        } catch (e) {
+            console.error("Failed to load draft:", e);
+        }
+    }, []);
 
     const handleGenerate = async () => {
         if (!topic.trim()) return dangerToast("Please enter a topic to generate content.");
         
         setGenerating(true)
         try {
-            const { getFunctions, httpsCallable } = await import("firebase/functions");
-            const { app } = await import("@/lib/firebase");
-            const { FirebaseFunctions } = await import("@/lib/firebase/functions");
-            
-            const functions = getFunctions(app);
             const generatePost = httpsCallable(functions, FirebaseFunctions.GENERATE_POST);
             
             const result = await generatePost({ 
@@ -78,6 +122,158 @@ export function PostEditor() {
         }
     }
 
+    const handleGenerateImage = async () => {
+        // Use imagePrompt if provided, otherwise fallback to the post content or topic
+        const prompt = imagePrompt.trim() || content.trim() || topic.trim();
+        if (!prompt) return dangerToast("Please enter an image prompt, generate post content, or provide a topic.");
+        
+        setGeneratingImage(true)
+        try {
+            const generateImage = httpsCallable(functions, FirebaseFunctions.GENERATE_IMAGE);
+            
+            // If prompt is from content, truncate it to keep it efficient for the AI
+            const finalPrompt = prompt.length > 500 ? prompt.substring(0, 500) + "..." : prompt;
+
+            const result = await generateImage({ 
+                prompt: finalPrompt,
+                referenceImage: referenceImageBase64
+            });
+            
+            const data = result.data as { imageUrl: string };
+            if (data.imageUrl) {
+                setImageUrl(data.imageUrl);
+                successToast("Image generated successfully!")
+            } else {
+                throw new Error("No image URL received");
+            }
+        } catch (error) {
+            console.error("Image generation failed:", error)
+            dangerToast("Failed to generate image.")
+        } finally {
+            setGeneratingImage(false)
+        }
+    }
+
+    const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !user?.uid) return;
+
+        if (!file.type.startsWith("image/")) {
+            return dangerToast("Please select an image file.");
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            return dangerToast("Image must be under 5MB.");
+        }
+
+        setGeneratingImage(true);
+        try {
+            const url = await uploadPostAttachment(user.uid, file);
+            setImageUrl(url);
+            successToast("Image uploaded successfully!");
+        } catch (error) {
+            console.error("Upload failed:", error);
+            dangerToast("Failed to upload image.");
+        } finally {
+            setGeneratingImage(false);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    }
+
+    const handleReferenceImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !user?.uid) return;
+
+        if (!file.type.startsWith("image/")) {
+            return dangerToast("Please select an image file.");
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            return dangerToast("Image must be under 5MB.");
+        }
+
+        setGeneratingImage(true);
+        try {
+            // Read as base64 for the AI
+            const reader = new FileReader();
+            const base64Promise = new Promise<string>((resolve) => {
+                reader.onload = () => resolve(reader.result as string);
+                reader.readAsDataURL(file);
+            });
+            const base64 = await base64Promise;
+            setReferenceImageBase64(base64);
+
+            const url = await uploadPostAttachment(user.uid, file);
+            setReferenceImageUrl(url);
+            successToast("Reference image uploaded! AI will use this as context.");
+        } catch (error) {
+            console.error("Reference upload failed:", error);
+            dangerToast("Failed to upload reference image.");
+        } finally {
+            setGeneratingImage(false);
+            if (referenceFileInputRef.current) referenceFileInputRef.current.value = "";
+        }
+    }
+
+    const handleEnhancePrompt = async () => {
+        const prompt = imagePrompt.trim() || content.trim() || topic.trim();
+        if (!prompt) return dangerToast("Enter a prompt to enhance.");
+
+        setEnhancingPrompt(true);
+        try {
+            const enhance = httpsCallable(functions, FirebaseFunctions.ENHANCE_IMAGE_PROMPT);
+            const result = await enhance({ prompt });
+            const data = result.data as { enhancedPrompt: string };
+            if (data.enhancedPrompt) {
+                setImagePrompt(data.enhancedPrompt);
+                successToast("Prompt enhanced!");
+            }
+        } catch (error) {
+            console.error("Enhance prompt failed:", error);
+            dangerToast("Failed to enhance prompt.");
+        } finally {
+            setEnhancingPrompt(false);
+        }
+    }
+
+    const handleGenerateImageWithContext = async () => {
+        if (!content.trim()) return dangerToast("Generate post content first to get context.");
+        
+        setGeneratingImage(true);
+        try {
+            const enhance = httpsCallable(functions, FirebaseFunctions.ENHANCE_IMAGE_PROMPT);
+            const result = await enhance({ prompt: content.trim() });
+            const enhanceData = result.data as { enhancedPrompt: string };
+            
+            if (enhanceData.enhancedPrompt) {
+                setImagePrompt(enhanceData.enhancedPrompt);
+                
+                const generateImage = httpsCallable(functions, FirebaseFunctions.GENERATE_IMAGE);
+                const finalPrompt = enhanceData.enhancedPrompt.length > 500 
+                    ? enhanceData.enhancedPrompt.substring(0, 500) + "..." 
+                    : enhanceData.enhancedPrompt;
+
+                const genResult = await generateImage({ 
+                    prompt: finalPrompt,
+                    referenceImage: referenceImageBase64
+                });
+                const genData = genResult.data as { imageUrl: string };
+                
+                if (genData.imageUrl) {
+                    setImageUrl(genData.imageUrl);
+                    successToast("Generated image using post context!");
+                } else {
+                    throw new Error("No image URL received");
+                }
+            } else {
+                throw new Error("Failed to get context-based prompt");
+            }
+        } catch (error) {
+            console.error("Context-based image generation failed:", error);
+            dangerToast("Failed to generate image from context.");
+        } finally {
+            setGeneratingImage(false);
+        }
+    }
+
     const createBasePayload = (): Partial<Post> => {
         if (!user?.uid) throw new Error("User not authenticated");
         return {
@@ -86,10 +282,21 @@ export function PostEditor() {
             user_id: user.uid,
             tone: tone.toUpperCase() as any,
             date: new Date().toISOString(),
-            mediaUrls: [],
+            mediaUrls: imageUrl ? [imageUrl] : [],
+            imageUrl: imageUrl || null,
             linkedinUrn: "",
             versions: []
         };
+    }
+
+    /** Upload base64 image to Storage, return the download URL (or null) */
+    const uploadImageIfNeeded = async (): Promise<string | null> => {
+        if (!imageUrl || !user?.uid) return null;
+        if (!imageUrl.startsWith("data:image")) return imageUrl; // already a URL
+
+        const blob = base64ToBlob(imageUrl);
+        const file = new File([blob], `ai-generated-${Date.now()}.png`, { type: "image/png" });
+        return await uploadPostAttachment(user.uid, file);
     }
 
     const handleSave = async () => {
@@ -98,9 +305,18 @@ export function PostEditor() {
         
         setSaving(true)
         try {
+            const storageUrl = await uploadImageIfNeeded();
             const payload = createBasePayload() as any;
-            await api.firebaseService.createPost(payload)
-            successToast("Draft saved successfully!")
+            payload.imageUrl = storageUrl;
+            payload.mediaUrls = storageUrl ? [storageUrl] : [];
+
+            if (editingPostId) {
+                await api.firebaseService.updatePost(editingPostId, payload);
+                successToast("Post updated successfully!");
+            } else {
+                await api.firebaseService.createPost(payload);
+                successToast("Draft saved successfully!");
+            }
         } catch (error) {
             console.error("Failed to save draft:", error)
             dangerToast("Failed to save draft.")
@@ -122,7 +338,10 @@ export function PostEditor() {
 
         setSaving(true)
         try {
+            const storageUrl = await uploadImageIfNeeded();
             const payload = createBasePayload() as any;
+            payload.imageUrl = storageUrl;
+            payload.mediaUrls = storageUrl ? [storageUrl] : [];
             const post = await api.firebaseService.createPost(payload)
             await api.firebaseService.schedulePost(String(post.id), finalDate.toISOString())
 
@@ -158,11 +377,11 @@ export function PostEditor() {
                         
                         <div className="mb-3.5">
                             <Label className="text-[12.5px] text-[#8888a0] mb-1.5 block font-medium">Topic *</Label>
-                            <Input
+                            <Textarea
                                 value={topic}
                                 onChange={(e) => setTopic(e.target.value)}
                                 placeholder="e.g. Leading remote teams"
-                                className="w-full h-11 bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[13.5px] rounded-[10px] px-3.5 py-2.5 transition-all focus:border-[#63d496] focus:shadow-[0_0_0_1px_rgba(99,212,150,0.5)] outline-none placeholder:text-[#4a4a68]"
+                                className="w-full min-h-[60px] bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[13.5px] rounded-[10px] px-3.5 py-2.5 transition-all focus:border-[#63d496] focus:shadow-[0_0_0_1px_rgba(99,212,150,0.5)] outline-none placeholder:text-[#4a4a68] resize-none"
                             />
                         </div>
                         
@@ -200,10 +419,168 @@ export function PostEditor() {
                             disabled={generating || !topic.trim()}
                             className="w-full flex items-center justify-center bg-gradient-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-[1px] hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-semibold border-none h-11 px-[20px] rounded-[10px] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {generating ? <Wand2 className="mr-2 h-[14px] w-[14px] animate-spin" /> : <Wand2 className="mr-2 h-[14px] w-[14px]" />}
-                            {generating ? "Generating..." : "Generate with AI"}
+                            {generating ? <RefreshCw className="mr-2 h-[14px] w-[14px] animate-spin" /> : <Wand2 className="mr-2 h-[14px] w-[14px]" />}
+                            {generating ? "Generating..." : "Generate Post"}
                         </Button>
+
+                        <div className="flex gap-2.5 mt-2.5">
+                            <Button
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={saving}
+                                variant="outline"
+                                className="flex-1 h-10 text-[12.5px] bg-[#1a1a24] border-[#2a2a3a] text-[#e0e0f0] font-medium rounded-[10px] hover:bg-[#20202c] hover:border-[#63d496]/40"
+                            >
+                                <Upload className="mr-2 h-3.5 w-3.5 text-[#63d496]" />
+                                Upload Post Image
+                            </Button>
+                            {/* {!showImageOptions && (
+                               <Button
+                                 onClick={() => setShowImageOptions(true)}
+                                 variant="outline"
+                                 className="h-10 px-3 bg-[#1a1a24] border-[#2a2a3a] text-[#8888a0] rounded-[10px]"
+                               >
+                                 <ImageIcon className="h-4 w-4" />
+                               </Button>
+                            )} */}
+                        </div>
+
+                        <div className="mt-5 pt-4 border-t border-[#1e1e2a] flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <ImageIcon className={`h-4 w-4 ${showImageOptions ? 'text-[#63d496]' : 'text-[#5a5a78]'}`} />
+                                <span className={`text-[12.5px] font-medium transition-colors ${showImageOptions ? 'text-[#e0e0f0]' : 'text-[#5a5a78]'}`}>
+                                    Add AI Image
+                                </span>
+                            </div>
+                            <button 
+                                onClick={() => setShowImageOptions(!showImageOptions)}
+                                className={`relative w-10 min-w-10 h-[22px] rounded-full transition-all duration-300 ${showImageOptions ? 'bg-[#63d496]' : 'bg-[#1e1e2a] border border-[#2a2a3a]'}`}
+                            >
+                                <div className={`absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-all duration-300 shadow-sm ${showImageOptions ? 'translate-x-[18px]' : 'translate-x-0'}`} />
+                            </button>
+                        </div>
                     </Card>
+
+                    {showImageOptions && (
+                        <Card className="animate-in fade-in slide-in-from-top-2 duration-300 p-5 rounded-[16px] border border-[#1e1e2a] bg-[#13131a] shadow-sm transition-all hover:border-[#2a2a3a]">
+                            <h3 className="text-[13px] font-semibold text-[#7070a0] uppercase tracking-[0.8px] mb-4 flex items-center gap-2">
+                                <Sparkles className="h-3.5 w-3.5 text-[#63d496]" />
+                                Visual Asset
+                            </h3>
+                            
+                            <div className="mb-3.5">
+                                <Label className="text-[12.5px] text-[#8888a0] mb-1.5 block font-medium">Image Prompt (Optional)</Label>
+                                <div className="flex flex-col gap-2">
+                                    <Textarea
+                                        value={imagePrompt}
+                                        onChange={(e) => setImagePrompt(e.target.value)}
+                                        placeholder="Describe the image you want..."
+                                        className="flex-1 min-h-[80px] bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[13.5px] rounded-[10px] px-3.5 py-2.5 transition-all focus:border-[#63d496] focus:shadow-[0_0_0_1px_rgba(99,212,150,0.5)] outline-none placeholder:text-[#4a4a68] resize-none"
+                                    />
+                                    <div className="flex flex gap-2">
+                                        <Button
+                                            onClick={handleEnhancePrompt}
+                                            disabled={enhancingPrompt || generatingImage || (!imagePrompt.trim() && !content.trim() && !topic.trim())}
+                                            variant="outline"
+                                            className="h-[38px] px-3 bg-[#0e0e16] border-[#1e1e2a] hover:border-[#63d496]/40 hover:bg-[#1a1a24] text-[#8888a0] hover:text-[#63d496] rounded-[10px] transition-all disabled:opacity-50 flex gap-2 text-[12px] font-medium"
+                                        >
+                                            {enhancingPrompt ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                                            <span>Enhance</span>
+                                        </Button>
+                                        <Button
+                                            onClick={handleGenerateImageWithContext}
+                                            disabled={generatingImage || enhancingPrompt || !content.trim()}
+                                            variant="outline"
+                                            className="h-[38px] px-3 bg-[#0e0e16] border-[#1e1e2a] hover:border-[#63d496]/40 hover:bg-[#1a1a24] text-[#8888a0] hover:text-[#63d496] rounded-[10px] transition-all disabled:opacity-50 flex gap-2 text-[12px] font-medium whitespace-nowrap"
+                                            title="Get context from post and generate image"
+                                        >
+                                            {generatingImage ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                                            <span>Get context from post</span>
+                                        </Button>
+                                    </div>
+                                </div>
+                                {!imagePrompt.trim() && (content.trim() || topic.trim()) && (
+                                    <p className="text-[11px] text-[#5a5a78] mt-1.5">Using post content as context for generation.</p>
+                                )}
+                            </div>
+
+                            {/* Reference Image Section */}
+                            <div className="mb-4">
+                                <Label className="text-[12.5px] text-[#8888a0] mb-2 block font-medium">Reference Image (AI Context)</Label>
+                                {referenceImageUrl ? (
+                                    <div className="relative group rounded-lg overflow-hidden border border-[#1e1e2a] aspect-video w-1/2">
+                                        <img src={referenceImageUrl} alt="Reference context" className="w-full h-full object-cover" />
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <Button 
+                                                onClick={() => setReferenceImageUrl(null)}
+                                                variant="destructive"
+                                                size="icon"
+                                                className="h-8 w-8 rounded-lg"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <Button
+                                        onClick={() => referenceFileInputRef.current?.click()}
+                                        disabled={generatingImage}
+                                        variant="outline"
+                                        className="h-10 text-[12.5px] px-4 bg-[#0e0e16] border-[#1e1e2a] hover:border-[#63d496]/40 text-[#8888a0] rounded-[10px]"
+                                    >
+                                        <Upload className="mr-2 h-3.5 w-3.5" />
+                                        Upload AI Context Image
+                                    </Button>
+                                )}
+                                <input
+                                    ref={referenceFileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleReferenceImageUpload}
+                                    className="hidden"
+                                />
+                                <p className="text-[11px] text-[#5a5a78] mt-1.5 line-clamp-2 italic">
+                                    AI will use this image to understand style, objects, or composition.
+                                </p>
+                            </div>
+
+                            {imageUrl ? (
+                                <div className="relative group mb-4 rounded-xl overflow-hidden border border-[#1e1e2a] aspect-video">
+                                    <img src={imageUrl} alt="Generated asset" className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                        <Button 
+                                            onClick={handleGenerateImage}
+                                            disabled={generatingImage}
+                                            variant="secondary"
+                                            size="sm"
+                                            className="bg-white/10 hover:bg-white/20 text-white border-none rounded-lg h-8"
+                                        >
+                                            <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${generatingImage ? 'animate-spin' : ''}`} />
+                                            {generatingImage ? "Generating..." : "Regenerate"}
+                                        </Button>
+                                        <Button 
+                                            onClick={() => setImageUrl(null)}
+                                            variant="destructive"
+                                            size="icon"
+                                            className="h-8 w-8 rounded-lg"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex gap-2">
+                                    <Button 
+                                        onClick={handleGenerateImage} 
+                                        disabled={generatingImage || (!topic.trim() && !content.trim() && !imagePrompt.trim())}
+                                        className="flex-1 flex items-center justify-center bg-[#1a1a24] border border-[#2a2a3a] text-[#e0e0f0] hover:bg-[#20202c] hover:border-[#63d496]/40 transition-all font-sans font-medium h-11 px-[20px] rounded-[10px] disabled:opacity-50"
+                                    >
+                                        {generatingImage ? <RefreshCw className="mr-2 h-[14px] w-[14px] animate-spin" /> : <ImageIcon className="mr-2 h-[14px] w-[14px] text-[#63d496]" />}
+                                        {generatingImage ? "Generating..." : "Generate AI Image"}
+                                    </Button>
+                                </div>
+                            )}
+                        </Card>
+                    )}
 
                     <Card className="animate-fadeUp animation-delay-200 p-5 rounded-[16px] border border-[#1e1e2a] bg-[#13131a] shadow-sm transition-all hover:border-[#2a2a3a]">
                         <h3 className="text-[13px] font-semibold text-[#7070a0] uppercase tracking-[0.8px] mb-3.5">
@@ -218,13 +595,13 @@ export function PostEditor() {
                                         {date ? format(set(date, { hours: parseInt(hour), minutes: parseInt(minute) }), "MMM d, yyyy 'at' p") : "Pick a date (Optional)"}
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-4 bg-[#13131a] border-[#1e1e2a] text-[#e0e0f0] flex flex-col gap-3" align="start">
+                                <PopoverContent className="w-70 p-3 bg-[#13131a] border-[#1e1e2a] text-[#e0e0f0] flex flex-col gap-3" align="start">
                                     <Calendar
                                         mode="single"
                                         selected={date}
                                         onSelect={setDate}
                                         initialFocus
-                                        className="bg-[#13131a] border-[#1e1e2a] text-[#e0e0f0]"
+                                        className="bg-[#13131a] border-[#1e1e2a] text-[#e0e0f0] w-full"
                                         disabled={(d) => {
                                             const today = new Date();
                                             today.setHours(0, 0, 0, 0);
@@ -302,7 +679,7 @@ export function PostEditor() {
                                 </div>
                                 <div className="flex-1 bg-[#0e0e16] rounded-[10px] border border-[#1e1e2a] flex justify-center p-4 min-h-[460px]">
                                     <div className="w-full h-full overflow-y-auto pr-1">
-                                        {user && <PostPreview content={content} user={user as any} />}
+                                        {user && <PostPreview content={content} image={imageUrl || undefined} user={user as any} />}
                                     </div>
                                 </div>
                             </div>
@@ -316,7 +693,7 @@ export function PostEditor() {
                             onClick={handleSave} 
                             disabled={saving || !content.trim()}
                         >
-                            Save Draft
+                            {editingPostId ? "Update Post" : "Save Draft"}
                         </Button>
                         <Button 
                             className="bg-gradient-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-[1px] hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-semibold border-none h-10 px-[20px] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed" 
@@ -337,7 +714,7 @@ export function PostEditor() {
                         <TabsTrigger value="hide" className="rounded-lg data-[state=active]:bg-[#2a2a35] data-[state=active]:text-white transition-all">Hide Preview</TabsTrigger>
                     </TabsList>
                     <TabsContent value="preview" className="mt-2 bg-[#0e0e16] rounded-[10px] border border-[#1e1e2a] p-4">
-                        {user && <PostPreview content={content} user={user as any} />}
+                        {user && <PostPreview content={content} image={imageUrl || undefined} user={user as any} />}
                     </TabsContent>
                 </Tabs>
             </div>

@@ -96,7 +96,7 @@ export function SchedulePostDialog({
                         mode="single"
                         selected={date}
                         onSelect={setDate}
-                        className="rounded-md border mx-auto"
+                        className="w-full rounded-md border mx-auto"
                         disabled={(d) => {
                             const today = new Date();
                             today.setHours(0, 0, 0, 0);

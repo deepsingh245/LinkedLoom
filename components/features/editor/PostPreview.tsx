@@ -56,8 +56,15 @@ export function PostPreview({ content, image, user }: PostPreviewProps) {
                 </div>
 
                 {image && (
-                    <div className="w-full bg-muted flex items-center justify-center text-muted-foreground relative mt-2" style={{ paddingTop: '56.25%' }}>
-                        <div className="absolute inset-0 flex items-center justify-center font-medium">Image Preview</div>
+                    <div className="w-full bg-muted relative mt-2 border-t border-b border-border/10 overflow-hidden">
+                        <img 
+                            src={image} 
+                            alt="Post visual" 
+                            className="w-full h-auto object-cover max-h-[500px]"
+                            onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/1200x630?text=Image+Unavailable';
+                            }}
+                        />
                     </div>
                 )}
                 
