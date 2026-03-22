@@ -11,16 +11,29 @@ const db = admin.firestore();
 
 // LinkedIn Configuration
 const LINKEDIN_SCOPE = "openid profile email w_member_social";
-const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID || '';
-const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET || '';
-const LINKEDIN_REDIRECT_URI = process.env.LINKEDIN_REDIRECT_URI || "http://localhost:3000/linkedin/callback";
+const getLinkedInConfig = () => {
+    const clientId = process.env.LINKEDIN_CLIENT_ID;
+    const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
+    const redirectUri = process.env.LINKEDIN_REDIRECT_URI;
 
-console.log("ENV:", LINKEDIN_REDIRECT_URI);
+    if (!clientId) {
+        throw new HttpsError("failed-precondition", "LINKEDIN_CLIENT_ID is not configured.");
+    }
+    if (!clientSecret) {
+        throw new HttpsError("failed-precondition", "LINKEDIN_CLIENT_SECRET is not configured.");
+    }
+    if (!redirectUri) {
+        throw new HttpsError("failed-precondition", "LINKEDIN_REDIRECT_URI is not configured.");
+    }
+
+    return { clientId, clientSecret, redirectUri };
+};
 
 /**
  * Generate LinkedIn OAuth URL
  */
 export const getLinkedInAuthUrl = onRequest({ cors: true }, async (req, res) => {
+  const { clientId, redirectUri } = getLinkedInConfig();
   const state = crypto.randomUUID();
 
   // Save state for CSRF protection
@@ -33,8 +46,8 @@ export const getLinkedInAuthUrl = onRequest({ cors: true }, async (req, res) => 
   const authUrl =
     `https://www.linkedin.com/oauth/v2/authorization` +
     `?response_type=code` +
-    `&client_id=${LINKEDIN_CLIENT_ID}` +
-    `&redirect_uri=${encodeURIComponent(LINKEDIN_REDIRECT_URI)}` +
+    `&client_id=${clientId}` +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
     `&state=${state}` +
     `&scope=${encodeURIComponent(LINKEDIN_SCOPE)}`;
 
@@ -66,13 +79,15 @@ export const exchangeLinkedInToken = onRequest({ cors: true }, async (req, res) 
     // Delete state after use
     await stateDoc.ref.delete();
 
+    const { clientId, clientSecret, redirectUri } = getLinkedInConfig();
+
     // Exchange authorization code for access token
     const params = new URLSearchParams();
     params.append("grant_type", "authorization_code");
     params.append("code", code);
-    params.append("redirect_uri", LINKEDIN_REDIRECT_URI);
-    params.append("client_id", LINKEDIN_CLIENT_ID);
-    params.append("client_secret", LINKEDIN_CLIENT_SECRET);
+    params.append("redirect_uri", redirectUri);
+    params.append("client_id", clientId);
+    params.append("client_secret", clientSecret);
 
     const tokenResponse = await axios.post(
       "https://www.linkedin.com/oauth/v2/accessToken",
@@ -196,11 +211,74 @@ export const exchangeLinkedInToken = onRequest({ cors: true }, async (req, res) 
 });
 
 /**
+ * Register and upload an image to LinkedIn
+ */
+export async function uploadMediaToLinkedIn(accessToken: string, personUrn: string, imageUrl: string) {
+    try {
+        console.log("Registering upload with LinkedIn...");
+        // 1. Register the upload
+        const registerResponse = await axios.post(
+            "https://api.linkedin.com/v2/assets?action=registerUpload",
+            {
+                registerUploadRequest: {
+                    recipes: ["urn:li:digitalmediaRecipe:feedshare-image"],
+                    owner: personUrn,
+                    serviceRelationships: [
+                        {
+                            relationshipType: "OWNER",
+                            identifier: "urn:li:userGeneratedContent"
+                        }
+                    ]
+                }
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    "Content-Type": "application/json",
+                    "X-Restli-Protocol-Version": "2.0.0",
+                }
+            }
+        );
+
+        const asset = registerResponse.data.value.asset;
+        const uploadUrl = registerResponse.data.value.uploadMechanism["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"].uploadUrl;
+
+        console.log("Fetching image from URL:", imageUrl);
+        // 2. Fetch the image content
+        let imageData: Buffer;
+        if (imageUrl.startsWith('data:')) {
+            // Handle base64
+            const base64Data = imageUrl.split(',')[1];
+            imageData = Buffer.from(base64Data, 'base64');
+        } else {
+            // Handle URL
+            const fetchResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+            imageData = Buffer.from(fetchResponse.data);
+        }
+
+        console.log("Uploading image to LinkedIn...");
+        // 3. Upload the image binary
+        await axios.put(uploadUrl, imageData, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Content-Type": "application/octet-stream",
+            }
+        });
+
+        return asset;
+    } catch (error: any) {
+        console.error("LinkedIn Media Upload Error:", error.response?.data || error.message);
+        throw new Error(`Failed to upload media to LinkedIn: ${error.message}`);
+    }
+}
+
+/**
  * Internal helper for LinkedIn API submission
  */
 export async function publishToLinkedInInternal(connection: any, content: string, articleUrl?: string, imageUrl?: string) {
     let shareMediaCategory = "NONE";
     const media: any[] = [];
+    const authorUrn = `urn:li:person:${connection.providerUserId}`;
     
     if (articleUrl) {
       shareMediaCategory = "ARTICLE";
@@ -210,14 +288,15 @@ export async function publishToLinkedInInternal(connection: any, content: string
       });
     } else if (imageUrl) {
       shareMediaCategory = "IMAGE";
+      const assetUrn = await uploadMediaToLinkedIn(connection.accessToken, authorUrn, imageUrl);
       media.push({
         status: "READY",
-        originalUrl: imageUrl,
+        media: assetUrn,
       });
     }
 
     const payload: any = {
-      author: `urn:li:person:${connection.providerUserId}`,
+      author: authorUrn,
       lifecycleState: "PUBLISHED",
       specificContent: {
         "com.linkedin.ugc.ShareContent": {
