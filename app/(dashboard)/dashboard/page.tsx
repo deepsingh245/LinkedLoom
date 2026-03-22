@@ -12,21 +12,29 @@ import { DashboardData } from "@/lib/firebase/interfaces";
 import { Post } from "@/types";
 import { Routes } from "@/lib/routes";
 
+import { Skeleton } from "@/components/ui/skeleton";
+
 export default function DashboardPage() {
     const user = useAuth() as User;
     const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
     const [scheduledPosts, setScheduledPosts] = useState<Post[]>([]);
+    const [loadingDashboard, setLoadingDashboard] = useState(true);
+    const [loadingScheduled, setLoadingScheduled] = useState(true);
 
     const getDashboardData = async () => {
         if (!user?.uid) return;
+        setLoadingDashboard(true);
         const data = await api.firebaseService.getAnalyticsDashboardData(user.uid);
         setDashboardData(data ? data : { totalPosts: 0, totalDrafts: 0, totalScheduled: 0, totalFailed: 0, totalLikes: 0, totalComments: 0, totalShares: 0 });
+        setLoadingDashboard(false);
     }
 
     const getScheduledPosts = async () => {
         if (!user?.uid) return;
+        setLoadingScheduled(true);
         const data = await api.firebaseService.getScheduledPosts(user.uid);
         setScheduledPosts(data);
+        setLoadingScheduled(false);
     }
 
     useEffect(() => {
@@ -53,10 +61,30 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <StatsCard title="Total Posts" value={`${dashboardData?.totalPosts}`} change="+3 this week" color="#63d496" icon={Library} />
-                <StatsCard title="Total Views" value={`${dashboardData?.totalLikes}`} change="+18% vs last week" color="#6490d4" icon={Eye} />
-                <StatsCard title="Engagement Rate" value={`${dashboardData?.totalComments}%`} change="Avg across posts" color="#c890f0" icon={Heart} />
-                <StatsCard title="Scheduled" value={`${scheduledPosts?.length}`} change="Next: Mar 10" color="#f0b464" icon={Calendar} />
+                <StatsCard 
+                    title="Total (Posts + Drafts)" 
+                    value={`${(dashboardData?.totalPosts ?? 0) + (dashboardData?.totalDrafts ?? 0)}`} 
+                    change="+3 this week" color="#63d496" icon={Library} 
+                    loading={loadingDashboard}
+                />
+                <StatsCard 
+                    title="Total Views" 
+                    value={`${dashboardData?.totalLikes ?? 0}`} 
+                    change="+18% vs last week" color="#6490d4" icon={Eye} 
+                    loading={loadingDashboard}
+                />
+                <StatsCard 
+                    title="Engagement Rate" 
+                    value={`${dashboardData?.totalComments ?? 0}%`} 
+                    change="Avg across posts" color="#c890f0" icon={Heart} 
+                    loading={loadingDashboard}
+                />
+                <StatsCard 
+                    title="Scheduled" 
+                    value={`${scheduledPosts?.length ?? 0}`} 
+                    change="Next: Mar 10" color="#f0b464" icon={Calendar} 
+                    loading={loadingScheduled}
+                />
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
@@ -95,7 +123,7 @@ export default function DashboardPage() {
     );
 }
 
-function StatsCard({ title, value, change, color, icon: IconComponent }: { title: string, value: string, change: string, color: string, icon: React.ElementType }) {
+function StatsCard({ title, value, change, color, icon: IconComponent, loading }: { title: string, value: string, change: string, color: string, icon: React.ElementType, loading?: boolean }) {
     return (
         <Card className="rounded-[16px] border border-[#1e1e2a] bg-[#13131a] p-5 shadow-sm transition-all hover:border-[#2a2a3a] hover:-translate-y-[2px] hover:shadow-[0_8px_24px_rgba(0,0,0,0.2)]">
             <div className="flex items-start justify-between mb-[14px]">
@@ -104,8 +132,16 @@ function StatsCard({ title, value, change, color, icon: IconComponent }: { title
                     <IconComponent className="h-4 w-4" />
                 </div>
             </div>
-            <div className="font-display text-[30px] font-semibold text-[#f0f0f8] tracking-[-0.5px] mb-1">{value}</div>
-            <div style={{ color: color }} className="text-[12px]">{change}</div>
+            {loading ? (
+                <Skeleton className="h-9 w-20 mb-1" />
+            ) : (
+                <div className="font-display text-[30px] font-semibold text-[#f0f0f8] tracking-[-0.5px] mb-1">{value}</div>
+            )}
+            {loading ? (
+                <Skeleton className="h-4 w-28" />
+            ) : (
+                <div style={{ color: color }} className="text-[12px]">{change}</div>
+            )}
         </Card>
     )
 }

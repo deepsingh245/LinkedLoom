@@ -66,9 +66,12 @@ export function PostEditor() {
 
     const [imagePrompt, setImagePrompt] = React.useState("")
     const [imageUrl, setImageUrl] = React.useState<string | null>(null)
+    const [referenceImageUrl, setReferenceImageUrl] = React.useState<string | null>(null)
+    const [referenceImageBase64, setReferenceImageBase64] = React.useState<string | null>(null)
     const [showImageOptions, setShowImageOptions] = React.useState(false)
     const [editingPostId, setEditingPostId] = React.useState<string | null>(null)
     const fileInputRef = React.useRef<HTMLInputElement>(null)
+    const referenceFileInputRef = React.useRef<HTMLInputElement>(null)
 
     // Load draft from localStorage when navigating from Edit button
     React.useEffect(() => {
@@ -132,7 +135,8 @@ export function PostEditor() {
             const finalPrompt = prompt.length > 500 ? prompt.substring(0, 500) + "..." : prompt;
 
             const result = await generateImage({ 
-                prompt: finalPrompt
+                prompt: finalPrompt,
+                referenceImage: referenceImageBase64
             });
             
             const data = result.data as { imageUrl: string };
@@ -175,6 +179,40 @@ export function PostEditor() {
         }
     }
 
+    const handleReferenceImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !user?.uid) return;
+
+        if (!file.type.startsWith("image/")) {
+            return dangerToast("Please select an image file.");
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            return dangerToast("Image must be under 5MB.");
+        }
+
+        setGeneratingImage(true);
+        try {
+            // Read as base64 for the AI
+            const reader = new FileReader();
+            const base64Promise = new Promise<string>((resolve) => {
+                reader.onload = () => resolve(reader.result as string);
+                reader.readAsDataURL(file);
+            });
+            const base64 = await base64Promise;
+            setReferenceImageBase64(base64);
+
+            const url = await uploadPostAttachment(user.uid, file);
+            setReferenceImageUrl(url);
+            successToast("Reference image uploaded! AI will use this as context.");
+        } catch (error) {
+            console.error("Reference upload failed:", error);
+            dangerToast("Failed to upload reference image.");
+        } finally {
+            setGeneratingImage(false);
+            if (referenceFileInputRef.current) referenceFileInputRef.current.value = "";
+        }
+    }
+
     const handleEnhancePrompt = async () => {
         const prompt = imagePrompt.trim() || content.trim() || topic.trim();
         if (!prompt) return dangerToast("Enter a prompt to enhance.");
@@ -193,6 +231,46 @@ export function PostEditor() {
             dangerToast("Failed to enhance prompt.");
         } finally {
             setEnhancingPrompt(false);
+        }
+    }
+
+    const handleGenerateImageWithContext = async () => {
+        if (!content.trim()) return dangerToast("Generate post content first to get context.");
+        
+        setGeneratingImage(true);
+        try {
+            const enhance = httpsCallable(functions, FirebaseFunctions.ENHANCE_IMAGE_PROMPT);
+            const result = await enhance({ prompt: content.trim() });
+            const enhanceData = result.data as { enhancedPrompt: string };
+            
+            if (enhanceData.enhancedPrompt) {
+                setImagePrompt(enhanceData.enhancedPrompt);
+                
+                const generateImage = httpsCallable(functions, FirebaseFunctions.GENERATE_IMAGE);
+                const finalPrompt = enhanceData.enhancedPrompt.length > 500 
+                    ? enhanceData.enhancedPrompt.substring(0, 500) + "..." 
+                    : enhanceData.enhancedPrompt;
+
+                const genResult = await generateImage({ 
+                    prompt: finalPrompt,
+                    referenceImage: referenceImageBase64
+                });
+                const genData = genResult.data as { imageUrl: string };
+                
+                if (genData.imageUrl) {
+                    setImageUrl(genData.imageUrl);
+                    successToast("Generated image using post context!");
+                } else {
+                    throw new Error("No image URL received");
+                }
+            } else {
+                throw new Error("Failed to get context-based prompt");
+            }
+        } catch (error) {
+            console.error("Context-based image generation failed:", error);
+            dangerToast("Failed to generate image from context.");
+        } finally {
+            setGeneratingImage(false);
         }
     }
 
@@ -299,11 +377,11 @@ export function PostEditor() {
                         
                         <div className="mb-3.5">
                             <Label className="text-[12.5px] text-[#8888a0] mb-1.5 block font-medium">Topic *</Label>
-                            <Input
+                            <Textarea
                                 value={topic}
                                 onChange={(e) => setTopic(e.target.value)}
                                 placeholder="e.g. Leading remote teams"
-                                className="w-full h-11 bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[13.5px] rounded-[10px] px-3.5 py-2.5 transition-all focus:border-[#63d496] focus:shadow-[0_0_0_1px_rgba(99,212,150,0.5)] outline-none placeholder:text-[#4a4a68]"
+                                className="w-full min-h-[60px] bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[13.5px] rounded-[10px] px-3.5 py-2.5 transition-all focus:border-[#63d496] focus:shadow-[0_0_0_1px_rgba(99,212,150,0.5)] outline-none placeholder:text-[#4a4a68] resize-none"
                             />
                         </div>
                         
@@ -345,6 +423,27 @@ export function PostEditor() {
                             {generating ? "Generating..." : "Generate Post"}
                         </Button>
 
+                        <div className="flex gap-2.5 mt-2.5">
+                            <Button
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={saving}
+                                variant="outline"
+                                className="flex-1 h-10 text-[12.5px] bg-[#1a1a24] border-[#2a2a3a] text-[#e0e0f0] font-medium rounded-[10px] hover:bg-[#20202c] hover:border-[#63d496]/40"
+                            >
+                                <Upload className="mr-2 h-3.5 w-3.5 text-[#63d496]" />
+                                Upload Post Image
+                            </Button>
+                            {/* {!showImageOptions && (
+                               <Button
+                                 onClick={() => setShowImageOptions(true)}
+                                 variant="outline"
+                                 className="h-10 px-3 bg-[#1a1a24] border-[#2a2a3a] text-[#8888a0] rounded-[10px]"
+                               >
+                                 <ImageIcon className="h-4 w-4" />
+                               </Button>
+                            )} */}
+                        </div>
+
                         <div className="mt-5 pt-4 border-t border-[#1e1e2a] flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <ImageIcon className={`h-4 w-4 ${showImageOptions ? 'text-[#63d496]' : 'text-[#5a5a78]'}`} />
@@ -370,26 +469,78 @@ export function PostEditor() {
                             
                             <div className="mb-3.5">
                                 <Label className="text-[12.5px] text-[#8888a0] mb-1.5 block font-medium">Image Prompt (Optional)</Label>
-                                <div className="flex gap-2">
-                                    <Input
+                                <div className="flex flex-col gap-2">
+                                    <Textarea
                                         value={imagePrompt}
                                         onChange={(e) => setImagePrompt(e.target.value)}
                                         placeholder="Describe the image you want..."
-                                        className="flex-1 h-11 bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[13.5px] rounded-[10px] px-3.5 py-2.5 transition-all focus:border-[#63d496] focus:shadow-[0_0_0_1px_rgba(99,212,150,0.5)] outline-none placeholder:text-[#4a4a68]"
+                                        className="flex-1 min-h-[80px] bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[13.5px] rounded-[10px] px-3.5 py-2.5 transition-all focus:border-[#63d496] focus:shadow-[0_0_0_1px_rgba(99,212,150,0.5)] outline-none placeholder:text-[#4a4a68] resize-none"
                                     />
-                                    <Button
-                                        onClick={handleEnhancePrompt}
-                                        disabled={enhancingPrompt || (!imagePrompt.trim() && !content.trim() && !topic.trim())}
-                                        variant="outline"
-                                        className="h-11 px-3 bg-[#0e0e16] border-[#1e1e2a] hover:border-[#63d496]/40 hover:bg-[#1a1a24] text-[#8888a0] hover:text-[#63d496] rounded-[10px] transition-all disabled:opacity-50"
-                                        title="Enhance prompt with AI"
-                                    >
-                                        {enhancingPrompt ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-                                    </Button>
+                                    <div className="flex flex gap-2">
+                                        <Button
+                                            onClick={handleEnhancePrompt}
+                                            disabled={enhancingPrompt || generatingImage || (!imagePrompt.trim() && !content.trim() && !topic.trim())}
+                                            variant="outline"
+                                            className="h-[38px] px-3 bg-[#0e0e16] border-[#1e1e2a] hover:border-[#63d496]/40 hover:bg-[#1a1a24] text-[#8888a0] hover:text-[#63d496] rounded-[10px] transition-all disabled:opacity-50 flex gap-2 text-[12px] font-medium"
+                                        >
+                                            {enhancingPrompt ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                                            <span>Enhance</span>
+                                        </Button>
+                                        <Button
+                                            onClick={handleGenerateImageWithContext}
+                                            disabled={generatingImage || enhancingPrompt || !content.trim()}
+                                            variant="outline"
+                                            className="h-[38px] px-3 bg-[#0e0e16] border-[#1e1e2a] hover:border-[#63d496]/40 hover:bg-[#1a1a24] text-[#8888a0] hover:text-[#63d496] rounded-[10px] transition-all disabled:opacity-50 flex gap-2 text-[12px] font-medium whitespace-nowrap"
+                                            title="Get context from post and generate image"
+                                        >
+                                            {generatingImage ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                                            <span>Get context from post</span>
+                                        </Button>
+                                    </div>
                                 </div>
                                 {!imagePrompt.trim() && (content.trim() || topic.trim()) && (
                                     <p className="text-[11px] text-[#5a5a78] mt-1.5">Using post content as context for generation.</p>
                                 )}
+                            </div>
+
+                            {/* Reference Image Section */}
+                            <div className="mb-4">
+                                <Label className="text-[12.5px] text-[#8888a0] mb-2 block font-medium">Reference Image (AI Context)</Label>
+                                {referenceImageUrl ? (
+                                    <div className="relative group rounded-lg overflow-hidden border border-[#1e1e2a] aspect-video w-1/2">
+                                        <img src={referenceImageUrl} alt="Reference context" className="w-full h-full object-cover" />
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <Button 
+                                                onClick={() => setReferenceImageUrl(null)}
+                                                variant="destructive"
+                                                size="icon"
+                                                className="h-8 w-8 rounded-lg"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <Button
+                                        onClick={() => referenceFileInputRef.current?.click()}
+                                        disabled={generatingImage}
+                                        variant="outline"
+                                        className="h-10 text-[12.5px] px-4 bg-[#0e0e16] border-[#1e1e2a] hover:border-[#63d496]/40 text-[#8888a0] rounded-[10px]"
+                                    >
+                                        <Upload className="mr-2 h-3.5 w-3.5" />
+                                        Upload AI Context Image
+                                    </Button>
+                                )}
+                                <input
+                                    ref={referenceFileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleReferenceImageUpload}
+                                    className="hidden"
+                                />
+                                <p className="text-[11px] text-[#5a5a78] mt-1.5 line-clamp-2 italic">
+                                    AI will use this image to understand style, objects, or composition.
+                                </p>
                             </div>
 
                             {imageUrl ? (
@@ -424,24 +575,8 @@ export function PostEditor() {
                                         className="flex-1 flex items-center justify-center bg-[#1a1a24] border border-[#2a2a3a] text-[#e0e0f0] hover:bg-[#20202c] hover:border-[#63d496]/40 transition-all font-sans font-medium h-11 px-[20px] rounded-[10px] disabled:opacity-50"
                                     >
                                         {generatingImage ? <RefreshCw className="mr-2 h-[14px] w-[14px] animate-spin" /> : <ImageIcon className="mr-2 h-[14px] w-[14px] text-[#63d496]" />}
-                                        {generatingImage ? "Generating..." : "Generate Image"}
+                                        {generatingImage ? "Generating..." : "Generate AI Image"}
                                     </Button>
-                                    <Button
-                                        onClick={() => fileInputRef.current?.click()}
-                                        disabled={generatingImage}
-                                        variant="outline"
-                                        className="h-11 px-4 bg-[#1a1a24] border-[#2a2a3a] hover:border-[#63d496]/40 hover:bg-[#20202c] text-[#e0e0f0] font-medium rounded-[10px] transition-all disabled:opacity-50"
-                                    >
-                                        <Upload className="mr-2 h-[14px] w-[14px] text-[#63d496]" />
-                                        Upload
-                                    </Button>
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleMediaUpload}
-                                        className="hidden"
-                                    />
                                 </div>
                             )}
                         </Card>

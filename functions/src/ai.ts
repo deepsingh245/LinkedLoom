@@ -50,7 +50,7 @@ export const generateImage = onCall(
             );
         }
 
-        const { prompt } = request.data;
+        const { prompt, referenceImage } = request.data;
 
         if (!prompt || typeof prompt !== "string") {
             throw new HttpsError(
@@ -60,11 +60,24 @@ export const generateImage = onCall(
         }
 
         try {
+            const parts: any[] = [{ text: prompt }];
+            
+            if (referenceImage && typeof referenceImage === "string") {
+                // Remove data:image/...;base64, prefix if present
+                const base64Data = referenceImage.replace(/^data:image\/\w+;base64,/, "");
+                parts.push({
+                    inlineData: {
+                        mimeType: "image/png", // Defaulting to png, should ideally be dynamic
+                        data: base64Data
+                    }
+                });
+            }
+
             const result = await retryWithBackoff(() =>
                 imageModel.generateContent({
                     contents: [{
                         role: "user",
-                        parts: [{ text: prompt }]
+                        parts: parts
                     }],
                     // Add "as any" to bypass the outdated TypeScript interface
                     generationConfig: {
