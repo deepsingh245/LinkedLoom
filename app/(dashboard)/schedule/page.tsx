@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { api } from "@/lib/api";
 import { Post } from "@/types";
 import { Routes } from "@/lib/routes";
@@ -21,8 +21,9 @@ const SchedulePage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<TabValues>("all");
 
-    const fetchPosts = async () => {
+    const fetchPosts = useCallback(async () => {
         if (!user?.uid) return;
+
         try {
             setLoading(true);
             const data = await api.firebaseService.getAllPosts(user.uid);
@@ -32,7 +33,7 @@ const SchedulePage: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user?.uid]);
 
     useEffect(() => {
         if (user?.uid) {
@@ -40,7 +41,7 @@ const SchedulePage: React.FC = () => {
         } else if (user === null) {
             setLoading(false);
         }
-    }, [user?.uid]);
+    }, [user?.uid, user, fetchPosts]);
 
     const filteredPosts = useMemo(() => {
         if (activeTab === "all") return posts;
@@ -71,7 +72,7 @@ const SchedulePage: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-3">
                     <Link href="/create">
-                        <Button className="bg-gradient-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-[1px] hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-semibold border-none h-10 px-5 rounded-xl">
+                        <Button className="bg-linear-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-px hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-semibold border-none h-10 px-5 rounded-xl">
                             <Plus className="mr-2 h-4 w-4" />
                             New Post
                         </Button>
@@ -97,7 +98,7 @@ const SchedulePage: React.FC = () => {
             </div>
 
             {filteredPosts.length === 0 ? (
-                <div className="text-center py-12 border border-[#1e1e2a] bg-[#13131a] rounded-xl flex flex-col items-center justify-center min-h-[300px]">
+                <div className="text-center py-12 border border-[#1e1e2a] bg-[#13131a] rounded-xl flex flex-col items-center justify-center min-h-75">
                     <h3 className="text-lg font-medium text-white mb-2">No posts found</h3>
                     <p className="text-[#a0a0b0] mb-6">Start creating content to see it here.</p>
                     <Link href={Routes.CREATE_POST}>

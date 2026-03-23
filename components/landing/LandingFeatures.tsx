@@ -1,71 +1,79 @@
-"use client";
-import {
-    Wand2,
-    Calendar,
-    BarChart3,
-    Zap,
-    LayoutTemplate,
-    ShieldCheck
-} from "lucide-react";
-
-const features = [
-    {
-        icon: <Wand2 className="h-10 w-10 text-pink-500" />,
-        title: "AI Post Generator",
-        description: "Generate viral LinkedIn posts in seconds with advanced AI models tailored for professional content."
-    },
-    {
-        icon: <Calendar className="h-10 w-10 text-blue-500" />,
-        title: "Smart Scheduling",
-        description: "Plan your content calendar with drag-and-drop ease. Auto-schedule for peak engagement times."
-    },
-    {
-        icon: <BarChart3 className="h-10 w-10 text-green-500" />,
-        title: "Deep Analytics",
-        description: "Track what's working with detailed metrics on impressions, engagement, and follower growth."
-    },
-    {
-        icon: <LayoutTemplate className="h-10 w-10 text-purple-500" />,
-        title: "Templates Library",
-        description: "Access proven hook templates and post structures used by top LinkedIn creators."
-    },
-    {
-        icon: <Zap className="h-10 w-10 text-yellow-500" />,
-        title: "Brand Voice",
-        description: "Train the AI on your writing style so every post sounds authentically like you."
-    },
-    {
-        icon: <ShieldCheck className="h-10 w-10 text-orange-500" />,
-        title: "Safe & Secure",
-        description: "We use official APIs and enterprise-grade security to keep your account safe."
-    }
-];
+import { GlassCard } from "@/components/ui/glass-card";
+import Link from 'next/link';
 
 export function LandingFeatures() {
-    return (
-        <section id="features" className="py-24 bg-muted/30">
-            <div className="container px-4">
-                <div className="text-center max-w-2xl mx-auto mb-16">
-                    <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
-                        Everything you need to grow
-                    </h2>
-                    <p className="text-lg text-muted-foreground">
-                        Stop struggling with content creation. LinkedLoom gives you the tools to build your personal brand at scale.
-                    </p>
-                </div>
+  return (
+    <section id="features" className="py-24 px-8 max-w-7xl mx-auto">
+      <div className="text-center mb-24">
+        <div className="text-figma-lime text-[10px] font-black tracking-[0.2em] mb-4 uppercase">Intelligent Generation</div>
+        <h2 className="text-4xl md:text-7xl font-black text-white leading-[0.9] tracking-tight mb-8">
+          Write with the internet's<br />smartest co-pilot.
+        </h2>
+        <p className="max-w-2xl mx-auto text-on-surface-variant text-lg md:text-xl opacity-70 mb-12">
+          Dial in your tone—from professional thought-leader to casual creator. LinkedLoom's AI doesn't just write; it understands the specific psychology of LinkedIn, X, and Reddit audiences.
+        </p>
+        <div className="flex justify-center">
+            <Link href="#" className="text-figma-lime font-bold flex items-center gap-2 hover:gap-4 transition-all">
+                Explore the Studio <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            </Link>
+        </div>
+      </div>
 
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {features.map((feature, i) => (
-                        <div key={i} className="group relative overflow-hidden rounded-2xl border bg-background p-8 hover:shadow-lg transition-all duration-300">
-                            <div className="mb-4 inline-block rounded-lg bg-muted p-3 group-hover:bg-primary/10 transition-colors">
-                                {feature.icon}
-                            </div>
-                            <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                            <p className="text-muted-foreground">{feature.description}</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-20 mb-40 items-center">
+         <div className="order-2 md:order-1">
+            <div className="text-blue-400 text-[10px] font-black tracking-[0.2em] mb-4 uppercase">Perfect Execution</div>
+            <h3 className="text-3xl md:text-5xl font-black text-white leading-[1.1] tracking-tight mb-8">
+                Know exactly how it looks before you hit send.
+            </h3>
+            <p className="text-on-surface-variant text-lg opacity-70 leading-relaxed mb-10">
+                Never guess if your image gets cropped or your thread breaks. Get real-time, pixel-perfect previews for every platform simultaneously.
+            </p>
+         </div>
+         <div className="order-1 md:order-2 glass-card p-4 rounded-3xl border-white/5 shadow-2xl overflow-hidden aspect-video flex items-center justify-center bg-[#0d0d0d] tilted-mockup">
+             <div className="w-full h-full relative p-4 flex flex-col gap-4">
+                <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-figma-lime/20 border border-figma-lime/30"></div>
+                    <div className="space-y-1">
+                        <div className="h-2 w-20 bg-white/20 rounded-full"></div>
+                        <div className="h-2 w-12 bg-white/10 rounded-full"></div>
+                    </div>
+                </div>
+                <div className="h-2 w-full bg-white/5 rounded-full"></div>
+                <div className="h-2 w-2/3 bg-white/5 rounded-full"></div>
+                <div className="w-full aspect-video bg-white/[0.02] rounded-xl border border-white/5 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-white/10 text-4xl">image</span>
+                </div>
+             </div>
+         </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
+         <div className="glass-card p-4 rounded-3xl border-white/5 shadow-2xl overflow-hidden aspect-video flex items-center justify-center bg-[#0d0d0d] tilted-mockup-reverse">
+             <div className="w-full h-full p-8 flex flex-col justify-between">
+                <div className="flex justify-between items-center">
+                    <div className="text-xs font-bold text-white/40">November 2024</div>
+                    <div className="flex gap-2 text-white/40"><span className="material-symbols-outlined text-sm">chevron_left</span><span className="material-symbols-outlined text-sm">chevron_right</span></div>
+                </div>
+                <div className="grid grid-cols-7 gap-2">
+                    {Array.from({length: 12}).map((_, i) => (
+                        <div key={i} className="aspect-square bg-white/[0.02] border border-white/5 rounded-lg relative overflow-hidden">
+                            {i === 7 && <div className="absolute inset-x-1 top-2 h-1 bg-figma-lime/40 rounded-full"></div>}
+                            {i === 9 && <div className="absolute inset-x-1 top-2 h-1 bg-purple-500/40 rounded-full"></div>}
                         </div>
                     ))}
                 </div>
-            </div>
-        </section>
-    );
+             </div>
+         </div>
+         <div>
+            <div className="text-figma-lime text-[10px] font-black tracking-[0.2em] mb-4 uppercase">Automated Growth</div>
+            <h3 className="text-3xl md:text-5xl font-black text-white leading-[1.1] tracking-tight mb-8">
+                Build your presence while you sleep.
+            </h3>
+            <p className="text-on-surface-variant text-lg opacity-70 leading-relaxed mb-10">
+                Map out your entire month in minutes. Our visual content library and smart calendar ensure you hit your audience when they are most active.
+            </p>
+         </div>
+      </div>
+    </section>
+  );
 }

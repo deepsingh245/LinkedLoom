@@ -10,6 +10,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-gradient-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-[1px] hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-semibold border-none",
+        gradient: "bg-gradient-to-r from-primary to-secondary text-on-primary-container font-bold hover:opacity-80 transition-all duration-300 active:scale-95 border-none",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
@@ -18,6 +19,7 @@ const buttonVariants = cva(
           "border border-[#2a2a3a] bg-[#1a1a24] text-[#c0c0d8] hover:border-[#3a3a50] hover:bg-[#1e1e2c] hover:text-[#e0e0f0] font-sans font-medium transition-all",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        lime: "bg-[#b8ff52] text-black hover:bg-[#a6e64a] font-bold shadow-[0_0_20px_rgba(184,255,82,0.3)] hover:shadow-[0_0_30px_rgba(184,255,82,0.5)] transition-all border-none",
       },
       size: {
         default: "h-auto px-[20px] py-[10px] text-[14px] rounded-[10px]",

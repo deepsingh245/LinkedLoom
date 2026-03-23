@@ -10,6 +10,7 @@ const badgeVariants = cva(
       variant: {
         default:
           "bg-primary border-transparent text-primary-foreground hover:bg-primary/80",
+        pill: "bg-surface-container border border-primary/20 rounded-full px-4 py-1.5 shadow-[0_0_20px_rgba(105,246,184,0.1)] text-primary uppercase text-[10px] sm:text-xs font-bold tracking-widest",
         published:
           "border border-[#1a4030] bg-[#0d2318] text-[#63d496]",
         draft:

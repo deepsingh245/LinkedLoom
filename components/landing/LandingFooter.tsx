@@ -1,65 +1,52 @@
-import Link from "next/link";
-import { Github, Twitter, Linkedin } from "lucide-react";
+import Link from 'next/link';
 
 export function LandingFooter() {
-    return (
-        <footer className="border-t bg-muted/20">
-            <div className="container px-4 py-12">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                    <div className="col-span-2 md:col-span-1">
-                        <Link href="/" className="text-xl font-bold flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold">L</div>
-                            LinkedLoom
-                        </Link>
-                        <p className="mt-4 text-sm text-muted-foreground">
-                            Supercharge your LinkedIn growth with AI-powered content creation and analytics.
-                        </p>
-                    </div>
-
-                    <div>
-                        <h4 className="font-semibold mb-4">Product</h4>
-                        <ul className="space-y-2 text-sm text-muted-foreground">
-                            <li><Link href="#features" className="hover:text-primary">Features</Link></li>
-                            <li><Link href="/pricing" className="hover:text-primary">Pricing</Link></li>
-                            <li><Link href="/blog" className="hover:text-primary">Blog</Link></li>
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h4 className="font-semibold mb-4">Company</h4>
-                        <ul className="space-y-2 text-sm text-muted-foreground">
-                            <li><Link href="#about" className="hover:text-primary">About</Link></li>
-                            <li><Link href="/careers" className="hover:text-primary">Careers</Link></li>
-                            <li><Link href="/contact" className="hover:text-primary">Contact</Link></li>
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h4 className="font-semibold mb-4">Legal</h4>
-                        <ul className="space-y-2 text-sm text-muted-foreground">
-                            <li><Link href="/privacy" className="hover:text-primary">Privacy</Link></li>
-                            <li><Link href="/terms" className="hover:text-primary">Terms</Link></li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div className="mt-12 pt-8 border-t flex flex-col md:flex-row justify-between items-center gap-4">
-                    <p className="text-sm text-muted-foreground">
-                        © 2024 LinkedLoom. All rights reserved.
-                    </p>
-                    <div className="flex gap-4">
-                        <Link href="#" className="text-muted-foreground hover:text-primary">
-                            <Twitter className="h-5 w-5" />
-                        </Link>
-                        <Link href="#" className="text-muted-foreground hover:text-primary">
-                            <Github className="h-5 w-5" />
-                        </Link>
-                        <Link href="#" className="text-muted-foreground hover:text-primary">
-                            <Linkedin className="h-5 w-5" />
-                        </Link>
-                    </div>
-                </div>
-            </div>
-        </footer>
-    );
+  return (
+    <footer className="w-full border-t border-white/5 bg-[#080808] pt-20 pb-10">
+      <div className="max-w-7xl mx-auto px-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-12 mb-20">
+          <div className="col-span-2 lg:col-span-1">
+            <div className="text-2xl font-black text-white mb-6">LinkedLoom<span className="text-figma-lime">.</span></div>
+            <p className="text-sm text-on-surface-variant opacity-50 max-w-[200px] leading-relaxed">
+              Dominate every platform without lifting a finger. Built by the future of content.
+            </p>
+          </div>
+          <div>
+            <h4 className="text-white text-xs font-black tracking-widest uppercase mb-6">Product</h4>
+            <ul className="space-y-4">
+              <li><Link href="#" className="text-sm text-on-surface-variant hover:text-figma-lime transition-colors opacity-60 hover:opacity-100">Studio</Link></li>
+              <li><Link href="#" className="text-sm text-on-surface-variant hover:text-figma-lime transition-colors opacity-60 hover:opacity-100">Templates</Link></li>
+              <li><Link href="#" className="text-sm text-on-surface-variant hover:text-figma-lime transition-colors opacity-60 hover:opacity-100">Scheduling</Link></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-white text-xs font-black tracking-widest uppercase mb-6">Assets</h4>
+            <ul className="space-y-4">
+              <li><Link href="#" className="text-sm text-on-surface-variant hover:text-figma-lime transition-colors opacity-60 hover:opacity-100">Pricing</Link></li>
+              <li><Link href="#" className="text-sm text-on-surface-variant hover:text-figma-lime transition-colors opacity-60 hover:opacity-100">Blog</Link></li>
+              <li><Link href="#" className="text-sm text-on-surface-variant hover:text-figma-lime transition-colors opacity-60 hover:opacity-100">Documentation</Link></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-white text-xs font-black tracking-widest uppercase mb-6">Legal</h4>
+            <ul className="space-y-4">
+              <li><Link href="#" className="text-sm text-on-surface-variant hover:text-figma-lime transition-colors opacity-60 hover:opacity-100">Privacy</Link></li>
+              <li><Link href="#" className="text-sm text-on-surface-variant hover:text-figma-lime transition-colors opacity-60 hover:opacity-100">Terms</Link></li>
+              <li><Link href="#" className="text-sm text-on-surface-variant hover:text-figma-lime transition-colors opacity-60 hover:opacity-100">Cookies</Link></li>
+            </ul>
+          </div>
+        </div>
+        <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="text-[10px] font-medium text-on-surface-variant opacity-40 uppercase tracking-widest">
+            © 2026 LinkedLoom AI. Crafted for creators.
+          </div>
+          <div className="flex items-center gap-6">
+             <Link href="#" className="text-on-surface-variant hover:text-white transition-colors opacity-40 hover:opacity-100"><span className="material-symbols-outlined text-sm">X</span></Link>
+             <Link href="#" className="text-on-surface-variant hover:text-white transition-colors opacity-40 hover:opacity-100"><span className="material-symbols-outlined text-sm">work</span></Link>
+             <Link href="#" className="text-on-surface-variant hover:text-white transition-colors opacity-40 hover:opacity-100"><span className="material-symbols-outlined text-sm">forum</span></Link>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
 }
