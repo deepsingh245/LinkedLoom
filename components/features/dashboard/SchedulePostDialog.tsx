@@ -96,7 +96,7 @@ export function SchedulePostDialog({
                         mode="single"
                         selected={date}
                         onSelect={setDate}
-                        className="w-full rounded-md border mx-auto"
+                        className="w-full rounded-xl border border-white/5 bg-white/5 backdrop-blur-md mx-auto p-4 shadow-inner"
                         disabled={(d) => {
                             const today = new Date();
                             today.setHours(0, 0, 0, 0);
@@ -107,7 +107,7 @@ export function SchedulePostDialog({
                     {date && (
                         <div className="flex items-center justify-center gap-2 mt-2">
                             <Select value={hour} onValueChange={setHour}>
-                                <SelectTrigger className="w-[80px]">
+                                <SelectTrigger className="w-[80px] bg-white/5 border-white/5 hover:bg-white/10 transition-colors">
                                     <SelectValue placeholder="HH" />
                                 </SelectTrigger>
                                 <SelectContent className="max-h-[200px]">
@@ -118,7 +118,7 @@ export function SchedulePostDialog({
                             </Select>
                             <span className="text-xl font-bold">:</span>
                             <Select value={minute} onValueChange={setMinute}>
-                                <SelectTrigger className="w-[80px]">
+                                <SelectTrigger className="w-[80px] bg-white/5 border-white/5 hover:bg-white/10 transition-colors">
                                     <SelectValue placeholder="MM" />
                                 </SelectTrigger>
                                 <SelectContent className="max-h-[200px]">
@@ -135,9 +135,9 @@ export function SchedulePostDialog({
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button onClick={handleSchedule} disabled={loading || !date || !finalDate}>
+                    <Button onClick={handleSchedule} disabled={loading || !date || !finalDate} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/20">
                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Schedule
+                        Schedule Post
                     </Button>
                 </DialogFooter>
             </DialogContent>
