@@ -15,7 +15,7 @@ import { Routes } from "@/lib/routes";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
-    const user = useAuth() as User;
+    const { user } = useAuth();
     const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
     const [scheduledPosts, setScheduledPosts] = useState<Post[]>([]);
     const [loadingDashboard, setLoadingDashboard] = useState(true);
@@ -24,17 +24,47 @@ export default function DashboardPage() {
     const getDashboardData = async () => {
         if (!user?.uid) return;
         setLoadingDashboard(true);
-        const data = await api.firebaseService.getAnalyticsDashboardData(user.uid);
-        setDashboardData(data ? data : { totalPosts: 0, totalDrafts: 0, totalScheduled: 0, totalFailed: 0, totalLikes: 0, totalComments: 0, totalShares: 0 });
-        setLoadingDashboard(false);
+        try {
+            const data = await api.firebaseService.getAnalyticsDashboardData(user.uid);
+            setDashboardData(data || { 
+                totalPosts: 0, 
+                totalDrafts: 0, 
+                totalScheduled: 0, 
+                totalFailed: 0, 
+                totalLikes: 0, 
+                totalComments: 0, 
+                totalShares: 0, 
+                postsThisWeek: 0 
+            });
+        } catch (error) {
+            console.error("Dashboard data fetch error:", error);
+            setDashboardData({ 
+                totalPosts: 0, 
+                totalDrafts: 0, 
+                totalScheduled: 0, 
+                totalFailed: 0, 
+                totalLikes: 0, 
+                totalComments: 0, 
+                totalShares: 0, 
+                postsThisWeek: 0 
+            });
+        } finally {
+            setLoadingDashboard(false);
+        }
     }
 
     const getScheduledPosts = async () => {
         if (!user?.uid) return;
         setLoadingScheduled(true);
-        const data = await api.firebaseService.getScheduledPosts(user.uid);
-        setScheduledPosts(data);
-        setLoadingScheduled(false);
+        try {
+            const data = await api.firebaseService.getScheduledPosts(user.uid);
+            setScheduledPosts(data || []);
+        } catch (error) {
+            console.error("Scheduled posts fetch error:", error);
+            setScheduledPosts([]);
+        } finally {
+            setLoadingScheduled(false);
+        }
     }
 
     useEffect(() => {
@@ -43,6 +73,22 @@ export default function DashboardPage() {
             getScheduledPosts();
         }
     }, [user?.uid])
+
+    // Calculate dynamic values
+    const totalContent = (dashboardData?.totalPosts ?? 0) + (dashboardData?.totalDrafts ?? 0);
+    const postsThisWeek = dashboardData?.postsThisWeek ?? 0;
+    const views = dashboardData?.metrics?.views ?? "0";
+    const engagement = dashboardData?.metrics?.engagement ?? "0%";
+    
+    let nextDate = "None";
+    if (scheduledPosts?.length > 0) {
+        const nextPost = [...scheduledPosts]
+            .filter(p => p.scheduledFor)
+            .sort((a, b) => new Date(a.scheduledFor!).getTime() - new Date(b.scheduledFor!).getTime())[0];
+        if (nextPost?.scheduledFor) {
+            nextDate = new Date(nextPost.scheduledFor).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+    }
     
     return (
         <div className="space-y-8 p-4 md:p-8  mx-auto">
@@ -62,27 +108,27 @@ export default function DashboardPage() {
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <StatsCard 
-                    title="Total (Posts + Drafts)" 
-                    value={`${(dashboardData?.totalPosts ?? 0) + (dashboardData?.totalDrafts ?? 0)}`} 
-                    change="+3 this week" color="#63d496" icon={Library} 
+                    title="Total Content" 
+                    value={`${totalContent}`} 
+                    change={`${postsThisWeek} created this week`} color="#63d496" icon={Library} 
                     loading={loadingDashboard}
                 />
                 <StatsCard 
                     title="Total Views" 
-                    value={`${dashboardData?.totalLikes ?? 0}`} 
-                    change="+18% vs last week" color="#6490d4" icon={Eye} 
+                    value={`${views}`} 
+                    change={`${dashboardData?.totalLikes ?? 0} likes, ${dashboardData?.totalComments ?? 0} comments`} color="#6490d4" icon={Eye} 
                     loading={loadingDashboard}
                 />
                 <StatsCard 
                     title="Engagement Rate" 
-                    value={`${dashboardData?.totalComments ?? 0}%`} 
-                    change="Avg across posts" color="#c890f0" icon={Heart} 
+                    value={`${engagement}`} 
+                    change="Interactions per view" color="#c890f0" icon={Heart} 
                     loading={loadingDashboard}
                 />
                 <StatsCard 
                     title="Scheduled" 
                     value={`${scheduledPosts?.length ?? 0}`} 
-                    change="Next: Mar 10" color="#f0b464" icon={Calendar} 
+                    change={`Next: ${nextDate}`} color="#f0b464" icon={Calendar} 
                     loading={loadingScheduled}
                 />
             </div>
@@ -108,7 +154,11 @@ export default function DashboardPage() {
                                 <div key={i} className="flex items-start gap-3 py-3 border-b border-[#1a1a26] last:border-0">
                                     <div className="flex-1 min-w-0">
                                         <p className="text-[12.5px] text-[#c0c0d8] leading-[1.4] mb-[5px] line-clamp-2">{post.content}</p>
-                                        <p className="text-[11px] text-[#4a4a68]">{/* post.scheduledFor?.toDateString() */}Mar 10, 2026</p>
+                                        <p className="text-[11px] text-[#4a4a68]">
+                                            {post.scheduledFor 
+                                                ? new Date(post.scheduledFor).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                                : "No date"}
+                                        </p>
                                     </div>
                                     <div className="bg-[#0d1828] border border-[#1a2840] text-[#6490d4] text-[11px] font-semibold tracking-[0.3px] px-[10px] py-[3px] rounded-full flex-shrink-0">Scheduled</div>
                                 </div>

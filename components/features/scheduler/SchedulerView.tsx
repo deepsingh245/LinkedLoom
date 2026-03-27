@@ -33,7 +33,7 @@ export function SchedulerView() {
     const [date, setDate] = React.useState<Date | undefined>(new Date())
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const user = useAuth();
+    const { user } = useAuth();
     const [scheduledPosts, setScheduledPosts] = React.useState<Post[]>([]);
     const [drafts, setDrafts] = React.useState<Post[]>([]);
     const [selectedDraft, setSelectedDraft] = React.useState<string | number | undefined>(undefined)

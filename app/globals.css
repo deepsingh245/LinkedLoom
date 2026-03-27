@@ -170,8 +170,15 @@
   @keyframes glow { 0%,100% { box-shadow:0 0 20px rgba(99,212,150,.15); } 50% { box-shadow:0 0 40px rgba(99,212,150,.35); } }
   @keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
   @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+  @keyframes blob {
+    0% { transform: translate(0px, 0px) scale(1); }
+    33% { transform: translate(30px, -50px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.9); }
+    100% { transform: translate(0px, 0px) scale(1); }
+  }
 
   .fade-up { animation: fadeUp .45s cubic-bezier(.16,1,.3,1) both; }
+  .animate-blob { animation: blob 7s infinite; }
   .fade-up-1 { animation-delay:.05s; }
   .fade-up-2 { animation-delay:.1s; }
   .fade-up-3 { animation-delay:.15s; }

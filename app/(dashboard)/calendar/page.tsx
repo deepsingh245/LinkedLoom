@@ -13,7 +13,7 @@ import { useAuth } from "@/components/auth-provider"; // Import useAuth
 import { User } from "firebase/auth"; // Import User type if not already globally available
 
 export default function CalendarPage() {
-    const user = useAuth() as User;
+    const { user } = useAuth();
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
     const [date, setDate] = useState<Date | undefined>(new Date());

@@ -10,13 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
-import { User } from "firebase/auth"; 
 import { cn } from "@/lib/utils";
 
 type TabValues = "all" | "scheduled" | "drafts" | "published";
 
 const SchedulePage: React.FC = () => {
-    const user = useAuth() as User | null;
+    const { user } = useAuth();
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<TabValues>("all");

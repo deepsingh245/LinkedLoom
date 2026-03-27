@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { format, set, isBefore } from "date-fns"
-import { User } from "firebase/auth"
 import { Wand2, Calendar as CalendarIcon, Save, Image as ImageIcon, Sparkles, X, RefreshCw, Upload } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -48,7 +47,7 @@ function base64ToBlob(dataUri: string): Blob {
 }
 
 export function PostEditor() {
-    const user = useAuth() as User | null;
+    const { user, profile } = useAuth();
 
     const [content, setContent] = React.useState("")
     const [topic, setTopic] = React.useState("")
@@ -679,7 +678,16 @@ export function PostEditor() {
                                 </div>
                                 <div className="flex-1 bg-[#0e0e16] rounded-[10px] border border-[#1e1e2a] flex justify-center p-4 min-h-[460px]">
                                     <div className="w-full h-full overflow-y-auto pr-1">
-                                        {user && <PostPreview content={content} image={imageUrl || undefined} user={user as any} />}
+                                        {(user || profile) && (
+                                            <PostPreview 
+                                                content={content} 
+                                                image={imageUrl || undefined} 
+                                                user={profile ? { 
+                                                    displayName: profile.displayName || null, 
+                                                    photoURL: profile.photoURL || null 
+                                                } : user} 
+                                            />
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -714,7 +722,16 @@ export function PostEditor() {
                         <TabsTrigger value="hide" className="rounded-lg data-[state=active]:bg-[#2a2a35] data-[state=active]:text-white transition-all">Hide Preview</TabsTrigger>
                     </TabsList>
                     <TabsContent value="preview" className="mt-2 bg-[#0e0e16] rounded-[10px] border border-[#1e1e2a] p-4">
-                        {user && <PostPreview content={content} image={imageUrl || undefined} user={user as any} />}
+                        {(user || profile) && (
+                            <PostPreview 
+                                content={content} 
+                                image={imageUrl || undefined} 
+                                user={profile ? { 
+                                    displayName: profile.displayName || null, 
+                                    photoURL: profile.photoURL || null 
+                                } : user} 
+                            />
+                        )}
                     </TabsContent>
                 </Tabs>
             </div>

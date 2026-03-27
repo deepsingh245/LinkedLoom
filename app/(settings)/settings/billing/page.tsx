@@ -4,7 +4,17 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Check, CreditCard, Download } from "lucide-react"
 
+import { useAuth } from "@/components/auth-provider"
+
 export default function BillingSettingsPage() {
+    const { user, profile, loading } = useAuth();
+    
+    const displayName = profile?.displayName || user?.displayName || "User";
+
+    if (loading) {
+        return <div className="p-8 text-[#8888a0]">Loading billing details...</div>
+    }
+
     return (
         <div className="space-y-6">
             <div>
@@ -143,7 +153,7 @@ export default function BillingSettingsPage() {
                             </div>
                             <div>
                                 <p className="text-sm font-medium text-[#f0f0f8]">Visa ending in 4242</p>
-                                <p className="text-xs text-[#5a5a78]">Expires 09/27 • Sarah Chen</p>
+                                <p className="text-xs text-[#5a5a78]">Expires 09/27 • {displayName}</p>
                             </div>
                         </div>
                         <Badge className="bg-[#0d2318] text-[#63d496] border-[#1a4030] hover:bg-[#0d2318] flex items-center gap-1.5">

@@ -17,7 +17,7 @@ export default function Home() {
         <LandingHowItWorks />
         <LandingFeatures />
         <LandingSocialProof />
-        <LandingPricing />
+        {/* <LandingPricing /> */}
       </main>
       <LandingFooter />
     </div>

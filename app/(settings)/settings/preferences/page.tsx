@@ -1,20 +1,22 @@
-"use client"
+'use client'
+
+import { useAuth } from "@/components/auth-provider"
+import { updateUserProfile } from "@/lib/firebase/user"
+import { successToast, dangerToast } from "@/lib/toast"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useState } from "react"
 
-function CustomSwitch({ checked, defaultChecked }: { checked?: boolean, defaultChecked?: boolean }) {
-    const [isOn, setIsOn] = useState(checked ?? defaultChecked ?? false);
+function CustomSwitch({ checked, onCheckedChange }: { checked: boolean, onCheckedChange: (checked: boolean) => void }) {
     return (
         <button 
             type="button"
             role="switch"
-            aria-checked={isOn}
-            onClick={() => setIsOn(!isOn)}
-            className={`w-11 h-6 rounded-full relative transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#63d496]/50 ${isOn ? 'bg-[#63d496]' : 'bg-[#2a2a3a]'}`}
+            aria-checked={checked}
+            onClick={() => onCheckedChange(!checked)}
+            className={`w-11 h-6 rounded-full relative transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#63d496]/50 ${checked ? 'bg-[#63d496]' : 'bg-[#2a2a3a]'}`}
         >
-            <span className={`absolute top-1/2 -translate-y-1/2 left-1 w-4 h-4 bg-[#0a1a10] rounded-full transition-transform duration-200 ${isOn ? 'translate-x-5' : 'bg-[#8888a0]'}`} />
+            <span className={`absolute top-1/2 -translate-y-1/2 left-1 w-4 h-4 bg-[#0a1a10] rounded-full transition-transform duration-200 ${checked ? 'translate-x-5' : 'bg-[#8888a0]'}`} />
         </button>
     )
 }
@@ -32,6 +34,79 @@ function SettingsRow({ title, description, control }: { title: string, descripti
 }
 
 export default function SettingsPage() {
+    const { user, profile, loading } = useAuth();
+
+    const handleUpdate = async (key: string, value: any) => {
+        if (!user?.uid) return;
+
+        try {
+            // Re-constructing the path properly for updateDoc would be better but we can just merge in updateUserProfile
+            // For nested updates, we need to be careful not to overwrite the whole object if we don't have it all.
+            // But updateUserProfile uses spread, so it should be fine if we pass the whole nested object.
+            
+            const currentPrefs = profile?.preferences || {};
+            const keys = key.split('.');
+            let updatedPrefs = { ...currentPrefs };
+            
+            if (keys.length === 1) {
+                (updatedPrefs as any)[keys[0]] = value;
+            } else if (keys.length === 2) {
+                const parentKey = keys[0];
+                const childKey = keys[1];
+                (updatedPrefs as any)[parentKey] = {
+                    ...(updatedPrefs as any)[parentKey],
+                    [childKey]: value
+                };
+            } else if (keys.length === 3) {
+                const p1 = keys[0];
+                const p2 = keys[1];
+                const p3 = keys[2];
+                (updatedPrefs as any)[p1] = {
+                    ...(updatedPrefs as any)[p1],
+                    [p2]: {
+                        ...(updatedPrefs as any)[p1]?.[p2],
+                        [p3]: value
+                    }
+                };
+            }
+
+            await updateUserProfile(user.uid, { preferences: updatedPrefs });
+            successToast("Preferences updated.");
+        } catch (error) {
+            console.error("Failed to update preferences:", error);
+            dangerToast("Failed to save changes.");
+        }
+    };
+
+    if (loading) {
+        return <div className="p-8 text-[#8888a0]">Loading preferences...</div>
+    }
+
+    const prefs = profile?.preferences || {
+        theme: 'dark',
+        density: 'comfortable',
+        animationsEnabled: true,
+        notifications: {
+            postPublished: true,
+            weeklyDigest: true,
+            aiSuggestions: false,
+            commentAlerts: true,
+            milestoneAlerts: true,
+            productUpdates: false,
+        },
+        ai: {
+            defaultTone: 'professional',
+            language: 'english',
+            autoHashtags: true,
+            smartSuggestions: true,
+        },
+        privacy: {
+            publicProfile: true,
+            analyticsSharing: false,
+            twoFactorAuth: false,
+        }
+    };
+
     return (
         <div className="space-y-8 pb-20">
             <div>
@@ -48,7 +123,10 @@ export default function SettingsPage() {
                     <div className="grid grid-cols-2 gap-6 w-full">
                         <div className="space-y-2">
                             <Label className="text-[13px] text-[#5a5a78]">Theme</Label>
-                            <Select defaultValue="dark">
+                            <Select 
+                                value={prefs.theme || 'dark'} 
+                                onValueChange={(val) => handleUpdate('theme', val as any)}
+                            >
                                 <SelectTrigger className="w-full bg-[#0e0e16] border-[#2a2a3a] text-[#f0f0f8] focus:ring-[#63d496] shadow-none h-10 rounded-lg">
                                     <SelectValue placeholder="Theme" />
                                 </SelectTrigger>
@@ -61,7 +139,10 @@ export default function SettingsPage() {
                         </div>
                         <div className="space-y-2">
                             <Label className="text-[13px] text-[#5a5a78]">Density</Label>
-                            <Select defaultValue="comfortable">
+                            <Select 
+                                value={prefs.density || 'comfortable'} 
+                                onValueChange={(val) => handleUpdate('density', val as any)}
+                            >
                                 <SelectTrigger className="w-full bg-[#0e0e16] border-[#2a2a3a] text-[#f0f0f8] focus:ring-[#63d496] shadow-none h-10 rounded-lg">
                                     <SelectValue placeholder="Density" />
                                 </SelectTrigger>
@@ -79,7 +160,10 @@ export default function SettingsPage() {
                                 <Label className="text-sm font-medium text-[#e0e0f0]">Animations & Transitions</Label>
                                 <p className="text-[13px] text-[#5a5a78]">Disable for reduced-motion experience</p>
                             </div>
-                            <CustomSwitch defaultChecked />
+                            <CustomSwitch 
+                                checked={prefs.animationsEnabled !== false} 
+                                onCheckedChange={(val) => handleUpdate('animationsEnabled', val)} 
+                            />
                         </div>
                     </div>
                 </CardContent>
@@ -94,32 +178,32 @@ export default function SettingsPage() {
                     <SettingsRow 
                         title="Post Published" 
                         description="When your scheduled posts go live" 
-                        control={<CustomSwitch defaultChecked />} 
+                        control={<CustomSwitch checked={!!prefs.notifications?.postPublished} onCheckedChange={(val) => handleUpdate('notifications.postPublished', val)} />} 
                     />
                     <SettingsRow 
                         title="Weekly Digest" 
                         description="Performance summary every Monday" 
-                        control={<CustomSwitch defaultChecked />} 
+                        control={<CustomSwitch checked={!!prefs.notifications?.weeklyDigest} onCheckedChange={(val) => handleUpdate('notifications.weeklyDigest', val)} />} 
                     />
                     <SettingsRow 
                         title="AI Suggestions" 
                         description="New post ideas based on your best content" 
-                        control={<CustomSwitch defaultChecked={false} />} 
+                        control={<CustomSwitch checked={!!prefs.notifications?.aiSuggestions} onCheckedChange={(val) => handleUpdate('notifications.aiSuggestions', val)} />} 
                     />
                     <SettingsRow 
                         title="Comment Alerts" 
                         description="Notify when posts receive comments" 
-                        control={<CustomSwitch defaultChecked />} 
+                        control={<CustomSwitch checked={!!prefs.notifications?.commentAlerts} onCheckedChange={(val) => handleUpdate('notifications.commentAlerts', val)} />} 
                     />
                     <SettingsRow 
                         title="Milestone Alerts" 
                         description="When you hit follower or view milestones" 
-                        control={<CustomSwitch defaultChecked />} 
+                        control={<CustomSwitch checked={!!prefs.notifications?.milestoneAlerts} onCheckedChange={(val) => handleUpdate('notifications.milestoneAlerts', val)} />} 
                     />
                     <SettingsRow 
                         title="Product Updates" 
                         description="LinkedLoom new features and announcements" 
-                        control={<CustomSwitch defaultChecked={false} />} 
+                        control={<CustomSwitch checked={!!prefs.notifications?.productUpdates} onCheckedChange={(val) => handleUpdate('notifications.productUpdates', val)} />} 
                     />
                 </CardContent>
             </Card>
@@ -133,21 +217,27 @@ export default function SettingsPage() {
                     <div className="grid grid-cols-2 gap-6 w-full">
                         <div className="space-y-2">
                             <Label className="text-[13px] text-[#5a5a78]">Default Tone</Label>
-                            <Select defaultValue="professional">
+                            <Select 
+                                value={prefs.ai?.defaultTone || 'professional'} 
+                                onValueChange={(val) => handleUpdate('ai.defaultTone', val)}
+                            >
                                 <SelectTrigger className="w-full bg-[#0e0e16] border-[#2a2a3a] text-[#f0f0f8] focus:ring-[#63d496] shadow-none h-10 rounded-lg">
                                     <SelectValue placeholder="Tone" />
                                 </SelectTrigger>
                                 <SelectContent className="bg-[#1a1a24] border-[#2a2a3a] text-[#f0f0f8]">
                                     <SelectItem value="professional">Professional</SelectItem>
                                     <SelectItem value="casual">Casual</SelectItem>
-                                    <SelectItem value="enthusiastic">Enthusiastic</SelectItem>
-                                    <SelectItem value="informative">Informative</SelectItem>
+                                    <SelectItem value="viral">Viral</SelectItem>
+                                    <SelectItem value="storytelling">Storytelling</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
                         <div className="space-y-2">
                             <Label className="text-[13px] text-[#5a5a78]">Content Language</Label>
-                            <Select defaultValue="english">
+                            <Select 
+                                value={prefs.ai?.language || 'english'} 
+                                onValueChange={(val) => handleUpdate('ai.language', val)}
+                            >
                                 <SelectTrigger className="w-full bg-[#0e0e16] border-[#2a2a3a] text-[#f0f0f8] focus:ring-[#63d496] shadow-none h-10 rounded-lg">
                                     <SelectValue placeholder="Language" />
                                 </SelectTrigger>
@@ -165,12 +255,12 @@ export default function SettingsPage() {
                         <SettingsRow 
                             title="Auto-add Hashtags" 
                             description="Automatically append relevant hashtags" 
-                            control={<CustomSwitch defaultChecked />} 
+                            control={<CustomSwitch checked={!!prefs.ai?.autoHashtags} onCheckedChange={(val) => handleUpdate('ai.autoHashtags', val)} />} 
                         />
                         <SettingsRow 
                             title="Smart Suggestions" 
                             description="Show AI-powered topic ideas in your dashboard" 
-                            control={<CustomSwitch defaultChecked />} 
+                            control={<CustomSwitch checked={!!prefs.ai?.smartSuggestions} onCheckedChange={(val) => handleUpdate('ai.smartSuggestions', val)} />} 
                         />
                     </div>
                 </CardContent>
@@ -185,12 +275,12 @@ export default function SettingsPage() {
                     <SettingsRow 
                         title="Public Profile" 
                         description="Allow others to view your LinkedLoom profile" 
-                        control={<CustomSwitch defaultChecked />} 
+                        control={<CustomSwitch checked={!!prefs.privacy?.publicProfile} onCheckedChange={(val) => handleUpdate('privacy.publicProfile', val)} />} 
                     />
                     <SettingsRow 
                         title="Analytics Sharing" 
                         description="Share anonymized data to improve AI quality" 
-                        control={<CustomSwitch defaultChecked={false} />} 
+                        control={<CustomSwitch checked={!!prefs.privacy?.analyticsSharing} onCheckedChange={(val) => handleUpdate('privacy.analyticsSharing', val)} />} 
                     />
                     <div className="flex items-center justify-between py-4">
                         <div className="space-y-0.5">
@@ -199,10 +289,12 @@ export default function SettingsPage() {
                         </div>
                         <div className="flex items-center gap-3">
                             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1e1e2a] border border-[#2a2a3a]">
-                                <span className="w-1.5 h-1.5 rounded-full bg-[#ffb800]"></span>
-                                <span className="text-[11px] font-medium text-[#ffb800]">Disabled</span>
+                                <span className={`w-1.5 h-1.5 rounded-full ${prefs.privacy?.twoFactorAuth ? 'bg-[#63d496]' : 'bg-[#ffb800]'}`}></span>
+                                <span className={`text-[11px] font-medium ${prefs.privacy?.twoFactorAuth ? 'text-[#63d496]' : 'text-[#ffb800]'}`}>
+                                    {prefs.privacy?.twoFactorAuth ? 'Enabled' : 'Disabled'}
+                                </span>
                             </div>
-                            <CustomSwitch defaultChecked={false} />
+                            <CustomSwitch checked={!!prefs.privacy?.twoFactorAuth} onCheckedChange={(val) => handleUpdate('privacy.twoFactorAuth', val)} />
                         </div>
                     </div>
                 </CardContent>

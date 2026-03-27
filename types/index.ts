@@ -34,3 +34,47 @@ export interface AnalyticsData {
   views: number;
   engagement: number;
 }
+
+export interface UserProfile {
+  uid: string;
+  displayName?: string;
+  email?: string;
+  jobTitle?: string;
+  company?: string;
+  location?: string;
+  bio?: string;
+  phone?: string;
+  website?: string;
+  twitter?: string;
+  linkedin?: string;
+  reddit?: string;
+  medium?: string;
+  linkedInId?: string;
+  photoURL?: string;
+  preferences?: {
+    theme?: 'light' | 'dark' | 'system';
+    density?: 'comfortable' | 'compact';
+    animationsEnabled?: boolean;
+    notifications?: {
+      postPublished?: boolean;
+      weeklyDigest?: boolean;
+      aiSuggestions?: boolean;
+      commentAlerts?: boolean;
+      milestoneAlerts?: boolean;
+      productUpdates?: boolean;
+    };
+    ai?: {
+      defaultTone?: string;
+      language?: string;
+      autoHashtags?: boolean;
+      smartSuggestions?: boolean;
+    };
+    privacy?: {
+      publicProfile?: boolean;
+      analyticsSharing?: boolean;
+      twoFactorAuth?: boolean;
+    };
+  };
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}

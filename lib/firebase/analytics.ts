@@ -20,6 +20,16 @@ export const getAnalyticsDashboardData = async (userId: string): Promise<Dashboa
     let totalDrafts = 0;
     let totalScheduled = 0;
     let totalFailed = 0;
+    
+    let totalViews = 0;
+    let totalLikes = 0;
+    let totalComments = 0;
+    let totalShares = 0;
+    
+    let postsThisWeek = 0;
+
+    const now = new Date();
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     // 2. Initialize weekly chart data
     const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -43,22 +53,31 @@ export const getAnalyticsDashboardData = async (userId: string): Promise<Dashboa
         else if (status === "SCHEDULED") totalScheduled++;
         else if (status === "FAILED") totalFailed++;
         
+        let dateObj: Date;
+        if (post.createdAt?.toDate) {
+            dateObj = post.createdAt.toDate();
+        } else if (post.createdAt) {
+            dateObj = new Date(post.createdAt);
+        } else {
+            dateObj = new Date();
+        }
+
+        if (dateObj > oneWeekAgo) {
+            postsThisWeek++;
+        }
+
+        // Aggregate metrics
+        totalViews += (post.views || 0);
+        totalLikes += (post.likes || 0);
+        totalComments += (post.comments || 0);
+        totalShares += (post.shares || 0);
+
         // Only map published posts to the weekly chart
         if (status === "PUBLISHED") {
-            let dateObj: Date;
-            
-            // Handle Firestore Timestamp vs standardized ISO Date strings
-            if (post.createdAt?.toDate) {
-                dateObj = post.createdAt.toDate();
-            } else if (post.createdAt) {
-                dateObj = new Date(post.createdAt);
-            } else {
-                dateObj = new Date(); // Fallback if missing
-            }
-
             const dayName = daysOfWeek[dateObj.getDay()];
             if (chartDataMap[dayName]) {
                 chartDataMap[dayName].posts += 1;
+                chartDataMap[dayName].engagement += (post.likes || 0) + (post.comments || 0) + (post.shares || 0);
             }
         }
     });
@@ -74,21 +93,27 @@ export const getAnalyticsDashboardData = async (userId: string): Promise<Dashboa
         chartDataMap["Sun"],
     ];
 
+    const totalEngagement = totalLikes + totalComments + totalShares;
+    const engagementRate = totalViews > 0 
+        ? ((totalEngagement / totalViews) * 100).toFixed(1) 
+        : "0.0";
+
     // 4. Construct final Dashboard object
     const dashboardData: DashboardData = {
         totalPosts: totalPosts,
         totalDrafts: totalDrafts,
         totalScheduled: totalScheduled,
         totalFailed: totalFailed,
-        totalLikes: 0,      // Placeholder for future native implementation
-        totalComments: 0,   // Placeholder 
-        totalShares: 0,     // Placeholder
+        totalLikes: totalLikes,
+        totalComments: totalComments,
+        totalShares: totalShares,
+        postsThisWeek: postsThisWeek,
         chartData: chartData,
         metrics: {
-            impressions: "0",
-            followers: "0",
-            engagement: "0%",
-            views: "0",
+            impressions: totalViews.toString(), 
+            followers: "0", 
+            engagement: `${engagementRate}%`,
+            views: totalViews.toString(),
         }
     };
 

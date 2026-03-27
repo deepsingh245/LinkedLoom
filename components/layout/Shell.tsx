@@ -16,7 +16,7 @@ export default function DashboardLayout({
                 <header className="h-[72px] border-b border-[#1e1e2a] flex items-center justify-between px-8 bg-[#0c0c12]/80 backdrop-blur-md sticky top-0 z-10 transition-all">
                     <h1 className="text-xl font-display font-semibold tracking-tight text-[#f0f0f8]"></h1>
                     <div className="flex items-center gap-4">
-                        <ModeToggle />
+                        {/* <ModeToggle /> */}
                         <UserNav />
                     </div>
                 </header>
