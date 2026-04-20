@@ -125,6 +125,20 @@ export const schedulePost = async (postId: string, scheduledFor: string): Promis
   }
 };
 
+export const unschedulePost = async (postId: string): Promise<void> => {
+  try {
+    const docRef = doc(db, "posts", postId);
+    await updateDoc(docRef, {
+      scheduledFor: null,
+      status: "DRAFT",
+      updatedAt: new Date(),
+    });
+  } catch (e) {
+    console.error("Error unscheduling post: ", e);
+    throw e;
+  }
+};
+
 /**
  * Instantly publish a post to LinkedIn via the backend HTTP endpoint
  * and record it in Firestore as PUBLISHED.

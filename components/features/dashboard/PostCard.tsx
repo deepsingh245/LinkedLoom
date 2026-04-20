@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Post } from "@/types";
 import { format } from "date-fns";
-import { Calendar, Edit, MoreVertical, Trash2 } from "lucide-react";
+import { Calendar, CalendarOff, Edit, MoreVertical, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { SchedulePostDialog } from "./SchedulePostDialog";
@@ -50,6 +50,16 @@ export function PostCard({ post, onUpdate }: PostCardProps) {
         }
     };
 
+    const handleUnschedule = async () => {
+        try {
+            await api.firebaseService.unschedulePost(String(post.id));
+            toast.success("Post unscheduled and moved to drafts");
+            onUpdate();
+        } catch (error) {
+            toast.error("Failed to unschedule post");
+        }
+    };
+
     const getBadgeVariant = (status: string): "default" | "outline" | "published" | "scheduled" | "draft" => {
         const lower = status.toLowerCase();
         if (lower === 'published') return 'published';
@@ -79,10 +89,17 @@ export function PostCard({ post, onUpdate }: PostCardProps) {
                                 <Edit className="mr-2 h-4 w-4" />
                                 Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setShowSchedule(true)}>
-                                <Calendar className="mr-2 h-4 w-4" />
-                                Schedule
-                            </DropdownMenuItem>
+                            {post.status.toLowerCase() === 'scheduled' ? (
+                                <DropdownMenuItem onClick={handleUnschedule}>
+                                    <CalendarOff className="mr-2 h-4 w-4" />
+                                    Unschedule
+                                </DropdownMenuItem>
+                            ) : (
+                                <DropdownMenuItem onClick={() => setShowSchedule(true)}>
+                                    <Calendar className="mr-2 h-4 w-4" />
+                                    Schedule
+                                </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                                 onClick={() => setShowDelete(true)}
                                 className="text-red-600 focus:text-red-600"
