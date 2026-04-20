@@ -1,16 +1,17 @@
 "use client"
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { Check, Camera, Trash, Loader2, Linkedin, Globe } from "lucide-react"
+import { Check, Camera, Loader2, Linkedin, Globe } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { updateUserProfile } from "@/lib/firebase/user"
 import { dangerToast, successToast } from "@/lib/toast"
 import { api } from "@/lib/api"
 import { cn } from "@/lib/utils"
+
 
 const XIcon = ({ className }: { className?: string }) => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -66,9 +67,9 @@ export default function ProfileSettingsPage() {
         }
     }
 
-    const handleConnectPlaceholder = (platform: string) => {
-        dangerToast(`${platform} connection is coming soon!`);
-    }
+    // const handleConnectPlaceholder = (platform: string) => {
+    //     dangerToast(`${platform} connection is coming soon!`);
+    // }
 
     useEffect(() => {
         if (profile) {
@@ -122,7 +123,7 @@ export default function ProfileSettingsPage() {
             <Card className="bg-[#13131a] border-[#1e1e2a] rounded-2xl">
                 <CardContent className="p-6 flex items-center gap-6">
                     <div className="relative">
-                        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#1a2e22] to-[#13241b] border border-[#2a4a36] flex items-center justify-center text-2xl font-bold text-[#63d496]">
+                        <div className="w-24 h-24 rounded-full bg-linear-to-br from-[#1a2e22] to-[#13241b] border border-[#2a4a36] flex items-center justify-center text-2xl font-bold text-[#63d496]">
                             {profile?.photoURL ? (
                                 <img src={profile.photoURL} alt={profile.displayName} className="w-full h-full rounded-full object-cover" />
                             ) : (
@@ -156,7 +157,7 @@ export default function ProfileSettingsPage() {
                         size="sm" 
                         onClick={handleSave} 
                         disabled={loading}
-                        className="bg-gradient-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)]"
+                        className="bg-linear-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)]"
                     >
                         {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
                         Save Changes
@@ -361,7 +362,7 @@ export default function ProfileSettingsPage() {
                         size="sm" 
                         onClick={handleSave} 
                         disabled={loading}
-                        className="bg-gradient-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)]"
+                        className="bg-linear-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)]"
                     >
                         {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
                         Save Changes

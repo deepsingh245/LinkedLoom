@@ -36,12 +36,12 @@ export default function LinkedInCallbackPage() {
                 // It must match what was sent in getLinkedInAuthUrl
                 // For now, we rely on the default in backend or pass current URL origin + path
                 const redirectUri = window.location.origin + "/integrations/linkedin/callback";
-                
+
                 await api.firebaseService.exchangeLinkedInToken(code, redirectUri);
                 setStatus("success");
                 setMessage("LinkedIn account connected successfully!");
                 toast.success("LinkedIn connected!");
-                
+
                 // Redirect after delay
                 setTimeout(() => {
                     router.push("/dashboard/scheduler");
@@ -59,7 +59,7 @@ export default function LinkedInCallbackPage() {
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-background">
-            <Card className="w-[400px]">
+            <Card className="w-100">
                 <CardHeader>
                     <CardTitle className="text-center">LinkedIn Integration</CardTitle>
                 </CardHeader>
@@ -81,7 +81,7 @@ export default function LinkedInCallbackPage() {
                         <>
                             <XCircle className="h-10 w-10 text-destructive" />
                             <p className="text-destructive font-medium text-center">{message}</p>
-                            <button 
+                            <button
                                 onClick={() => router.push("/dashboard/scheduler")}
                                 className="mt-4 text-sm text-primary hover:underline"
                             >

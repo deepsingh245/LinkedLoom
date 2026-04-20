@@ -13,7 +13,6 @@ import {
     DropdownMenuItem,
     DropdownMenuLabel,
     DropdownMenuSeparator,
-    DropdownMenuShortcut,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "../auth-provider";
@@ -50,7 +49,7 @@ export function UserNav() {
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent 
-                className="w-60 bg-[#13131a]/95 backdrop-blur-xl border border-[#1e1e2a] p-1 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] z-[100] animate-in fade-in slide-in-from-top-2 duration-200" 
+                className="w-60 bg-[#13131a]/95 backdrop-blur-xl border border-[#1e1e2a] p-1 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] z-100 animate-in fade-in slide-in-from-top-2 duration-200" 
                 align="end" 
                 forceMount
             >

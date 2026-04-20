@@ -22,7 +22,7 @@ export function LandingAbout() {
                     <div className="order-1 lg:order-2">
                         <div className="relative aspect-square rounded-2xl overflow-hidden border bg-muted flex items-center justify-center">
                             {/* Placeholder for About Image */}
-                            <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/20 to-primary/20" />
+                            <div className="absolute inset-0 bg-linear-to-tr from-blue-600/20 to-primary/20" />
                             <div className="text-center p-8 z-10">
                                 <h3 className="text-2xl font-bold mb-2">10k+</h3>
                                 <p className="text-muted-foreground">Posts Generated</p>

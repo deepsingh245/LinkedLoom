@@ -35,7 +35,7 @@ export default function BillingSettingsPage() {
                                 <span className="text-[#f0f0f8] font-medium"><span className="text-[#63d496]">38</span> / ∞</span>
                              </div>
                              <div className="h-1.5 w-full bg-[#1a1a24] rounded-full overflow-hidden">
-                                <div className="h-full bg-gradient-to-r from-[#63d496] to-[#3db87a] w-[40%] rounded-full"></div>
+                                <div className="h-full bg-linear-to-r from-[#63d496] to-[#3db87a] w-[40%] rounded-full"></div>
                              </div>
                         </div>
                         <div className="space-y-2">
@@ -44,7 +44,7 @@ export default function BillingSettingsPage() {
                                 <span className="text-[#f0f0f8] font-medium">4 / 20</span>
                              </div>
                              <div className="h-1.5 w-full bg-[#1a1a24] rounded-full overflow-hidden">
-                                <div className="h-full bg-gradient-to-r from-[#6490d4] to-[#4d78c0] w-[20%] rounded-full"></div>
+                                <div className="h-full bg-linear-to-r from-[#6490d4] to-[#4d78c0] w-[20%] rounded-full"></div>
                              </div>
                         </div>
                         <div className="space-y-2">
@@ -53,7 +53,7 @@ export default function BillingSettingsPage() {
                                 <span className="text-[#f0f0f8] font-medium"><span className="text-[#c890f0]">2</span> / 3</span>
                              </div>
                              <div className="h-1.5 w-full bg-[#1a1a24] rounded-full overflow-hidden">
-                                <div className="h-full bg-gradient-to-r from-[#c890f0] to-[#b070d8] w-[66%] rounded-full"></div>
+                                <div className="h-full bg-linear-to-r from-[#c890f0] to-[#b070d8] w-[66%] rounded-full"></div>
                              </div>
                         </div>
                     </div>
@@ -85,7 +85,7 @@ export default function BillingSettingsPage() {
 
                     {/* Pro Plan */}
                     <Card className="bg-[#1a2e22]/20 border-[#63d496]/50 shadow-[0_0_30px_rgba(99,212,150,0.05)] rounded-2xl flex flex-col relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#63d496] to-[#3db87a]"></div>
+                        <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-[#63d496] to-[#3db87a]"></div>
                         <CardHeader className="p-6 pb-4 flex flex-row items-center justify-between">
                             <div>
                                 <CardTitle className="text-xs font-bold text-[#63d496] tracking-wider uppercase mb-2">Pro</CardTitle>
@@ -132,7 +132,7 @@ export default function BillingSettingsPage() {
                                 <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#6490d4]" /> Brand voice</li>
                                 <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#6490d4]" /> Account manager</li>
                             </ul>
-                            <Button className="w-full bg-gradient-to-r from-[#6490d4] to-[#4d78c0] text-white hover:opacity-90 border-none shadow-[0_8px_24px_rgba(100,144,212,0.3)]">Upgrade</Button>
+                            <Button className="w-full bg-linear-to-r from-[#6490d4] to-[#4d78c0] text-white hover:opacity-90 border-none shadow-[0_8px_24px_rgba(100,144,212,0.3)]">Upgrade</Button>
                         </CardContent>
                     </Card>
                  </div>

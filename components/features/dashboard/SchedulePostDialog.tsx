@@ -20,10 +20,9 @@ import {
 import { api } from "@/lib/api";
 import { Post } from "@/types";
 import { format, set, isBefore } from "date-fns";
-import { Calendar as CalendarIcon, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 interface SchedulePostDialogProps {
     post: Post;
@@ -84,7 +83,7 @@ export function SchedulePostDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-106.25">
                 <DialogHeader>
                     <DialogTitle>Schedule Post</DialogTitle>
                     <DialogDescription>
@@ -107,10 +106,10 @@ export function SchedulePostDialog({
                     {date && (
                         <div className="flex items-center justify-center gap-2 mt-2">
                             <Select value={hour} onValueChange={setHour}>
-                                <SelectTrigger className="w-[80px] bg-white/5 border-white/5 hover:bg-white/10 transition-colors">
+                                <SelectTrigger className="w-20 bg-white/5 border-white/5 hover:bg-white/10 transition-colors">
                                     <SelectValue placeholder="HH" />
                                 </SelectTrigger>
-                                <SelectContent className="max-h-[200px]">
+                                <SelectContent className="max-h-50">
                                     {hours.map((h) => (
                                         <SelectItem key={h} value={h}>{h}</SelectItem>
                                     ))}
@@ -118,10 +117,10 @@ export function SchedulePostDialog({
                             </Select>
                             <span className="text-xl font-bold">:</span>
                             <Select value={minute} onValueChange={setMinute}>
-                                <SelectTrigger className="w-[80px] bg-white/5 border-white/5 hover:bg-white/10 transition-colors">
+                                <SelectTrigger className="w-20 bg-white/5 border-white/5 hover:bg-white/10 transition-colors">
                                     <SelectValue placeholder="MM" />
                                 </SelectTrigger>
-                                <SelectContent className="max-h-[200px]">
+                                <SelectContent className="max-h-50">
                                     {minutes.map((m) => (
                                         <SelectItem key={m} value={m}>{m}</SelectItem>
                                     ))}

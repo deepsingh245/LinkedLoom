@@ -28,8 +28,8 @@ export default function RegisterPage() {
         try {
             await api.firebaseService.registerWithEmailAndPassword(email, password, name)
             router.push(Routes.LOGIN)
-        } catch (err: any) {
-            setError(err.response?.data?.message || "Registration failed")
+        } catch (err: unknown) {
+            setError((err as Error).message || "Registration failed")
         } finally {
             setLoading(false)
         }
@@ -76,12 +76,12 @@ export default function RegisterPage() {
             
             {/* Subtle Grid / Noise Pattern */}
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-25 brightness-50 contrast-150 pointer-events-none mix-blend-overlay" />
-            <div className="absolute inset-0 bg-gradient-to-tr from-[#080808] via-transparent to-[#080808] opacity-70 pointer-events-none" />
+            <div className="absolute inset-0 bg-linear-to-tr from-[#080808] via-transparent to-[#080808] opacity-70 pointer-events-none" />
 
             <Card className="w-full max-w-md shadow-2xl border-[#1e1e2a] bg-[#13131a]/80 backdrop-blur-xl fade-up relative z-10">
                 <CardHeader className="space-y-1.5 pb-6">
                     <div className="flex justify-center mb-4">
-                        <div className="h-12 w-12 bg-gradient-to-br from-[#63d496] to-[#3db87a] rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(99,212,150,0.3)]">
+                        <div className="h-12 w-12 bg-linear-to-br from-[#63d496] to-[#3db87a] rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(99,212,150,0.3)]">
                             <span className="text-[#0a1a10] font-bold text-xl">L</span>
                         </div>
                     </div>
@@ -175,7 +175,7 @@ export default function RegisterPage() {
                         </div>
                         <Button 
                             type="submit" 
-                            className="w-full bg-gradient-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-[1px] hover:shadow-[0_8px_24px_rgba(99,212,150,0.3)] active:translate-y-0 transition-all font-semibold h-11 rounded-xl border-none mt-2" 
+                            className="w-full bg-linear-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-px hover:shadow-[0_8px_24px_rgba(99,212,150,0.3)] active:translate-y-0 transition-all font-semibold h-11 rounded-xl border-none mt-2" 
                             disabled={loading}
                         >
                             {loading ? "Creating account..." : "Register"}

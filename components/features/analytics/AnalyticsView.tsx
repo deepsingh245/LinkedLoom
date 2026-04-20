@@ -14,20 +14,16 @@ import {
     Bar
 } from 'recharts';
 
-import { useAuth } from "@/components/auth-provider";
-import { User } from "firebase/auth";
-import { api } from "@/lib/api";
-import * as React from "react";
-import { DashboardData } from "@/lib/firebase/interfaces";
 import { BarChart3, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Routes } from "@/lib/routes";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useData } from "@/components/data-provider";
 
-const EmptyAnalyticsState = ({ router }: { router: any }) => (
-    <div className="flex flex-col items-center justify-center h-[400px] border-2 border-dashed border-[#1e1e2a] rounded-xl relative z-10 bg-[#0c0c12]/50 group hover:border-primary/30 transition-all duration-500">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl" />
+const EmptyAnalyticsState = ({ router }: { router: ReturnType<typeof useRouter> }) => (
+    <div className="flex flex-col items-center justify-center h-100 border-2 border-dashed border-[#1e1e2a] rounded-xl relative z-10 bg-[#0c0c12]/50 group hover:border-primary/30 transition-all duration-500">
+        <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl" />
         <div className="p-5 bg-[#1a1a24] border border-[#2a2a3a] rounded-2xl mb-6 shadow-xl group-hover:scale-110 transition-transform duration-500">
             <BarChart3 className="w-8 h-8 text-primary" />
         </div>
@@ -39,37 +35,16 @@ const EmptyAnalyticsState = ({ router }: { router: any }) => (
             className="bg-primary hover:bg-primary/90 text-black font-bold h-11 px-8 rounded-xl shadow-[0_8px_30px_rgb(99,212,150,0.2)] hover:shadow-[0_8px_30px_rgb(99,212,150,0.4)] transition-all active:scale-95"
             onClick={() => router.push(Routes.CREATE_POST)}
         >
-            <Plus className="w-5 h-5 mr-2 stroke-[3]" />
+            <Plus className="w-5 h-5 mr-2 stroke-3" />
             Start a New Post
         </Button>
     </div>
 );
 
 export function AnalyticsView() {
-    const { user } = useAuth();
+    const { dashboardData, loading } = useData();
     const router = useRouter();
-    const [dashboardData, setDashboardData] = React.useState<DashboardData | null>(null)
-    const [loading, setLoading] = React.useState(true);
-    
-    const isChartEmpty = !loading && dashboardData?.totalPosts === 0;
-
-    React.useEffect(() => {
-        const fetchData = async () => {
-            if (!user?.uid) return;
-            try {
-                setLoading(true);
-                const data = await api.firebaseService.getAnalyticsDashboardData(user.uid)
-                if (data) {
-                    setDashboardData(data)
-                }
-            } catch (e) {
-                console.error("Failed to load analytics", e)
-            } finally {
-                setLoading(false);
-            }
-        }
-        fetchData()
-    }, [user])
+    const isChartEmpty = !loading && (!dashboardData || (dashboardData.totalPosts === 0 && (!dashboardData.chartData || dashboardData.chartData.length === 0)));
 
     const chartData = dashboardData?.chartData || [];
 
@@ -94,15 +69,14 @@ export function AnalyticsView() {
                         <Skeleton className="h-full flex-1 bg-transparent rounded-lg" />
                     </div>
                     
-                    <div className="card bg-[#13131a] border border-[#1e1e2a] rounded-xl p-6 h-[500px] relative overflow-hidden">
+                    <div className="card bg-[#13131a] border border-[#1e1e2a] rounded-xl p-6 h-125 relative overflow-hidden">
                         <div className="space-y-2 mb-8">
                             <Skeleton className="h-7 w-48 bg-[#1e1e2a]" />
                             <Skeleton className="h-4 w-72 bg-[#1e1e2a]" />
                         </div>
-                        <Skeleton className="h-[350px] w-full bg-[#1e1e2a]/50 rounded-lg" />
-                        <div className="absolute inset-x-6 bottom-10 flex items-center justify-between pointer-events-none">
-                            {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-                                <Skeleton key={i} className="h-4 w-8 bg-[#1e1e2a]" />
+                        <div className="flex items-end gap-2 h-75 mt-10">
+                            {[40, 70, 45, 90, 65, 80, 55, 85].map((height, i) => (
+                                <Skeleton key={i} className="flex-1 bg-[#1e1e2a]/50" style={{ height: `${height}%` }} />
                             ))}
                         </div>
                     </div>
@@ -113,95 +87,153 @@ export function AnalyticsView() {
 
     return (
         <div className="p-6 space-y-8 animate-fade-in pb-10">
+            {/* Stats Overview */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                <MetricCard title="Total Published" value={String(dashboardData?.totalPosts || 0)} change="All time" isPositive={true} />
-                <MetricCard title="Scheduled Posts" value={String(dashboardData?.totalScheduled || 0)} change="Upcoming" isPositive={true} />
-                <MetricCard title="Draft Posts" value={String(dashboardData?.totalDrafts || 0)} change="In progress" isPositive={true} />
-                <MetricCard title="Failed Posts" value={String(dashboardData?.totalFailed || 0)} change="Require attention" isPositive={false} />
+                <StatsMetric title="Total Impressions" value={dashboardData?.metrics?.impressions || "0"} change="Total Reach" color="text-[#63d496]" />
+                <StatsMetric title="Total Views" value={dashboardData?.metrics?.views || "0"} change="Active Views" color="text-[#6490d4]" />
+                <StatsMetric title="Engagement Rate" value={dashboardData?.metrics?.engagement || "0%"} change="Avg. Interaction" color="text-[#c890f0]" />
+                <StatsMetric title="Followers Grown" value={dashboardData?.metrics?.followers || "0"} change="Net Growth" color="text-[#f0b464]" />
             </div>
 
-            <Tabs defaultValue="overview" className="space-y-6">
-                <TabsList className="bg-[#1e1e2a] border border-[#2a2a35] p-1 rounded-xl">
-                    <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-[#2a2a35] data-[state=active]:text-white transition-all">Publishing Overview</TabsTrigger>
-                    <TabsTrigger value="engagement" className="rounded-lg data-[state=active]:bg-[#2a2a35] data-[state=active]:text-white transition-all">Weekly Bar Chart</TabsTrigger>
+            <Tabs defaultValue="engagement" className="space-y-6">
+                <TabsList className="bg-[#1a1a24] border border-[#2a2a3a] p-1 h-11 rounded-xl">
+                    <TabsTrigger value="engagement" className="rounded-lg px-6 data-[state=active]:bg-primary data-[state=active]:text-black font-semibold transition-all">Engagement</TabsTrigger>
+                    <TabsTrigger value="growth" className="rounded-lg px-6 data-[state=active]:bg-primary data-[state=active]:text-black font-semibold transition-all">Growth</TabsTrigger>
                 </TabsList>
-                <TabsContent value="overview" className="space-y-6">
-                    <div className="card bg-[#13131a] border-[#1e1e2a] rounded-xl overflow-hidden p-6 relative">
-                        {/* Glow Effect */}
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[100px] pointer-events-none"></div>
 
-                        <div className="mb-6 relative z-10">
-                            <h3 className="text-xl font-bold tracking-tight text-white mb-1">Posts Published Over Time</h3>
-                            <p className="text-sm text-gray-400">Total number of published posts grouped by day of the week.</p>
-                        </div>
-                        <div className="h-[400px] relative z-10 w-full mt-4">
+                <TabsContent value="engagement">
+                    <Card className="bg-[#13131a]/50 border-[#1e1e2a] backdrop-blur-sm overflow-hidden rounded-2xl">
+                        <CardHeader className="border-b border-white/5 bg-white/2 p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <CardTitle className="text-xl font-display font-bold text-[#f0f0f8]">Engagement Over Time</CardTitle>
+                                    <CardDescription className="text-[#8888a0] mt-1">Detailed breakdown of likes, comments, and shares</CardDescription>
+                                </div>
+                                <div className="flex gap-2">
+                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#63d496]/10 border border-[#63d496]/20">
+                                        <div className="w-2 h-2 rounded-full bg-[#63d496]" />
+                                        <span className="text-[11px] font-bold text-[#63d496] uppercase tracking-wider">Active</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="pt-8 px-6 pb-6">
                             {isChartEmpty ? (
                                 <EmptyAnalyticsState router={router} />
                             ) : (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={chartData}>
-                                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                                        <XAxis dataKey="name" className="text-sm font-medium" />
-                                        <YAxis className="text-sm font-medium" allowDecimals={false} />
-                                        <Tooltip
-                                            contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)' }}
-                                            itemStyle={{ color: 'hsl(var(--foreground))' }}
-                                        />
-                                        <Line type="monotone" dataKey="posts" name="Posts Published" stroke="hsl(var(--primary))" strokeWidth={2} />
-                                    </LineChart>
-                                </ResponsiveContainer>
+                                <div className="h-100 w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={chartData}>
+                                            <defs>
+                                                <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#63d496" stopOpacity={0.3}/>
+                                                    <stop offset="95%" stopColor="#63d496" stopOpacity={0}/>
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2a" vertical={false} />
+                                            <XAxis 
+                                                dataKey="name" 
+                                                stroke="#4a4a68" 
+                                                fontSize={11} 
+                                                tickLine={false} 
+                                                axisLine={false}
+                                                dy={10}
+                                            />
+                                            <YAxis 
+                                                stroke="#4a4a68" 
+                                                fontSize={11} 
+                                                tickLine={false} 
+                                                axisLine={false}
+                                                tickFormatter={(value) => `${value}`}
+                                            />
+                                            <Tooltip 
+                                                contentStyle={{ 
+                                                    backgroundColor: '#1a1a24', 
+                                                    border: '1px solid #2a2a3a',
+                                                    borderRadius: '12px',
+                                                    boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                                                    color: '#f0f0f8'
+                                                }}
+                                                itemStyle={{ color: '#63d496' }}
+                                            />
+                                            <Line 
+                                                type="monotone" 
+                                                dataKey="engagement" 
+                                                stroke="#63d496" 
+                                                strokeWidth={3}
+                                                dot={{ fill: '#63d496', strokeWidth: 2, r: 4, stroke: '#0c0c12' }}
+                                                activeDot={{ r: 6, strokeWidth: 0 }}
+                                            />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
                             )}
-                        </div>
-                    </div>
+                        </CardContent>
+                    </Card>
                 </TabsContent>
-                <TabsContent value="engagement" className="space-y-6">
-                    <div className="card bg-[#13131a] border-[#1e1e2a] rounded-xl overflow-hidden p-6 relative">
-                         {/* Glow Effect */}
-                         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[100px] pointer-events-none"></div>
 
-                        <div className="mb-6 relative z-10">
-                            <h3 className="text-xl font-bold tracking-tight text-white mb-1">Daily Publishing Bar</h3>
-                        </div>
-                        <div className="h-[400px] relative z-10 w-full mt-4">
+                <TabsContent value="growth">
+                    <Card className="bg-[#13131a]/50 border-[#1e1e2a] backdrop-blur-sm overflow-hidden rounded-2xl">
+                        <CardHeader className="border-b border-white/5 bg-white/2 p-6">
+                            <CardTitle className="text-xl font-display font-bold text-[#f0f0f8]">Audience Growth</CardTitle>
+                            <CardDescription className="text-[#8888a0] mt-1">Weekly new followers across platforms</CardDescription>
+                        </CardHeader>
+                        <CardContent className="pt-8 px-6 pb-6">
                             {isChartEmpty ? (
                                 <EmptyAnalyticsState router={router} />
                             ) : (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={chartData}>
-                                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                                        <XAxis dataKey="name" />
-                                        <YAxis allowDecimals={false} />
-                                        <Tooltip
-                                            cursor={{ fill: 'transparent' }}
-                                            contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)' }}
-                                        />
-                                        <Bar dataKey="posts" name="Posts Published" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
+                                <div className="h-100 w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={chartData}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2a" vertical={false} />
+                                            <XAxis 
+                                                dataKey="name" 
+                                                stroke="#4a4a68" 
+                                                fontSize={11} 
+                                                tickLine={false} 
+                                                axisLine={false}
+                                                dy={10}
+                                            />
+                                            <YAxis 
+                                                stroke="#4a4a68" 
+                                                fontSize={11} 
+                                                tickLine={false} 
+                                                axisLine={false} 
+                                            />
+                                            <Tooltip 
+                                                cursor={{fill: 'rgba(255,255,255,0.03)'}}
+                                                contentStyle={{ 
+                                                    backgroundColor: '#1a1a24', 
+                                                    border: '1px solid #2a2a3a',
+                                                    borderRadius: '12px',
+                                                    boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                                                    color: '#f0f0f8'
+                                                }}
+                                            />
+                                            <Bar dataKey="views" fill="#6490d4" radius={[4, 4, 0, 0]} barSize={40} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
                             )}
-                        </div>
-                    </div>
+                        </CardContent>
+                    </Card>
                 </TabsContent>
             </Tabs>
         </div>
     )
 }
 
-function MetricCard({ title, value, change, isPositive }: { title: string, value: string, change: string, isPositive: boolean }) {
+function StatsMetric({ title, value, change, color }: { title: string, value: string, change: string, color: string }) {
     return (
-        <div className="card p-6 bg-[#13131a] border-[#1e1e2a] rounded-xl hover:border-primary/50 transition-all duration-300 relative overflow-hidden group">
-            {/* Glow Effect on Hover */}
-            <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-[50px] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-
-            <div className="flex flex-col relative z-10">
-                <span className="text-sm font-medium text-gray-400 mb-2">{title}</span>
-                <div className="flex items-end justify-between items-center">
-                    <span className="text-3xl font-bold text-white tracking-tight">{value}</span>
-                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${isPositive ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                        {change}
-                    </span>
-                </div>
+        <Card className="p-6 bg-[#13131a]/50 border-[#1e1e2a] hover:border-white/10 transition-all rounded-2xl backdrop-blur-sm group">
+            <p className="text-[11px] font-bold text-[#5a5a78] uppercase tracking-wider mb-2 group-hover:text-[#8888a0] transition-colors">{title}</p>
+            <div className="flex justify-between items-end">
+                <h3 className="text-3xl font-display font-bold text-[#f0f0f8] tracking-tight">{value}</h3>
+                <span className={`text-[12px] font-bold ${color} bg-white/5 px-2.5 py-1 rounded-lg`}>{change}</span>
             </div>
-        </div>
+            <div className="mt-4 h-1 w-full bg-[#1a1a24] rounded-full overflow-hidden">
+                <div className={`h-full bg-current ${color} opacity-30`} style={{ width: '65%' }} />
+            </div>
+        </Card>
     )
 }

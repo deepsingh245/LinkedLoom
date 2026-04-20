@@ -23,6 +23,7 @@ import { SharedAlertDialog } from "@/components/shared/SharedAlertDialog";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+;
 
 interface PostCardProps {
     post: Post;
