@@ -23,7 +23,7 @@ import { SharedAlertDialog } from "@/components/shared/SharedAlertDialog";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-;
+import { SmartImage } from "@/components/ui/smart-image";
 
 interface PostCardProps {
     post: Post;
@@ -113,7 +113,7 @@ export function PostCard({ post, onUpdate }: PostCardProps) {
                 {post.imageUrl && (
                     <div className="px-4 pt-3">
                         <div className="rounded-lg overflow-hidden border border-[#1e1e2a] aspect-video">
-                            <img src={post.imageUrl} alt="Post image" className="w-full h-full object-cover" />
+                            <SmartImage src={post.imageUrl} alt="Post image" className="w-full h-full object-cover" />
                         </div>
                     </div>
                 )}
