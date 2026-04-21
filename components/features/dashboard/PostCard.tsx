@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Post } from "@/types";
 import { format } from "date-fns";
-import { Calendar, Edit, MoreVertical, Trash2 } from "lucide-react";
+import { Calendar, CalendarOff, Edit, MoreVertical, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { SchedulePostDialog } from "./SchedulePostDialog";
@@ -23,6 +23,7 @@ import { SharedAlertDialog } from "@/components/shared/SharedAlertDialog";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { SmartImage } from "@/components/ui/smart-image";
 
 interface PostCardProps {
     post: Post;
@@ -46,6 +47,16 @@ export function PostCard({ post, onUpdate }: PostCardProps) {
             onUpdate();
         } catch (error) {
             toast.error("Failed to delete post");
+        }
+    };
+
+    const handleUnschedule = async () => {
+        try {
+            await api.firebaseService.unschedulePost(String(post.id));
+            toast.success("Post unscheduled and moved to drafts");
+            onUpdate();
+        } catch (error) {
+            toast.error("Failed to unschedule post");
         }
     };
 
@@ -78,10 +89,17 @@ export function PostCard({ post, onUpdate }: PostCardProps) {
                                 <Edit className="mr-2 h-4 w-4" />
                                 Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setShowSchedule(true)}>
-                                <Calendar className="mr-2 h-4 w-4" />
-                                Schedule
-                            </DropdownMenuItem>
+                            {post.status.toLowerCase() === 'scheduled' ? (
+                                <DropdownMenuItem onClick={handleUnschedule}>
+                                    <CalendarOff className="mr-2 h-4 w-4" />
+                                    Unschedule
+                                </DropdownMenuItem>
+                            ) : (
+                                <DropdownMenuItem onClick={() => setShowSchedule(true)}>
+                                    <Calendar className="mr-2 h-4 w-4" />
+                                    Schedule
+                                </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                                 onClick={() => setShowDelete(true)}
                                 className="text-red-600 focus:text-red-600"
@@ -95,7 +113,7 @@ export function PostCard({ post, onUpdate }: PostCardProps) {
                 {post.imageUrl && (
                     <div className="px-4 pt-3">
                         <div className="rounded-lg overflow-hidden border border-[#1e1e2a] aspect-video">
-                            <img src={post.imageUrl} alt="Post image" className="w-full h-full object-cover" />
+                            <SmartImage src={post.imageUrl} alt="Post image" className="w-full h-full object-cover" />
                         </div>
                     </div>
                 )}

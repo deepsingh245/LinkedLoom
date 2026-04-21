@@ -20,23 +20,20 @@ import {
     ItemActions,
     ItemContent,
     ItemDescription,
-    ItemMedia,
     ItemTitle,
 } from "@/components/ui/item"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-
 import { useAuth } from "@/components/auth-provider";
-import { User } from "firebase/auth";
 
 export function SchedulerView() {
     const [date, setDate] = React.useState<Date | undefined>(new Date())
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const user = useAuth();
+    const { user } = useAuth();
     const [scheduledPosts, setScheduledPosts] = React.useState<Post[]>([]);
     const [drafts, setDrafts] = React.useState<Post[]>([]);
-    const [selectedDraft, setSelectedDraft] = React.useState<string | number | undefined>(undefined)
+    // const [selectedDraft, setSelectedDraft] = React.useState<string | number | undefined>(undefined)
 
     React.useEffect(() => {
         const fetchScheduledPosts = async () => {
@@ -149,7 +146,7 @@ export function SchedulerView() {
                                                     variant="outline"
                                                     size="sm"
                                                     className="cursor-pointer"
-                                                    onClick={() => setSelectedDraft(draft.id)}
+                                                    // onClick={() => setSelectedDraft(draft.id)}
                                                 >
                                                     Schedule
                                                 </Button>
@@ -163,7 +160,7 @@ export function SchedulerView() {
 
                 </div>
 
-                <div className="space-y-2 overflow-y-auto h-[400px]">
+                <div className="space-y-2 overflow-y-auto h-100">
                     {scheduledPosts.map((post) => (
                         <Card key={post.id} className="cursor-pointer hover:bg-muted/50 transition-colors">
                             <CardContent className="p-3 flex items-start gap-3">

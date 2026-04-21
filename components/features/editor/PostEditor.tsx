@@ -2,11 +2,9 @@
 
 import * as React from "react"
 import { format, set, isBefore } from "date-fns"
-import { User } from "firebase/auth"
 import { Wand2, Calendar as CalendarIcon, Save, Image as ImageIcon, Sparkles, X, RefreshCw, Upload } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
@@ -18,7 +16,7 @@ import {
     SelectValue
 } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 
@@ -31,6 +29,7 @@ import { httpsCallable } from "firebase/functions"
 import { functions } from "@/lib/firebase"
 import { FirebaseFunctions } from "@/lib/firebase/functions"
 import { uploadPostAttachment } from "@/lib/firebase/storage"
+
 
 const LINKEDIN_MAX_LENGTH = 3000;
 
@@ -48,7 +47,7 @@ function base64ToBlob(dataUri: string): Blob {
 }
 
 export function PostEditor() {
-    const user = useAuth() as User | null;
+    const { user, profile } = useAuth();
 
     const [content, setContent] = React.useState("")
     const [topic, setTopic] = React.useState("")
@@ -63,6 +62,7 @@ export function PostEditor() {
     const [generatingImage, setGeneratingImage] = React.useState(false)
     const [enhancingPrompt, setEnhancingPrompt] = React.useState(false)
     const [saving, setSaving] = React.useState(false)
+    const [activePlatform, setActivePlatform] = React.useState<string>("linkedin")
 
     const [imagePrompt, setImagePrompt] = React.useState("")
     const [imageUrl, setImageUrl] = React.useState<string | null>(null)
@@ -123,15 +123,12 @@ export function PostEditor() {
     }
 
     const handleGenerateImage = async () => {
-        // Use imagePrompt if provided, otherwise fallback to the post content or topic
         const prompt = imagePrompt.trim() || content.trim() || topic.trim();
         if (!prompt) return dangerToast("Please enter an image prompt, generate post content, or provide a topic.");
         
         setGeneratingImage(true)
         try {
             const generateImage = httpsCallable(functions, FirebaseFunctions.GENERATE_IMAGE);
-            
-            // If prompt is from content, truncate it to keep it efficient for the AI
             const finalPrompt = prompt.length > 500 ? prompt.substring(0, 500) + "..." : prompt;
 
             const result = await generateImage({ 
@@ -192,7 +189,6 @@ export function PostEditor() {
 
         setGeneratingImage(true);
         try {
-            // Read as base64 for the AI
             const reader = new FileReader();
             const base64Promise = new Promise<string>((resolve) => {
                 reader.onload = () => resolve(reader.result as string);
@@ -280,7 +276,7 @@ export function PostEditor() {
             content,
             status: "draft",
             user_id: user.uid,
-            tone: tone.toUpperCase() as any,
+            tone: tone.toUpperCase() as string,
             date: new Date().toISOString(),
             mediaUrls: imageUrl ? [imageUrl] : [],
             imageUrl: imageUrl || null,
@@ -289,10 +285,9 @@ export function PostEditor() {
         };
     }
 
-    /** Upload base64 image to Storage, return the download URL (or null) */
     const uploadImageIfNeeded = async (): Promise<string | null> => {
         if (!imageUrl || !user?.uid) return null;
-        if (!imageUrl.startsWith("data:image")) return imageUrl; // already a URL
+        if (!imageUrl.startsWith("data:image")) return imageUrl; 
 
         const blob = base64ToBlob(imageUrl);
         const file = new File([blob], `ai-generated-${Date.now()}.png`, { type: "image/png" });
@@ -306,7 +301,7 @@ export function PostEditor() {
         setSaving(true)
         try {
             const storageUrl = await uploadImageIfNeeded();
-            const payload = createBasePayload() as any;
+            const payload = createBasePayload();
             payload.imageUrl = storageUrl;
             payload.mediaUrls = storageUrl ? [storageUrl] : [];
 
@@ -339,7 +334,7 @@ export function PostEditor() {
         setSaving(true)
         try {
             const storageUrl = await uploadImageIfNeeded();
-            const payload = createBasePayload() as any;
+            const payload = createBasePayload();
             payload.imageUrl = storageUrl;
             payload.mediaUrls = storageUrl ? [storageUrl] : [];
             const post = await api.firebaseService.createPost(payload)
@@ -364,13 +359,13 @@ export function PostEditor() {
                 <h1 className="font-display text-[26px] font-semibold text-[#f0f0f8] tracking-[-0.4px] mb-1.5">
                     Create Post
                 </h1>
-                <p className="text-[#5a5a78] text-[14px]">Generate with AI or write from scratch.</p>
+                <p className="text-[#5a5a78] text-3.5">Generate with AI or write from scratch.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Controls */}
                 <div className="flex flex-col gap-4 lg:col-span-1">
-                    <Card className="animate-fadeUp animation-delay-100 p-5 rounded-[16px] border border-[#1e1e2a] bg-[#13131a] shadow-sm transition-all hover:border-[#2a2a3a]">
+                    <Card className="animate-fadeUp animation-delay-100 p-5 rounded-2xl border border-[#1e1e2a] bg-[#13131a] shadow-sm transition-all hover:border-[#2a2a3a]">
                         <h3 className="text-[13px] font-semibold text-[#7070a0] uppercase tracking-[0.8px] mb-4">
                             AI Generation
                         </h3>
@@ -381,7 +376,7 @@ export function PostEditor() {
                                 value={topic}
                                 onChange={(e) => setTopic(e.target.value)}
                                 placeholder="e.g. Leading remote teams"
-                                className="w-full min-h-[60px] bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[13.5px] rounded-[10px] px-3.5 py-2.5 transition-all focus:border-[#63d496] focus:shadow-[0_0_0_1px_rgba(99,212,150,0.5)] outline-none placeholder:text-[#4a4a68] resize-none"
+                                className="w-full min-h-15 bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[13.5px] rounded-[10px] px-3.5 py-2.5 transition-all focus:border-[#63d496] focus:shadow-[0_0_0_1px_rgba(99,212,150,0.5)] outline-none placeholder:text-[#4a4a68] resize-none"
                             />
                         </div>
                         
@@ -400,8 +395,8 @@ export function PostEditor() {
                             </Select>
                         </div>
                         
-                        <div className="mb-[18px]">
-                            <Label className="text-[12.5px] text-[#8888a0] mb-3 block font-medium flex justify-between">
+                        <div className="mb-4.5">
+                            <Label className="text-[12.5px] text-[#8888a0] mb-3 font-medium flex justify-between">
                                 <span>Post Length</span>
                                 <span className="text-[#63d496]">{length[0]}%</span>
                             </Label>
@@ -417,9 +412,9 @@ export function PostEditor() {
                         <Button 
                             onClick={handleGenerate} 
                             disabled={generating || !topic.trim()}
-                            className="w-full flex items-center justify-center bg-gradient-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-[1px] hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-semibold border-none h-11 px-[20px] rounded-[10px] disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full flex items-center justify-center bg-linear-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-px hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-semibold border-none h-11 px-5 rounded-[10px] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {generating ? <RefreshCw className="mr-2 h-[14px] w-[14px] animate-spin" /> : <Wand2 className="mr-2 h-[14px] w-[14px]" />}
+                            {generating ? <RefreshCw className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Wand2 className="mr-2 h-3.5 w-3.5" />}
                             {generating ? "Generating..." : "Generate Post"}
                         </Button>
 
@@ -433,35 +428,32 @@ export function PostEditor() {
                                 <Upload className="mr-2 h-3.5 w-3.5 text-[#63d496]" />
                                 Upload Post Image
                             </Button>
-                            {/* {!showImageOptions && (
-                               <Button
-                                 onClick={() => setShowImageOptions(true)}
-                                 variant="outline"
-                                 className="h-10 px-3 bg-[#1a1a24] border-[#2a2a3a] text-[#8888a0] rounded-[10px]"
-                               >
-                                 <ImageIcon className="h-4 w-4" />
-                               </Button>
-                            )} */}
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                onChange={handleMediaUpload}
+                                className="hidden"
+                            />
                         </div>
 
                         <div className="mt-5 pt-4 border-t border-[#1e1e2a] flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <ImageIcon className={`h-4 w-4 ${showImageOptions ? 'text-[#63d496]' : 'text-[#5a5a78]'}`} />
                                 <span className={`text-[12.5px] font-medium transition-colors ${showImageOptions ? 'text-[#e0e0f0]' : 'text-[#5a5a78]'}`}>
                                     Add AI Image
                                 </span>
                             </div>
                             <button 
                                 onClick={() => setShowImageOptions(!showImageOptions)}
-                                className={`relative w-10 min-w-10 h-[22px] rounded-full transition-all duration-300 ${showImageOptions ? 'bg-[#63d496]' : 'bg-[#1e1e2a] border border-[#2a2a3a]'}`}
+                                className={`relative w-10 min-w-10 h-5.5 rounded-full transition-all duration-300 ${showImageOptions ? 'bg-[#63d496]' : 'bg-[#1e1e2a] border border-[#2a2a3a]'}`}
                             >
-                                <div className={`absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-all duration-300 shadow-sm ${showImageOptions ? 'translate-x-[18px]' : 'translate-x-0'}`} />
+                                <div className={`absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-all duration-300 shadow-sm ${showImageOptions ? 'translate-x-4.5' : 'translate-x-0'}`} />
                             </button>
                         </div>
                     </Card>
 
                     {showImageOptions && (
-                        <Card className="animate-in fade-in slide-in-from-top-2 duration-300 p-5 rounded-[16px] border border-[#1e1e2a] bg-[#13131a] shadow-sm transition-all hover:border-[#2a2a3a]">
+                        <Card className="animate-in fade-in slide-in-from-top-2 duration-300 p-5 rounded-2xl border border-[#1e1e2a] bg-[#13131a] shadow-sm transition-all hover:border-[#2a2a3a]">
                             <h3 className="text-[13px] font-semibold text-[#7070a0] uppercase tracking-[0.8px] mb-4 flex items-center gap-2">
                                 <Sparkles className="h-3.5 w-3.5 text-[#63d496]" />
                                 Visual Asset
@@ -474,14 +466,14 @@ export function PostEditor() {
                                         value={imagePrompt}
                                         onChange={(e) => setImagePrompt(e.target.value)}
                                         placeholder="Describe the image you want..."
-                                        className="flex-1 min-h-[80px] bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[13.5px] rounded-[10px] px-3.5 py-2.5 transition-all focus:border-[#63d496] focus:shadow-[0_0_0_1px_rgba(99,212,150,0.5)] outline-none placeholder:text-[#4a4a68] resize-none"
+                                        className="flex-1 min-h-20 bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[13.5px] rounded-[10px] px-3.5 py-2.5 transition-all focus:border-[#63d496] focus:shadow-[0_0_0_1px_rgba(99,212,150,0.5)] outline-none placeholder:text-[#4a4a68] resize-none"
                                     />
-                                    <div className="flex flex gap-2">
+                                    <div className="flex gap-2">
                                         <Button
                                             onClick={handleEnhancePrompt}
                                             disabled={enhancingPrompt || generatingImage || (!imagePrompt.trim() && !content.trim() && !topic.trim())}
                                             variant="outline"
-                                            className="h-[38px] px-3 bg-[#0e0e16] border-[#1e1e2a] hover:border-[#63d496]/40 hover:bg-[#1a1a24] text-[#8888a0] hover:text-[#63d496] rounded-[10px] transition-all disabled:opacity-50 flex gap-2 text-[12px] font-medium"
+                                            className="h-9.5 px-3 bg-[#0e0e16] border-[#1e1e2a] hover:border-[#63d496]/40 hover:bg-[#1a1a24] text-[#8888a0] hover:text-[#63d496] rounded-[10px] transition-all disabled:opacity-50 flex gap-2 text-[12px] font-medium"
                                         >
                                             {enhancingPrompt ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
                                             <span>Enhance</span>
@@ -490,7 +482,7 @@ export function PostEditor() {
                                             onClick={handleGenerateImageWithContext}
                                             disabled={generatingImage || enhancingPrompt || !content.trim()}
                                             variant="outline"
-                                            className="h-[38px] px-3 bg-[#0e0e16] border-[#1e1e2a] hover:border-[#63d496]/40 hover:bg-[#1a1a24] text-[#8888a0] hover:text-[#63d496] rounded-[10px] transition-all disabled:opacity-50 flex gap-2 text-[12px] font-medium whitespace-nowrap"
+                                            className="h-9.5 px-3 bg-[#0e0e16] border-[#1e1e2a] hover:border-[#63d496]/40 hover:bg-[#1a1a24] text-[#8888a0] hover:text-[#63d496] rounded-[10px] transition-all disabled:opacity-50 flex gap-2 text-[12px] font-medium whitespace-nowrap"
                                             title="Get context from post and generate image"
                                         >
                                             {generatingImage ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
@@ -498,9 +490,6 @@ export function PostEditor() {
                                         </Button>
                                     </div>
                                 </div>
-                                {!imagePrompt.trim() && (content.trim() || topic.trim()) && (
-                                    <p className="text-[11px] text-[#5a5a78] mt-1.5">Using post content as context for generation.</p>
-                                )}
                             </div>
 
                             {/* Reference Image Section */}
@@ -538,9 +527,6 @@ export function PostEditor() {
                                     onChange={handleReferenceImageUpload}
                                     className="hidden"
                                 />
-                                <p className="text-[11px] text-[#5a5a78] mt-1.5 line-clamp-2 italic">
-                                    AI will use this image to understand style, objects, or composition.
-                                </p>
                             </div>
 
                             {imageUrl ? (
@@ -572,9 +558,9 @@ export function PostEditor() {
                                     <Button 
                                         onClick={handleGenerateImage} 
                                         disabled={generatingImage || (!topic.trim() && !content.trim() && !imagePrompt.trim())}
-                                        className="flex-1 flex items-center justify-center bg-[#1a1a24] border border-[#2a2a3a] text-[#e0e0f0] hover:bg-[#20202c] hover:border-[#63d496]/40 transition-all font-sans font-medium h-11 px-[20px] rounded-[10px] disabled:opacity-50"
+                                        className="flex-1 flex items-center justify-center bg-[#1a1a24] border border-[#2a2a3a] text-[#e0e0f0] hover:bg-[#20202c] hover:border-[#63d496]/40 transition-all font-sans font-medium h-11 px-5 rounded-[10px] disabled:opacity-50"
                                     >
-                                        {generatingImage ? <RefreshCw className="mr-2 h-[14px] w-[14px] animate-spin" /> : <ImageIcon className="mr-2 h-[14px] w-[14px] text-[#63d496]" />}
+                                        {generatingImage ? <RefreshCw className="mr-2 h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="mr-2 h-3.5 w-3.5 text-[#63d496]" />}
                                         {generatingImage ? "Generating..." : "Generate AI Image"}
                                     </Button>
                                 </div>
@@ -582,7 +568,7 @@ export function PostEditor() {
                         </Card>
                     )}
 
-                    <Card className="animate-fadeUp animation-delay-200 p-5 rounded-[16px] border border-[#1e1e2a] bg-[#13131a] shadow-sm transition-all hover:border-[#2a2a3a]">
+                    <Card className="animate-fadeUp animation-delay-200 p-5 rounded-2xl border border-[#1e1e2a] bg-[#13131a] shadow-sm transition-all hover:border-[#2a2a3a]">
                         <h3 className="text-[13px] font-semibold text-[#7070a0] uppercase tracking-[0.8px] mb-3.5">
                             Post Settings
                         </h3>
@@ -590,7 +576,7 @@ export function PostEditor() {
                             <Label className="text-[12.5px] text-[#8888a0] mb-1.5 block font-medium">Status Date</Label>
                             <Popover>
                                 <PopoverTrigger asChild>
-                                    <Button disabled={saving} className="w-full h-11 justify-start text-left font-normal bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[13.5px] rounded-[10px] hover:bg-[#1a1a24] hover:border-[#2a2a3a]">
+                                    <Button disabled={saving} className="w-full h-11 justify-start text-left font-normal bg-[#0e0e16] border border-[#1e1e2a] text-[#242425] text-[13.5px] rounded-[10px] hover:bg-[#1a1a24] hover:border-[#2a2a3a]">
                                         <CalendarIcon className="mr-2 h-4 w-4" />
                                         {date ? format(set(date, { hours: parseInt(hour), minutes: parseInt(minute) }), "MMM d, yyyy 'at' p") : "Pick a date (Optional)"}
                                     </Button>
@@ -611,21 +597,21 @@ export function PostEditor() {
                                     {date && (
                                         <div className="flex items-center justify-center gap-2 mt-2 pt-2 border-t border-[#1e1e2a]">
                                             <Select value={hour} onValueChange={setHour}>
-                                                <SelectTrigger className="w-[80px] bg-[#0e0e16] border-[#1e1e2a]">
+                                                <SelectTrigger className="w-20 bg-[#0e0e16] border-[#1e1e2a]">
                                                     <SelectValue placeholder="HH" />
                                                 </SelectTrigger>
-                                                <SelectContent className="max-h-[200px] bg-[#13131a] border-[#1e1e2a] text-[#e0e0f0]">
+                                                <SelectContent className="max-h-50 bg-[#13131a] border-[#1e1e2a] text-[#e0e0f0]">
                                                     {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0')).map((h) => (
                                                         <SelectItem key={h} value={h}>{h}</SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
-                                            <span className="text-xl font-bold">:</span>
+                                            <span className="text-xl font-bold text-[#e0e0f0]">:</span>
                                             <Select value={minute} onValueChange={setMinute}>
-                                                <SelectTrigger className="w-[80px] bg-[#0e0e16] border-[#1e1e2a]">
+                                                <SelectTrigger className="w-20 bg-[#0e0e16] border-[#1e1e2a]">
                                                     <SelectValue placeholder="MM" />
                                                 </SelectTrigger>
-                                                <SelectContent className="max-h-[200px] bg-[#13131a] border-[#1e1e2a] text-[#e0e0f0]">
+                                                <SelectContent className="max-h-50 bg-[#13131a] border-[#1e1e2a] text-[#e0e0f0]">
                                                     {Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0')).map((m) => (
                                                         <SelectItem key={m} value={m}>{m}</SelectItem>
                                                     ))}
@@ -640,83 +626,125 @@ export function PostEditor() {
                 </div>
 
                 {/* Editor & Preview */}
-                <div className="animate-fadeUp animation-delay-200 lg:col-span-2 flex flex-col gap-3.5">
-                    <Card className="flex-1 p-5 rounded-[16px] border border-[#1e1e2a] bg-[#13131a] shadow-sm transition-all hover:border-[#2a2a3a] flex flex-col">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
-                            
-                            {/* Editor Side */}
-                            <div className="flex flex-col h-full min-h-[320px]">
-                                <div className="flex items-center justify-between mb-3">
-                                    <h3 className="text-[13px] font-semibold text-[#7070a0] uppercase tracking-[0.8px]">Content</h3>
-                                </div>
-                                <div className="relative flex-1 flex flex-col">
-                                    <Textarea
-                                        value={content}
-                                        onChange={(e) => setContent(e.target.value)}
-                                        placeholder="Start typing or generate with AI..."
-                                        className="flex-1 w-full h-full min-h-[320px] bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[14px] leading-[1.7] font-sans rounded-[10px] p-4 transition-all focus:border-[#63d496] focus:shadow-[0_0_0_1px_rgba(99,212,150,0.5)] outline-none placeholder:text-[#4a4a68] resize-none"
-                                    />
-                                </div>
+                <div className="animate-fadeUp animation-delay-200 lg:col-span-2 flex flex-col gap-0">
+                    <Tabs value={activePlatform} onValueChange={setActivePlatform} className="w-full h-full flex flex-col">
+                        <div className="flex items-center justify-between mb-4">
+                            <TabsList className="bg-[#1a1a24] border border-white/5 p-1 h-10.5 rounded-full w-fit flex items-center gap-1 shadow-inner">
+                                <TabsTrigger 
+                                    value="linkedin" 
+                                    className="h-full rounded-full px-5 data-[state=active]:bg-[#63d496] data-[state=active]:text-[#0a1a10] text-[#7070a0] font-semibold text-[13px] transition-all duration-300"
+                                >
+                                    LinkedIn
+                                </TabsTrigger>
+                                <TabsTrigger 
+                                    value="x" 
+                                    className="h-full rounded-full px-5 data-[state=active]:bg-[#63d496] data-[state=active]:text-[#0a1a10] text-[#7070a0] font-semibold text-[13px] transition-all duration-300"
+                                >
+                                    X
+                                </TabsTrigger>
+                                <TabsTrigger 
+                                    value="reddit" 
+                                    className="h-full rounded-full px-5 data-[state=active]:bg-[#63d496] data-[state=active]:text-[#0a1a10] text-[#7070a0] font-semibold text-[13px] transition-all duration-300"
+                                >
+                                    Reddit
+                                </TabsTrigger>
+                            </TabsList>
+                        </div>
+
+                        <Card className="flex-1 p-5 rounded-3xl border border-[#1e1e2a] bg-[#13131a] shadow-xl transition-all hover:border-[#2a2a3a] flex flex-col min-h-125">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full flex-1">
                                 
-                                <div className="h-1 bg-[#1a1a26] rounded-full overflow-hidden mt-3 mb-1.5 transition-all">
-                                    <div 
-                                        className={`h-full transition-all ${isOverLimit ? 'bg-[#f06464]' : 'bg-gradient-to-r from-[#63d496] to-[#3db87a]'}`} 
-                                        style={{width: `${progressPercentage}%`}}
-                                    />
-                                </div>
-                                <div className="flex justify-between items-center text-[11px]">
-                                    <span className="text-[#5a5a78]">{content.length}/{LINKEDIN_MAX_LENGTH} chars</span>
-                                    <span className={isOverLimit ? "text-[#f06464]" : "text-[#5a5a78]"}>
-                                        {isOverLimit ? `${content.length - LINKEDIN_MAX_LENGTH} over limit` : `${LINKEDIN_MAX_LENGTH - content.length} remaining`}
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            {/* Preview Side */}
-                            <div className="hidden lg:flex flex-col border-l border-[#1e1e2a] pl-6 h-full">
-                                <div className="flex items-center justify-between mb-3">
-                                    <h3 className="text-[13px] font-semibold text-[#7070a0] uppercase tracking-[0.8px]">Preview</h3>
-                                </div>
-                                <div className="flex-1 bg-[#0e0e16] rounded-[10px] border border-[#1e1e2a] flex justify-center p-4 min-h-[460px]">
-                                    <div className="w-full h-full overflow-y-auto pr-1">
-                                        {user && <PostPreview content={content} image={imageUrl || undefined} user={user as any} />}
+                                {/* Editor Side */}
+                                <div className="flex flex-col h-full">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="text-[13px] font-semibold text-[#7070a0] uppercase tracking-[0.8px]">Content</h3>
+                                    </div>
+                                    <div className="relative flex-1 flex flex-col">
+                                        <Textarea
+                                            value={content}
+                                            onChange={(e) => setContent(e.target.value)}
+                                            placeholder={`Start typing your ${activePlatform} post or generate with AI...`}
+                                            className="flex-1 w-full min-h-100 bg-[#0e0e16] border border-[#1e1e2a] text-[#e0e0f0] text-[15px] leading-[1.6] font-sans rounded-[10px] p-5 transition-all focus:border-[#63d496]/50 focus:ring-[3px] focus:ring-[#63d496]/10 outline-none placeholder:text-[#4a4a68] resize-none"
+                                        />
+                                    </div>
+                                    
+                                    <div className="h-1 bg-[#1a1a26] rounded-full overflow-hidden mt-4 mb-2 transition-all">
+                                        <div 
+                                            className={`h-full transition-all ${isOverLimit ? 'bg-[#f06464]' : 'bg-linear-to-r from-[#63d496] to-[#3db87a]'}`} 
+                                            style={{width: `${progressPercentage}%`}}
+                                        />
+                                    </div>
+                                    <div className="flex justify-between items-center text-[11px] font-medium">
+                                        <span className="text-[#5a5a78]">{content.length}/{LINKEDIN_MAX_LENGTH} chars</span>
+                                        <span className={isOverLimit ? "text-[#f06464]" : "text-[#5a5a78]"}>
+                                            {isOverLimit ? `${content.length - LINKEDIN_MAX_LENGTH} over limit` : `${LINKEDIN_MAX_LENGTH - content.length} remaining`}
+                                        </span>
                                     </div>
                                 </div>
+                                
+                                {/* Preview Side */}
+                                <div className="hidden lg:flex flex-col border-l border-[#1e1e2a] pl-6 h-full">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="text-[13px] font-semibold text-[#7070a0] uppercase tracking-[0.8px]">Social Preview</h3>
+                                    </div>
+                                    <div className="flex-1 bg-[#0c0c12] rounded-[10px] border border-[#1e1e2a]/50 flex justify-center p-4 min-h-100">
+                                        <div className="w-full h-full">
+                                            {(user || profile) && (
+                                                <PostPreview 
+                                                    platform={activePlatform}
+                                                    content={content} 
+                                                    image={imageUrl || undefined} 
+                                                    user={profile ? { 
+                                                        displayName: profile.displayName || null, 
+                                                        photoURL: profile.photoURL || null 
+                                                    } : user} 
+                                                />
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
                             </div>
+                        </Card>
+                    </Tabs>
 
-                        </div>
-                    </Card>
-
-                    <div className="flex gap-2.5 justify-end mt-1">
+                    <div className="flex gap-2.5 justify-end mt-4">
                         <Button 
-                            className="bg-[#13131a] border border-[#2a2a3a] text-[#cccccc] hover:bg-[#1a1a24] hover:border-[#3a3a4a] transition-all font-sans font-medium h-10 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed" 
+                            className="bg-[#13131a] border border-[#2a2a3a] text-[#232222] hover:bg-[#1a1a24] hover:border-[#3a3a4a] transition-all font-sans font-medium h-11 px-5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed shadow-sm" 
                             onClick={handleSave} 
                             disabled={saving || !content.trim()}
                         >
                             {editingPostId ? "Update Post" : "Save Draft"}
                         </Button>
                         <Button 
-                            className="bg-gradient-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-[1px] hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-semibold border-none h-10 px-[20px] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed" 
+                            className="bg-linear-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-px hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-bold border-none h-11 px-6 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed shadow-lg" 
                             onClick={handleSchedule} 
                             disabled={saving || !content.trim() || !date}
                         >
-                            <Save className="mr-2 h-[14px] w-[14px]" /> Schedule Post
+                            <Save className="mr-2 h-4 w-4 stroke-[2.5]" /> Schedule Post
                         </Button>
                     </div>
                 </div>
             </div>
 
             {/* Mobile Tabs for Preview */}
-            <div className="lg:hidden mt-6">
-                <Tabs defaultValue="preview">
-                    <TabsList className="grid w-full grid-cols-2 mb-4 bg-[#1e1e2a] border border-[#2a2a35] p-1 rounded-xl">
-                        <TabsTrigger value="preview" className="rounded-lg data-[state=active]:bg-[#2a2a35] data-[state=active]:text-white transition-all">Show Preview</TabsTrigger>
-                        <TabsTrigger value="hide" className="rounded-lg data-[state=active]:bg-[#2a2a35] data-[state=active]:text-white transition-all">Hide Preview</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="preview" className="mt-2 bg-[#0e0e16] rounded-[10px] border border-[#1e1e2a] p-4">
-                        {user && <PostPreview content={content} image={imageUrl || undefined} user={user as any} />}
-                    </TabsContent>
-                </Tabs>
+            <div className="lg:hidden mt-10">
+                <Card className="p-4 bg-[#13131a] border-[#1e1e2a] rounded-2xl">
+                    <h3 className="text-[13px] font-semibold text-[#7070a0] uppercase tracking-[0.8px] mb-4">Mobile Preview</h3>
+                    <div className="bg-[#0c0c12] rounded-xl border border-[#1e1e2a] p-4">
+                        {(user || profile) && (
+                            <PostPreview 
+                                platform={activePlatform}
+                                content={content} 
+                                image={imageUrl || undefined} 
+                                user={profile ? { 
+                                    displayName: profile.displayName || null, 
+                                    photoURL: profile.photoURL || null 
+                                } : user} 
+                            />
+                        )}
+                    </div>
+                </Card>
             </div>
         </div>
     )

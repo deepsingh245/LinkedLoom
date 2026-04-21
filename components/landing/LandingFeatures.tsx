@@ -40,7 +40,7 @@ export function LandingFeatures() {
                 </div>
                 <div className="h-2 w-full bg-white/5 rounded-full"></div>
                 <div className="h-2 w-2/3 bg-white/5 rounded-full"></div>
-                <div className="w-full aspect-video bg-white/[0.02] rounded-xl border border-white/5 flex items-center justify-center">
+                <div className="w-full aspect-video bg-white/2 rounded-xl border border-white/5 flex items-center justify-center">
                     <span className="material-symbols-outlined text-white/10 text-4xl">image</span>
                 </div>
              </div>
@@ -56,7 +56,7 @@ export function LandingFeatures() {
                 </div>
                 <div className="grid grid-cols-7 gap-2">
                     {Array.from({length: 12}).map((_, i) => (
-                        <div key={i} className="aspect-square bg-white/[0.02] border border-white/5 rounded-lg relative overflow-hidden">
+                        <div key={i} className="aspect-square bg-white/2 border border-white/5 rounded-lg relative overflow-hidden">
                             {i === 7 && <div className="absolute inset-x-1 top-2 h-1 bg-figma-lime/40 rounded-full"></div>}
                             {i === 9 && <div className="absolute inset-x-1 top-2 h-1 bg-purple-500/40 rounded-full"></div>}
                         </div>

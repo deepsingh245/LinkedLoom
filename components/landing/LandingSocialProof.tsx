@@ -2,6 +2,16 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 
 export function LandingSocialProof() {
+  // Testimonials will be fetched from an API in the future.
+  const testimonials: { name: string, role: string, text: string }[] = [
+    // { name: 'Sarah Chen', role: 'Founder @ GrowthScale', text: 'LinkedLoom saved me 10+ hours a week on LinkedIn and X formatting. It\'s like having a ghostwriter who knows exactly how I think.' },
+    // { name: 'Marcus Thorne', role: 'Content Strategist', text: 'The AI suggestions for X threading are unmatched. LinkedLoom saved me 12 hours last week alone. Total game changer for my workflow.' },
+    // { name: 'Elena Rodriguez', role: 'Director @ Nexus Media', text: 'I used to dread formatting long-form posts. LinkedLoom saved me 10+ hours a week and my engagement has never been higher.' },
+    // { name: 'David Park', role: 'SaaS Consultant', text: 'The automation doesn\'t feel automated. LinkedLoom saved me 15 hours a week while keeping my authentic voice intact.' },
+    // { name: 'Jordan Smith', role: 'Agency Owner', text: 'If you are serious about building a brand on X, you need this. LinkedLoom saved me 10+ hours a week from day one.' },
+    // { name: 'Chloe Vanes', role: 'Entrepreneur', text: 'The interface is so clean, but the power under the hood is insane. LinkedLoom saved me 8 hours a week effortlessly.' }
+  ];
+
   return (
     <section id="social-proof" className="py-24 px-8 max-w-7xl mx-auto text-center">
 
@@ -18,34 +28,38 @@ export function LandingSocialProof() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20">
-        {[
-          { name: 'Sarah Chen', role: 'Founder @ GrowthScale', text: 'LinkedLoom saved me 10+ hours a week on LinkedIn and X formatting. It\'s like having a ghostwriter who knows exactly how I think.' },
-          { name: 'Marcus Thorne', role: 'Content Strategist', text: 'The AI suggestions for X threading are unmatched. LinkedLoom saved me 12 hours last week alone. Total game changer for my workflow.' },
-          { name: 'Elena Rodriguez', role: 'Director @ Nexus Media', text: 'I used to dread formatting long-form posts. LinkedLoom saved me 10+ hours a week and my engagement has never been higher.' },
-          { name: 'David Park', role: 'SaaS Consultant', text: 'The automation doesn\'t feel automated. LinkedLoom saved me 15 hours a week while keeping my authentic voice intact.' },
-          { name: 'Jordan Smith', role: 'Agency Owner', text: 'If you are serious about building a brand on X, you need this. LinkedLoom saved me 10+ hours a week from day one.' },
-          { name: 'Chloe Vanes', role: 'Entrepreneur', text: 'The interface is so clean, but the power under the hood is insane. LinkedLoom saved me 8 hours a week effortlessly.' }
-        ].map((item, i) => (
-          <GlassCard key={i} className="p-8 flex flex-col justify-between hover:bg-white/[0.03] transition-colors border-white/5 opacity-80 hover:opacity-100 h-full">
-            <div>
-                <div className="flex gap-1 mb-6">
-                {[...Array(5)].map((_, i) => (
-                    <span key={i} className="material-symbols-outlined text-figma-lime text-xs">star</span>
-                ))}
-                </div>
-                <p className="text-on-surface-variant leading-relaxed mb-8 italic opacity-90">"{item.text}"</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center overflow-hidden">
-                 <span className="material-symbols-outlined text-orange-400">person</span>
-              </div>
+        {testimonials.length > 0 ? (
+          testimonials.map((item, i) => (
+            <GlassCard key={i} className="p-8 flex flex-col justify-between hover:bg-white/[0.03] transition-colors border-white/5 opacity-80 hover:opacity-100 h-full">
               <div>
-                <div className="font-bold text-white text-sm">{item.name}</div>
-                <div className="text-xs text-on-surface-variant opacity-60">{item.role}</div>
+                  <div className="flex gap-1 mb-6">
+                  {[...Array(5)].map((_, i) => (
+                      <span key={i} className="material-symbols-outlined text-figma-lime text-xs">star</span>
+                  ))}
+                  </div>
+                  <p className="text-on-surface-variant leading-relaxed mb-8 italic opacity-90">"{item.text}"</p>
               </div>
-            </div>
-          </GlassCard>
-        ))}
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center overflow-hidden">
+                   <span className="material-symbols-outlined text-orange-400">person</span>
+                </div>
+                <div>
+                  <div className="font-bold text-white text-sm">{item.name}</div>
+                  <div className="text-xs text-on-surface-variant opacity-60">{item.role}</div>
+                </div>
+              </div>
+            </GlassCard>
+          ))
+        ) : (
+          <div className="md:col-span-3 text-center py-16">
+            <GlassCard className="p-12 inline-block border-white/5">
+              <h3 className="text-3xl font-bold text-white mb-3">Launching soon!</h3>
+              <p className="text-on-surface-variant opacity-80 max-w-sm mx-auto">
+                We're putting the final touches on our platform. Your early feedback and support mean the world to us!
+              </p>
+            </GlassCard>
+          </div>
+        )}
       </div>
     </section>
   );

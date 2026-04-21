@@ -12,7 +12,7 @@ export function LandingNavbar() {
           <Link className="hover:text-white transition-colors" href="#features">Solutions</Link>
           <Link className="hover:text-white transition-colors" href="#features">Intelligence</Link>
           <Link className="hover:text-white transition-colors" href="#how-it-works">Network</Link>
-          <Link className="hover:text-white transition-colors" href="#pricing">Pricing</Link>
+          {/* <Link className="hover:text-white transition-colors" href="#pricing">Pricing</Link> */}
         </nav>
         <div className="flex items-center space-x-4 md:space-x-8 font-bold text-xs">
           <Link href="/login" className="hidden md:block text-on-surface-variant hover:text-white transition-colors tracking-widest uppercase">Log In</Link>

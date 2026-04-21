@@ -9,6 +9,7 @@ export interface DashboardData {
     totalLikes: number;
     totalComments: number;
     totalShares: number;
+    postsThisWeek?: number;
     chartData?: any[];
     metrics?: {
         impressions: string;

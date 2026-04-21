@@ -61,18 +61,18 @@ export function EditPostDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[525px]">
+            <DialogContent className="sm:max-w-131.25">
                 <DialogHeader>
                     <DialogTitle>Edit Post</DialogTitle>
                     <DialogDescription>
-                        Make changes to your post here. Click save when you're done.
+                        Make changes to your post here. Click save when you&apos;re done.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <Textarea
                         value={content}
                         onChange={(e) => setContent(e.target.value)}
-                        className="min-h-[200px]"
+                        className="min-h-50"
                         placeholder="Type your post content here..."
                     />
                 </div>

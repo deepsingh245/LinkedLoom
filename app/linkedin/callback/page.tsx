@@ -50,9 +50,13 @@ function CallbackContent() {
         } else {
           throw new Error("Failed to authenticate LinkedIn.");
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Exchange error:", err);
-        setError(err.message || "An error occurred while connecting LinkedIn.");
+        let errorMessage = "An error occurred while connecting LinkedIn.";
+        if (err instanceof Error) {
+            errorMessage = err.message;
+        }
+        setError(errorMessage);
       }
     };
 
