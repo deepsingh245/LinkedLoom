@@ -1,3 +1,9 @@
+export interface PostVersion {
+  content: string;
+  updatedAt: Date | string;
+  // Add other fields from Post that you want to version
+}
+
 export interface Post {
   id: string;
   content: string;
@@ -13,7 +19,7 @@ export interface Post {
   imageUrl?: string | null;
   articleUrl?: string | null;
   linkedinUrn?: string;
-  versions?: any[];
+  versions?: PostVersion[];
   user_id?: string;
   scheduledFor?: Date | string | null;
   createdAt?: Date | string;
@@ -35,10 +41,37 @@ export interface AnalyticsData {
   engagement: number;
 }
 
+export interface UserPreferences {
+  theme: "dark" | "light" | "system";
+  density: "comfortable" | "compact";
+  animationsEnabled: boolean;
+  notifications: {
+    postPublished: boolean;
+    weeklyDigest: boolean;
+
+    aiSuggestions: boolean;
+    commentAlerts: boolean;
+    milestoneAlerts: boolean;
+    productUpdates: boolean;
+  };
+  ai: {
+    defaultTone: string;
+    language: string;
+    autoHashtags: boolean;
+    smartSuggestions: boolean;
+  };
+  privacy: {
+    publicProfile: boolean;
+    analyticsSharing: boolean;
+    twoFactorAuth: boolean;
+  };
+}
+
 export interface UserProfile {
   uid: string;
   displayName?: string;
   email?: string;
+  photoURL?: string;
   jobTitle?: string;
   company?: string;
   location?: string;
@@ -49,32 +82,7 @@ export interface UserProfile {
   linkedin?: string;
   reddit?: string;
   medium?: string;
-  linkedInId?: string;
-  photoURL?: string;
-  preferences?: {
-    theme?: 'light' | 'dark' | 'system';
-    density?: 'comfortable' | 'compact';
-    animationsEnabled?: boolean;
-    notifications?: {
-      postPublished?: boolean;
-      weeklyDigest?: boolean;
-      aiSuggestions?: boolean;
-      commentAlerts?: boolean;
-      milestoneAlerts?: boolean;
-      productUpdates?: boolean;
-    };
-    ai?: {
-      defaultTone?: string;
-      language?: string;
-      autoHashtags?: boolean;
-      smartSuggestions?: boolean;
-    };
-    privacy?: {
-      publicProfile?: boolean;
-      analyticsSharing?: boolean;
-      twoFactorAuth?: boolean;
-    };
-  };
+  preferences?: UserPreferences;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }

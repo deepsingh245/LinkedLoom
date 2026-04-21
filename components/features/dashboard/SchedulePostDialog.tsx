@@ -110,7 +110,7 @@ export function SchedulePostDialog({
         }
     };
 
-    if (!profile?.linkedInId) {
+    if (!profile?.linkedin) {
         return (
             <Dialog open={open} onOpenChange={onOpenChange}>
                 <DialogContent className="sm:max-w-md bg-[#0a0a0f] border-[#1e1e2a] text-white">
@@ -247,7 +247,7 @@ export function SchedulePostDialog({
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button onClick={handleSchedule} disabled={loading || !date || !finalDate || !profile?.linkedInId} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/20">
+                    <Button onClick={handleSchedule} disabled={loading || !date || !finalDate || !profile?.linkedin} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/20">
                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Schedule Post
                     </Button>

@@ -281,15 +281,13 @@ export default function ProfileSettingsPage() {
                             <Button 
                                 size="sm" 
                                 variant="outline"
-                                onClick={handleConnectLinkedIn}
-                                disabled={connectingId === "linkedin"}
-                                className={cn(
-                                    "h-8 border-[#2a2a3a] text-xs transition-all",
-                                    profile?.linkedInId ? "bg-[#63d496]/10 border-[#63d496]/30 text-[#63d496] hover:bg-[#63d496]/20" : "hover:bg-[#63d496] hover:border-[#63d496] hover:text-[#0a1a10]"
-                                )}
+                                className={`w-full transition-colors duration-200 ${
+                                    profile?.linkedin ? "bg-[#63d496]/10 border-[#63d496]/30 text-[#63d496] hover:bg-[#63d496]/20" : "hover:bg-[#63d496] hover:border-[#63d496] hover:text-[#0a1a10]"
+                                }`}
+                                onClick={() => alert("Connect LinkedIn - Placeholder")}
                             >
-                                {connectingId === "linkedin" ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : null}
-                                {profile?.linkedInId ? "Connected" : "Connect"}
+                                <Linkedin className="mr-2 h-4 w-4" />
+                                {profile?.linkedin ? "Connected" : "Connect"}
                             </Button>
                         </div>
 
