@@ -113,23 +113,23 @@ export function SchedulePostDialog({
     if (!profile?.linkedin) {
         return (
             <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent className="sm:max-w-md bg-[#0a0a0f] border-[#1e1e2a] text-white">
+                <DialogContent className="sm:max-w-md bg-card border-border text-foreground">
                     <DialogHeader>
                         <DialogTitle className="text-xl font-semibold">Connect Social Account</DialogTitle>
-                        <DialogDescription className="text-gray-400">
+                        <DialogDescription className="text-muted-foreground">
                             You need to connect a social account before scheduling a post.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="flex flex-col gap-3 py-4">
                         {/* LinkedIn */}
-                        <div className="flex items-center justify-between p-4 bg-[#0e0e16] border border-[#2a2a3a] rounded-xl hover:border-[#63d496]/30 transition-colors">
+                        <div className="flex items-center justify-between p-4 bg-muted/40 border border-border rounded-xl hover:border-primary/30 transition-colors">
                             <div className="flex items-center gap-3">
                                 <div className="w-9 h-9 flex items-center justify-center bg-[#0a66c2]/10 rounded-lg">
                                     <Linkedin className="w-5 h-5 text-[#0a66c2]" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-[#f0f0f8]">LinkedIn</p>
-                                    <p className="text-[11px] text-[#5a5a78]">Professional Network</p>
+                                    <p className="text-sm font-medium text-foreground">LinkedIn</p>
+                                    <p className="text-[11px] text-muted-foreground">Professional Network</p>
                                 </div>
                             </div>
                             <Button 
@@ -138,8 +138,8 @@ export function SchedulePostDialog({
                                 onClick={handleConnectLinkedIn}
                                 disabled={connectingId === "linkedin"}
                                 className={cn(
-                                    "h-8 border-[#2a2a3a] text-xs transition-all",
-                                    "hover:bg-[#63d496] hover:border-[#63d496] hover:text-[#0a1a10] bg-transparent text-white"
+                                    "h-8 border-border text-xs transition-all",
+                                    "hover:bg-primary hover:border-primary hover:text-primary-foreground bg-transparent text-foreground"
                                 )}
                             >
                                 {connectingId === "linkedin" ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : null}
@@ -148,42 +148,42 @@ export function SchedulePostDialog({
                         </div>
 
                         {/* X (Twitter) */}
-                        <div className="flex items-center justify-between p-4 bg-[#0e0e16] border border-[#2a2a3a] rounded-xl opacity-60">
+                        <div className="flex items-center justify-between p-4 bg-muted/40 border border-border rounded-xl opacity-60">
                             <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 flex items-center justify-center bg-white/5 rounded-lg">
-                                    <XIcon className="w-4 h-4 text-white" />
+                                <div className="w-9 h-9 flex items-center justify-center bg-foreground/5 rounded-lg">
+                                    <XIcon className="w-4 h-4 text-foreground" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-[#f0f0f8]">X (Twitter)</p>
-                                    <p className="text-[11px] text-[#5a5a78]">Coming Soon</p>
+                                    <p className="text-sm font-medium text-foreground">X (Twitter)</p>
+                                    <p className="text-[11px] text-muted-foreground">Coming Soon</p>
                                 </div>
                             </div>
                             <Button 
                                 size="sm" 
                                 variant="outline"
                                 disabled
-                                className="h-8 border-[#2a2a3a] text-xs cursor-not-allowed bg-transparent text-white"
+                                className="h-8 border-border text-xs cursor-not-allowed bg-transparent text-muted-foreground"
                             >
                                 Connect
                             </Button>
                         </div>
 
                         {/* Reddit */}
-                        <div className="flex items-center justify-between p-4 bg-[#0e0e16] border border-[#2a2a3a] rounded-xl opacity-60">
+                        <div className="flex items-center justify-between p-4 bg-muted/40 border border-border rounded-xl opacity-60">
                             <div className="flex items-center gap-3">
                                 <div className="w-9 h-9 flex items-center justify-center bg-[#ff4500]/10 rounded-lg">
                                     <RedditIcon className="w-5 h-5 text-[#ff4500]" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-[#f0f0f8]">Reddit</p>
-                                    <p className="text-[11px] text-[#5a5a78]">Coming Soon</p>
+                                    <p className="text-sm font-medium text-foreground">Reddit</p>
+                                    <p className="text-[11px] text-muted-foreground">Coming Soon</p>
                                 </div>
                             </div>
                             <Button 
                                 size="sm" 
                                 variant="outline"
                                 disabled
-                                className="h-8 border-[#2a2a3a] text-xs cursor-not-allowed bg-transparent text-white"
+                                className="h-8 border-border text-xs cursor-not-allowed bg-transparent text-muted-foreground"
                             >
                                 Connect
                             </Button>
@@ -208,7 +208,7 @@ export function SchedulePostDialog({
                         mode="single"
                         selected={date}
                         onSelect={setDate}
-                        className="w-full rounded-xl border border-white/5 bg-white/5 backdrop-blur-md mx-auto p-4 shadow-inner"
+                        className="w-full rounded-xl border border-border bg-card mx-auto p-4 shadow-inner"
                         disabled={(d) => {
                             const today = new Date();
                             today.setHours(0, 0, 0, 0);
@@ -219,7 +219,7 @@ export function SchedulePostDialog({
                     {date && (
                         <div className="flex items-center justify-center gap-2 mt-2">
                             <Select value={hour} onValueChange={setHour}>
-                                <SelectTrigger className="w-20 bg-white/5 border-white/5 hover:bg-white/10 transition-colors">
+                                <SelectTrigger className="w-20 bg-muted/30 border-border hover:bg-muted/50 transition-colors">
                                     <SelectValue placeholder="HH" />
                                 </SelectTrigger>
                                 <SelectContent className="max-h-50">
@@ -230,7 +230,7 @@ export function SchedulePostDialog({
                             </Select>
                             <span className="text-xl font-bold">:</span>
                             <Select value={minute} onValueChange={setMinute}>
-                                <SelectTrigger className="w-20 bg-white/5 border-white/5 hover:bg-white/10 transition-colors">
+                                <SelectTrigger className="w-20 bg-muted/30 border-border hover:bg-muted/50 transition-colors">
                                     <SelectValue placeholder="MM" />
                                 </SelectTrigger>
                                 <SelectContent className="max-h-50">

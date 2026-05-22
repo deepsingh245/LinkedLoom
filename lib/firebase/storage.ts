@@ -94,3 +94,22 @@ export const uploadPostAttachment = async (userId: string, file: File): Promise<
     throw error;
   }
 };
+
+/**
+ * Uploads a profile image to a dedicated path and returns the public download URL.
+ * 
+ * @param userId - The ID of the user uploading the file
+ * @param file - The native File object from the browser
+ * @returns The public URL of the uploaded image
+ */
+export const uploadProfilePhoto = async (userId: string, file: File): Promise<string> => {
+  try {
+    const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-]/g, "_")}`;
+    const storageRef = ref(storage, `users/${userId}/profile/${fileName}`);
+    const snapshot = await uploadBytes(storageRef, file);
+    return await getDownloadURL(snapshot.ref);
+  } catch (error) {
+    console.error("Error uploading profile photo to Firebase Storage:", error);
+    throw error;
+  }
+};

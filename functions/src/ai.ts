@@ -163,7 +163,7 @@ export const generatePost = onCall(
         }
 
         const data = request.data;
-        const { topic, tone, length } = data;
+        const { topic, tone, length, excludeIcons, creativeExpansion } = data;
 
         if (!topic) {
             throw new HttpsError(
@@ -179,7 +179,7 @@ export const generatePost = onCall(
             );
         }
 
-        const prompt = getPrompt(topic, tone, length);
+        const prompt = getPrompt(topic, tone, length, excludeIcons, creativeExpansion);
 
         try {
             const genAI = new GoogleGenerativeAI(apiKey);
@@ -194,9 +194,16 @@ export const generatePost = onCall(
         } catch (error: any) {
             console.error("Gemini Generation Error:", error);
 
+            const isRateLimited =
+                error?.code === 429 ||
+                error?.status === 'RESOURCE_EXHAUSTED' ||
+                error?.message?.includes('429');
+
             throw new HttpsError(
-                "internal",
-                "Failed to generate post.",
+                isRateLimited ? "resource-exhausted" : "internal",
+                isRateLimited
+                    ? "Rate limit exceeded. Please wait a moment and try again."
+                    : "Failed to generate post.",
                 error.message
             );
         }
@@ -206,22 +213,35 @@ export const generatePost = onCall(
 function getPrompt(
     topic: string,
     tone?: string,
-    length?: number
+    length?: number,
+    excludeIcons?: boolean,
+    creativeExpansion?: boolean
 ): string {
-    return `
-You are a professional LinkedIn content writer.
+    let prompt = `You are a professional LinkedIn content writer.
 
 Write a LinkedIn post about "${topic}".
 
 Tone: ${tone || "professional"}
-Length: ${length ? `${length} words` : "short (100-150 words)"}
+Length: Approximately ${length || 800} characters.
 
 Requirements:
 - Use short paragraphs
-- Add emojis where appropriate
-- Make it engaging and practical
+`;
+
+    if (excludeIcons) {
+        prompt += `- Do NOT use any emojis or icons. Use text only.\n`;
+    } else {
+        prompt += `- Add emojis where appropriate\n`;
+    }
+
+    if (creativeExpansion) {
+        prompt += `- Be creative and add more original ideas, anecdotes, or elaboration from yourself to expand the topic.\n`;
+    }
+
+    prompt += `- Make it engaging and practical
 - Do NOT use any markdown formatting. No bold (**), no italics (*), no headers (#, ##), no bullet points with dashes. Write in plain text only.
 - End the post with 3-5 relevant hashtags on a new line (e.g. #Leadership #CareerGrowth #Tech)
 `;
+    return prompt;
 }
 

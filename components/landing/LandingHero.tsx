@@ -24,9 +24,11 @@ export function LandingHero() {
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-24">
-          <Button size="lg" className="hero-button-gradient hero-button-glow font-bold px-10 h-14 rounded-xl text-md transition-all hover:scale-105 active:scale-95">
-            Start for free
-          </Button>
+          <Link href="/register">
+            <Button size="lg" className="hero-button-gradient hero-button-glow font-bold px-10 h-14 rounded-xl text-md transition-all hover:scale-105 active:scale-95">
+              Start for free
+            </Button>
+          </Link>
           <Button size="lg" variant="outline" className="border-white/10 bg-white/5 font-bold px-10 h-14 rounded-xl text-md hover:bg-white/10 transition-all active:scale-95">
             View Memo
           </Button>

@@ -70,8 +70,8 @@ export function PostCard({ post, onUpdate }: PostCardProps) {
 
     return (
         <>
-            <div className="card hover-effect flex flex-col h-full bg-[#13131a] border-[#1e1e2a] rounded-xl overflow-hidden group">
-                <div className="flex flex-row items-center justify-between p-4 pb-2 border-b border-[#1e1e2a]/50">
+            <div className="card hover-effect flex flex-col h-full bg-card border-border border rounded-xl overflow-hidden group">
+                <div className="flex flex-row items-center justify-between p-4 pb-2 border-b border-border/50">
                     <div className="flex gap-2">
                         <Badge variant={getBadgeVariant(post.status)}>
                             {post.status}
@@ -79,7 +79,7 @@ export function PostCard({ post, onUpdate }: PostCardProps) {
                     </div>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-white">
+                            <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
                                 <span className="sr-only">Open menu</span>
                                 <MoreVertical className="h-4 w-4" />
                             </Button>
@@ -112,17 +112,17 @@ export function PostCard({ post, onUpdate }: PostCardProps) {
                 </div>
                 {post.imageUrl && (
                     <div className="px-4 pt-3">
-                        <div className="rounded-lg overflow-hidden border border-[#1e1e2a] aspect-video">
+                        <div className="rounded-lg overflow-hidden border border-border aspect-video">
                             <SmartImage src={post.imageUrl} alt="Post image" className="w-full h-full object-cover" />
                         </div>
                     </div>
                 )}
                 <div className="flex-1 p-4">
-                    <p className="line-clamp-4 text-sm text-gray-400 whitespace-pre-wrap">
+                    <p className="line-clamp-4 text-sm text-muted-foreground whitespace-pre-wrap">
                         {post.content || "No content..."}
                     </p>
                 </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground p-4 border-t border-[#1e1e2a]/50 bg-[#0e0e16]/50 mt-auto">
+                <div className="flex items-center justify-between text-xs text-muted-foreground p-4 border-t border-border/50 bg-muted/30 mt-auto">
                     {post.status.toLowerCase() === 'scheduled' ? (
                         <div className="flex items-center text-primary">
                             <Calendar className="mr-1.5 h-3.5 w-3.5" />

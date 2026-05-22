@@ -79,6 +79,7 @@ export interface UserProfile {
   phone?: string;
   website?: string;
   twitter?: string;
+  x?: string;
   linkedin?: string;
   reddit?: string;
   medium?: string;

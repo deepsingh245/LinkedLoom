@@ -30,11 +30,11 @@ function CustomSwitch({
       role="switch"
       aria-checked={checked}
       onClick={() => !disabled && onCheckedChange(!checked)}
-      className={`w-11 h-6 rounded-full relative transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#63d496]/50 ${checked ? "bg-[#63d496]" : "bg-[#2a2a3a]"} ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+      className={`w-11 h-6 rounded-full relative transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50 ${checked ? "bg-primary" : "bg-muted"} ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
       disabled={disabled}
     >
       <span
-        className={`absolute top-1/2 -translate-y-1/2 left-1 w-4 h-4 bg-[#0a1a10] rounded-full transition-transform duration-200 ${checked ? "translate-x-5" : "bg-[#8888a0]"}`}
+        className={`absolute top-1/2 -translate-y-1/2 left-1 w-4 h-4 bg-background rounded-full transition-transform duration-200 ${checked ? "translate-x-5" : "bg-muted-foreground"}`}
       ></span>
     </button>
   );
@@ -44,8 +44,8 @@ function SettingsRow({ title, description, control }: { title: string, descripti
   return (
     <div className="flex items-center justify-between py-4">
       <div className="space-y-0.5">
-        <Label className="text-sm font-medium text-[#e0e0f0]">{title}</Label>
-        <p className="text-[13px] text-[#5a5a78]">{description}</p>
+        <Label className="text-sm font-medium text-foreground">{title}</Label>
+        <p className="text-[13px] text-muted-foreground">{description}</p>
       </div>
       {control}
     </div>
@@ -106,7 +106,7 @@ export default function SettingsPage() {
   };
 
   if (loading) {
-    return <div className="p-8 text-[#8888a0]">Loading preferences...</div>;
+    return <div className="p-8 text-muted-foreground">Loading preferences...</div>;
   }
 
   const prefs: UserPreferences = profile?.preferences || {
@@ -137,33 +137,33 @@ export default function SettingsPage() {
   return (
     <div className="space-y-8 pb-20">
       <div>
-        <h1 className="text-3xl font-display font-semibold tracking-tight text-[#f0f0f8] mb-1">
+        <h1 className="text-3xl font-display font-semibold tracking-tight text-foreground mb-1">
           Settings
         </h1>
-        <p className="text-[15px] text-[#8888a0]">
+        <p className="text-[15px] text-muted-foreground">
           Customize your experience and preferences.
         </p>
       </div>
 
       {/* Appearance */}
-      <Card className="bg-[#13131a] border-[#1e1e2a] rounded-2xl">
+      <Card className="bg-card border-border rounded-2xl">
         <CardHeader className="p-6 pb-2">
-          <CardTitle className="text-base font-semibold text-[#f0f0f8]">
+          <CardTitle className="text-base font-semibold text-foreground">
             Appearance
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 pt-2 space-y-4">
           <div className="grid grid-cols-2 gap-6 w-full">
             <div className="space-y-2">
-              <Label className="text-[13px] text-[#5a5a78]">Theme</Label>
+              <Label className="text-[13px] text-muted-foreground">Theme</Label>
               <Select
                 value={prefs.theme || "dark"}
                 onValueChange={(val) => handleUpdate("theme", val as UserPreferences["theme"])}
               >
-                <SelectTrigger className="w-full bg-[#0e0e16] border-[#2a2a3a] text-[#f0f0f8] focus:ring-[#63d496] shadow-none h-10 rounded-lg">
+                <SelectTrigger className="w-full bg-background border-border text-foreground focus:ring-primary shadow-none h-10 rounded-lg">
                   <SelectValue placeholder="Theme" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1a1a24] border-[#2a2a3a] text-[#f0f0f8]">
+                <SelectContent className="bg-card border-border text-foreground">
                   <SelectItem value="dark">Dark</SelectItem>
                   <SelectItem value="light">Light</SelectItem>
                   <SelectItem value="system">System</SelectItem>
@@ -171,16 +171,16 @@ export default function SettingsPage() {
               </Select>
             </div>
             <div className="space-y-2 opacity-50 cursor-not-allowed">
-              <Label className="text-[13px] text-[#5a5a78]">Density</Label>
+              <Label className="text-[13px] text-muted-foreground">Density</Label>
               <Select
                 value={prefs.density || "comfortable"}
                 onValueChange={(val) => handleUpdate("density", val as UserPreferences["density"])}
                 disabled
               >
-                <SelectTrigger className="w-full bg-[#0e0e16] border-[#2a2a3a] text-[#f0f0f8] focus:ring-[#63d496] shadow-none h-10 rounded-lg">
+                <SelectTrigger className="w-full bg-background border-border text-foreground focus:ring-primary shadow-none h-10 rounded-lg">
                   <SelectValue placeholder="Density" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1a1a24] border-[#2a2a3a] text-[#f0f0f8]">
+                <SelectContent className="bg-card border-border text-foreground">
                   <SelectItem value="comfortable">Comfortable</SelectItem>
                   <SelectItem value="compact">Compact</SelectItem>
                 </SelectContent>
@@ -191,10 +191,10 @@ export default function SettingsPage() {
           <div className="pt-2 opacity-50 cursor-not-allowed">
             <div className="flex items-center justify-between py-4">
               <div className="space-y-0.5">
-                <Label className="text-sm font-medium text-[#e0e0f0]">
+                <Label className="text-sm font-medium text-foreground">
                   Animations & Transitions
                 </Label>
-                <p className="text-[13px] text-[#5a5a78]">
+                <p className="text-[13px] text-muted-foreground">
                   Disable for reduced-motion experience
                 </p>
               </div>
@@ -209,9 +209,9 @@ export default function SettingsPage() {
       </Card>
 
       {/* Notifications */}
-      <Card className="bg-[#13131a] border-[#1e1e2a] rounded-2xl opacity-50 cursor-not-allowed">
+      <Card className="bg-card border-border rounded-2xl opacity-50 cursor-not-allowed">
         <CardHeader className="p-6 pb-2">
-          <CardTitle className="text-base font-semibold text-[#f0f0f8]">
+          <CardTitle className="text-base font-semibold text-foreground">
             Notifications
           </CardTitle>
         </CardHeader>
@@ -286,25 +286,25 @@ export default function SettingsPage() {
       </Card>
 
       {/* AI Preferences */}
-      <Card className="bg-[#13131a] border-[#1e1e2a] rounded-2xl opacity-50 cursor-not-allowed">
+      <Card className="bg-card border-border rounded-2xl opacity-50 cursor-not-allowed">
         <CardHeader className="p-6 pb-2">
-          <CardTitle className="text-base font-semibold text-[#f0f0f8]">
+          <CardTitle className="text-base font-semibold text-foreground">
             AI Preferences
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 pt-2 space-y-4">
           <div className="grid grid-cols-2 gap-6 w-full">
             <div className="space-y-2">
-              <Label className="text-[13px] text-[#5a5a78]">Default Tone</Label>
+              <Label className="text-[13px] text-muted-foreground">Default Tone</Label>
               <Select
                 value={prefs.ai?.defaultTone || "professional"}
                 onValueChange={(val) => handleUpdate("ai.defaultTone", val)}
                 disabled
               >
-                <SelectTrigger className="w-full bg-[#0e0e16] border-[#2a2a3a] text-[#f0f0f8] focus:ring-[#63d496] shadow-none h-10 rounded-lg">
+                <SelectTrigger className="w-full bg-background border-border text-foreground focus:ring-primary shadow-none h-10 rounded-lg">
                   <SelectValue placeholder="Tone" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1a1a24] border-[#2a2a3a] text-[#f0f0f8]">
+                <SelectContent className="bg-card border-border text-foreground">
                   <SelectItem value="professional">Professional</SelectItem>
                   <SelectItem value="casual">Casual</SelectItem>
                   <SelectItem value="viral">Viral</SelectItem>
@@ -313,16 +313,16 @@ export default function SettingsPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-[13px] text-[#5a5a78]">Content Language</Label>
+              <Label className="text-[13px] text-muted-foreground">Content Language</Label>
               <Select
                 value={prefs.ai?.language || "english"}
                 onValueChange={(val) => handleUpdate("ai.language", val)}
                 disabled
               >
-                <SelectTrigger className="w-full bg-[#0e0e16] border-[#2a2a3a] text-[#f0f0f8] focus:ring-[#63d496] shadow-none h-10 rounded-lg">
+                <SelectTrigger className="w-full bg-background border-border text-foreground focus:ring-primary shadow-none h-10 rounded-lg">
                   <SelectValue placeholder="Language" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1a1a24] border-[#2a2a3a] text-[#f0f0f8]">
+                <SelectContent className="bg-card border-border text-foreground">
                   <SelectItem value="english">English</SelectItem>
                   <SelectItem value="spanish">Spanish</SelectItem>
                   <SelectItem value="french">French</SelectItem>
@@ -360,9 +360,9 @@ export default function SettingsPage() {
       </Card>
 
       {/* Privacy & Security */}
-      <Card className="bg-[#13131a] border-[#1e1e2a] rounded-2xl opacity-50 cursor-not-allowed">
+      <Card className="bg-card border-border rounded-2xl opacity-50 cursor-not-allowed">
         <CardHeader className="p-6 pb-2">
-          <CardTitle className="text-base font-semibold text-[#f0f0f8]">
+          <CardTitle className="text-base font-semibold text-foreground">
             Privacy & Security
           </CardTitle>
         </CardHeader>
@@ -391,20 +391,20 @@ export default function SettingsPage() {
           />
           <div className="flex items-center justify-between py-4">
             <div className="space-y-0.5">
-              <Label className="text-sm font-medium text-[#e0e0f0]">
+              <Label className="text-sm font-medium text-foreground">
                 Two-Factor Authentication
               </Label>
-              <p className="text-[13px] text-[#5a5a78]">
+              <p className="text-[13px] text-muted-foreground">
                 Add an extra layer of security
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1e1e2a] border border-[#2a2a3a]">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary border border-border">
                 <span
-                  className={`w-1.5 h-1.5 rounded-full ${prefs.privacy?.twoFactorAuth ? "bg-[#63d496]" : "bg-[#ffb800]"}`}
+                  className={`w-1.5 h-1.5 rounded-full ${prefs.privacy?.twoFactorAuth ? "bg-primary" : "bg-amber-500"}`}
                 ></span>
                 <span
-                  className={`text-[11px] font-medium ${prefs.privacy?.twoFactorAuth ? "text-[#63d496]" : "text-[#ffb800]"}`}
+                  className={`text-[11px] font-medium ${prefs.privacy?.twoFactorAuth ? "text-primary" : "text-amber-500"}`}
                 >
                   {prefs.privacy?.twoFactorAuth ? "Enabled" : "Disabled"}
                 </span>

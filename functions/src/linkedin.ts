@@ -157,6 +157,7 @@ export const exchangeLinkedInToken = onRequest({ cors: true }, async (req, res) 
         email: profileData.email,
         displayName: profileData.name,
         photoURL: profileData.picture,
+        linkedin: profileData.name,
     };
     
     // Only set createdAt if the user was just created

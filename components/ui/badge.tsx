@@ -12,12 +12,12 @@ const badgeVariants = cva(
           "bg-primary border-transparent text-primary-foreground hover:bg-primary/80",
         pill: "bg-surface-container border border-primary/20 rounded-full px-4 py-1.5 shadow-[0_0_20px_rgba(105,246,184,0.1)] text-primary uppercase text-[10px] sm:text-xs font-bold tracking-widest",
         published:
-          "border border-[#1a4030] bg-[#0d2318] text-[#63d496]",
+          "border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:border-[#1a4030] dark:bg-[#0d2318] dark:text-[#63d496]",
         draft:
-          "border border-[#2a2a18] bg-[#1a1a10] text-[#c8b464]",
+          "border border-amber-500/20 bg-amber-500/10 text-amber-600 dark:border-[#2a2a18] dark:bg-[#1a1a10] dark:text-[#c8b464]",
         scheduled:
-          "border border-[#1a2840] bg-[#0d1828] text-[#6490d4]",
-        outline: "text-foreground",
+          "border border-blue-500/20 bg-blue-500/10 text-blue-600 dark:border-[#1a2840] dark:bg-[#0d1828] dark:text-[#6490d4]",
+        outline: "text-foreground border-border",
       },
     },
     defaultVariants: {

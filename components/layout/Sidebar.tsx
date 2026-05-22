@@ -22,16 +22,16 @@ export function Sidebar({ className }: SidebarProps) {
         router.push('/login')
     }
     return (
-        <div className={cn("w-64 border-r border-[#1e1e2a] bg-[#0c0c12] p-4 flex flex-col h-screen", className)}>
+        <div className={cn("w-64 border-r border-border bg-background p-4 flex flex-col h-screen", className)}>
             <div className="flex items-center gap-3 mb-4 px-2">
-                <div className="w-8 h-8 rounded-lg bg-linear-to-br from-[#63d496] to-[#3db87a] flex items-center justify-center text-[#0a1a10] font-bold text-lg shadow-[0_0_15px_rgba(99,212,150,0.3)]">
+                <div className="w-8 h-8 rounded-lg bg-linear-to-br from-primary to-primary/80 flex items-center justify-center text-primary-foreground font-bold text-lg shadow-[0_0_15px_rgba(99,212,150,0.3)]">
                     L
                 </div>
-                <span className="font-display font-semibold text-xl tracking-tight text-[#f0f0f8]">LinkedLoom</span>
+                <span className="font-display font-semibold text-xl tracking-tight text-foreground">LinkedLoom</span>
             </div>
             
             <div className="flex-1 space-y-2">
-                <p className="px-2 text-[11px] font-semibold text-[#5a5a78] uppercase tracking-wider mb-4 mt-8">Menu</p>
+                <p className="px-2 text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-4 mt-8">Menu</p>
 
                 <NavItem href="/dashboard" active={pathname === "/dashboard"} icon={<LayoutDashboard className="h-4.5 w-4.5" />}>
                     Dashboard
@@ -47,13 +47,13 @@ export function Sidebar({ className }: SidebarProps) {
                 </NavItem>
             </div>
             
-            <div className="pt-6 border-t border-[#1e1e2a] mt-auto">
+            <div className="pt-6 border-t border-border mt-auto">
                 <NavItem href="/settings/profile" active={pathname.startsWith("/settings")} icon={<Settings className="h-4.5 w-4.5" />}>
                     Settings
                 </NavItem>
                 <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-[14px] font-medium rounded-xl text-[#f06464] hover:bg-[#2a1a1a] transition-all duration-200 mt-2"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-[14px] font-medium rounded-xl text-destructive hover:bg-destructive/10 transition-all duration-200 mt-2"
                 >
                     <LogOut className="h-4.5 w-4.5" />
                     Logout
@@ -70,13 +70,13 @@ function NavItem({ href, icon, children, active }: { href: string; icon: React.R
             className={cn(
                 "flex items-center gap-3 px-4 py-3 text-[14px] font-medium rounded-xl transition-all duration-200 group",
                 active 
-                    ? "bg-[#1a1a24] text-[#e0e0f0] shadow-[inset_2px_0_0_#63d496]" 
-                    : "text-[#8888a0] hover:bg-[#1a1a24] hover:text-[#e0e0f0]"
+                    ? "bg-accent text-foreground shadow-[inset_2px_0_0_var(--primary)]" 
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
             )}
         >
             <div className={cn(
                 "transition-colors", 
-                active ? "text-[#63d496]" : "text-[#5a5a78] group-hover:text-[#63d496]"
+                active ? "text-primary" : "text-muted-foreground/70 group-hover:text-primary"
             )}>
                 {icon}
             </div>

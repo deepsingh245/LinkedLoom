@@ -1,6 +1,7 @@
 import { GlassCard } from "@/components/ui/glass-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 
 export function LandingPricing() {
   return (
@@ -23,7 +24,9 @@ export function LandingPricing() {
             <li className="flex items-center gap-3"><span className="text-figma-lime">✓</span> Basic Style Matching</li>
             <li className="flex items-center gap-3"><span className="text-figma-lime">✓</span> Standard Support</li>
           </ul>
-          <Button variant="outline" className="mt-auto w-full h-12 rounded-xl border-white/10 hover:bg-white/5 font-bold">Get Started</Button>
+          <Link href="/register" className="mt-auto w-full">
+            <Button variant="outline" className="w-full h-12 rounded-xl border-white/10 hover:bg-white/5 font-bold">Get Started</Button>
+          </Link>
         </GlassCard>
         
         <GlassCard className="p-10 text-left border-figma-lime/30 relative transform md:scale-105 shadow-[0_0_50px_rgba(184,255,82,0.05)] flex flex-col bg-figma-lime/[0.02]">
@@ -36,7 +39,9 @@ export function LandingPricing() {
             <li className="flex items-center gap-3"><span className="text-figma-lime">✓</span> Ghost Scheduling</li>
             <li className="flex items-center gap-3"><span className="text-figma-lime">✓</span> Priority Support</li>
           </ul>
-          <Button variant="lime" className="mt-auto w-full h-12 rounded-xl text-md font-bold hero-button-glow">Start 30-Day Trial</Button>
+          <Link href="/register" className="mt-auto w-full">
+            <Button variant="lime" className="w-full h-12 rounded-xl text-md font-bold hero-button-glow">Start 30-Day Trial</Button>
+          </Link>
         </GlassCard>
 
         <GlassCard className="p-10 text-left border-white/5 flex flex-col bg-white/[0.01]">
@@ -48,7 +53,9 @@ export function LandingPricing() {
             <li className="flex items-center gap-3"><span className="text-figma-lime">✓</span> Custom API Access</li>
             <li className="flex items-center gap-3"><span className="text-figma-lime">✓</span> Dedicated Account Manager</li>
           </ul>
-          <Button variant="outline" className="mt-auto w-full h-12 rounded-xl border-white/10 hover:bg-white/5 font-bold">Contact Sales</Button>
+          <Link href="/register" className="mt-auto w-full">
+            <Button variant="outline" className="w-full h-12 rounded-xl border-white/10 hover:bg-white/5 font-bold">Contact Sales</Button>
+          </Link>
         </GlassCard>
       </div>
     </section>

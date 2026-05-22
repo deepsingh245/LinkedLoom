@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react"
 import { useAuth } from "./auth-provider"
+import { usePathname } from "next/navigation"
 import { api } from "@/lib/api"
 import { Post } from "@/types"
 import { DashboardData } from "@/lib/firebase/interfaces"
@@ -20,6 +21,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined)
 
 export function DataProvider({ children }: { children: ReactNode }) {
     const { user } = useAuth()
+    const pathname = usePathname()
     const [posts, setPosts] = useState<Post[]>([])
     const [scheduledPosts, setScheduledPosts] = useState<Post[]>([])
     const [draftPosts, setDraftPosts] = useState<Post[]>([])
@@ -73,10 +75,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }, [user?.uid, hasLoadedInitially])
 
     useEffect(() => {
-        if (user?.uid && !hasLoadedInitially) {
-            fetchData()
+        if (user?.uid) {
+            // Fetch/Sync on mount and on route change
+            fetchData(true)
         }
-    }, [user?.uid, fetchData, hasLoadedInitially])
+    }, [user?.uid, pathname, fetchData])
 
     const refreshData = async () => {
         await fetchData(true)

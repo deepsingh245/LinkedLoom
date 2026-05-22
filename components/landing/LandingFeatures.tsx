@@ -13,7 +13,7 @@ export function LandingFeatures() {
           Dial in your tone—from professional thought-leader to casual creator. LinkedLoom's AI doesn't just write; it understands the specific psychology of LinkedIn, X, and Reddit audiences.
         </p>
         <div className="flex justify-center">
-            <Link href="#" className="text-figma-lime font-bold flex items-center gap-2 hover:gap-4 transition-all">
+            <Link href="/register" className="text-figma-lime font-bold flex items-center gap-2 hover:gap-4 transition-all">
                 Explore the Studio <span className="material-symbols-outlined text-sm">arrow_forward</span>
             </Link>
         </div>
