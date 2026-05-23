@@ -18,7 +18,7 @@ import {
     Award,
     MessageCircle
 } from "lucide-react";
-;
+import { SmartImage } from "@/components/ui/smart-image";
 
 interface PostPreviewProps {
     platform: string;
@@ -78,7 +78,7 @@ function LinkedInPreview({ content, image, user }: Omit<PostPreviewProps, 'platf
 
             {image && (
                 <div className="w-full bg-slate-50 dark:bg-[#15191c] relative border-t border-b border-slate-200 dark:border-white/5 overflow-hidden">
-                    <img src={image} alt="Preview" loading="lazy" className="w-full h-auto object-cover max-h-120" />
+                    <SmartImage src={image} alt="Preview" className="w-full h-auto object-cover max-h-120" />
                 </div>
             )}
             
@@ -130,7 +130,7 @@ function XPreview({ content, image, user }: Omit<PostPreviewProps, 'platform'>) 
 
                     {image && (
                         <div className="mt-3 rounded-2xl overflow-hidden border border-slate-200 dark:border-[#2f3336] max-h-75">
-                            <img src={image} alt="Tweet media" loading="lazy" className="w-full h-full object-cover" />
+                            <SmartImage src={image} alt="Tweet media" className="w-full h-full object-cover" />
                         </div>
                     )}
 
@@ -201,7 +201,7 @@ function RedditPreview({ content, image, user }: Omit<PostPreviewProps, 'platfor
 
                     {image && (
                         <div className="mt-3 rounded border border-slate-200 dark:border-[#343536] bg-slate-50 dark:bg-black/20 overflow-hidden flex items-center justify-center max-h-75">
-                            <img src={image} alt="Reddit content" loading="lazy" className="max-w-full h-auto object-contain max-h-full" />
+                            <SmartImage src={image} alt="Reddit content" className="max-w-full h-auto object-contain max-h-full" />
                         </div>
                     )}
 

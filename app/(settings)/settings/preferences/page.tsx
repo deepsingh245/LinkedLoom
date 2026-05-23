@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/components/auth-provider";
+import { useAuth } from "@/components/providers/auth-provider";
 import { updateUserProfile } from "@/lib/firebase/user";
 import { successToast, dangerToast } from "@/lib/toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

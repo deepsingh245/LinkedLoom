@@ -10,6 +10,7 @@ LinkedLoom is a modern SaaS application designed to help founders and creators s
 -   **📝 Rich Editor**: Split-screen editor with real-time LinkedIn preview (Mobile & Desktop).
 -   **📅 Smart Scheduler**: (UI Ready) visual calendar to plan your content strategy.
 -   **📊 Analytics Dashboard**: (UI Ready) Track views, engagement, and growth metrics.
+-   **🖼️ Image Optimization Pipeline**: Automatic generation of low-res variants (200x200, 400x400, 800x800) in WebP format via Firebase Cloud Functions upon image upload. Displays low-resolution thumbnails in cards/previews using `<SmartImage />` with progressive blur-to-focus fade transitions while retaining high-res originals for LinkedIn.
 -   **🎨 Modern UI**: Built with **shadcn/ui** and **Tailwind CSS**, featuring full Dark Mode support.
 
 ## 🛠️ Tech Stack
@@ -59,13 +60,17 @@ Follow these steps to run the project locally:
 ├── app/                  # Next.js App Router Pages
 │   ├── (auth)/           # Authentication Routes
 │   ├── (dashboard)/      # Protected Dashboard Routes
-│   └── layout.tsx        # Root Layout & ThemeProvider
+│   ├── (settings)/       # Account & Preferences Settings
+│   └── layout.tsx        # Root Layout
 ├── components/
-│   ├── features/         # Feature-specific components (Editor, etc.)
+│   ├── features/         # Feature-specific components (post-editor, scheduler, dashboard, analytics)
+│   ├── landing/          # Landing Page components
 │   ├── layout/           # App Shell, Sidebar, Navigation
+│   ├── providers/        # Context Providers (auth, data, theme)
+│   ├── shared/           # Reusable components & shared Icons
 │   └── ui/               # shadcn/ui primitive components
-├── lib/                  # Utilities
-└── types/                # TypeScript Interfaces
+├── lib/                  # Services & helper utility functions
+└── types/                # TypeScript Interfaces & Schemas
 ```
 
 ## 🤝 Contributing

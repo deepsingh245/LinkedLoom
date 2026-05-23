@@ -19,7 +19,7 @@ import { useRouter } from "next/navigation";
 import { Routes } from "@/lib/routes";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useData } from "@/components/data-provider";
+import { useData } from "@/components/providers/data-provider";
 
 const EmptyAnalyticsState = ({ router }: { router: ReturnType<typeof useRouter> }) => (
     <div className="flex flex-col items-center justify-center h-100 border-2 border-dashed border-border rounded-xl relative z-10 bg-muted/30 group hover:border-primary/30 transition-all duration-500">

@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/item"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { useAuth } from "@/components/auth-provider";
+import { useAuth } from "@/components/providers/auth-provider";
 
 export function SchedulerView() {
     const [date, setDate] = React.useState<Date | undefined>(new Date())

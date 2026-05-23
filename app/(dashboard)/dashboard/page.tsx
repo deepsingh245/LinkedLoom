@@ -9,7 +9,7 @@ import {
     Eye
 } from "lucide-react";
 import Link from "next/link";
-import { useData } from "@/components/data-provider";
+import { useData } from "@/components/providers/data-provider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 

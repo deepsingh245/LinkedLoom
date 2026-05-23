@@ -18,10 +18,11 @@ import {
 import Link from "next/link"
 import { Routes } from "@/lib/routes"
 import { PostCard } from "@/components/features/dashboard/PostCard"
-import { useData } from "@/components/data-provider"
+import { useData } from "@/components/providers/data-provider"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
+import { SmartImage } from "@/components/ui/smart-image"
 
 import { Post } from "@/types"
 
@@ -188,7 +189,7 @@ function PostDisplay({ posts, refreshData, searchQuery, viewMode, label = "No po
                             <div className="flex items-center gap-4 flex-1">
                                 {post.imageUrl ? (
                                     <div className="w-16 h-16 rounded-xl overflow-hidden border border-border">
-                                        <img src={post.imageUrl} alt="" loading="lazy" className="w-full h-full object-cover" />
+                                        <SmartImage src={post.imageUrl} alt="" className="w-full h-full object-cover" />
                                     </div>
                                 ) : (
                                     <div className="w-16 h-16 rounded-xl bg-muted border border-border flex items-center justify-center text-muted-foreground">

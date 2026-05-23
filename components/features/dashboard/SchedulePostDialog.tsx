@@ -23,20 +23,9 @@ import { format, set, isBefore } from "date-fns";
 import { Loader2, Linkedin } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { useAuth } from "@/components/auth-provider";
+import { useAuth } from "@/components/providers/auth-provider";
 import { cn } from "@/lib/utils";
-
-const XIcon = ({ className }: { className?: string }) => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className={className}>
-        <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932 6.064-6.932zm-1.294 19.497h2.039L6.486 3.24H4.298l13.31 17.41z" />
-    </svg>
-);
-
-const RedditIcon = ({ className }: { className?: string }) => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className={className}>
-        <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.056 1.597.011.138.011.273.011.412 0 2.303-2.56 4.182-5.72 4.182-3.16 0-5.72-1.879-5.72-4.182 0-.139 0-.274.011-.412a1.754 1.754 0 0 1-1.056-1.597c0-.968.786-1.754 1.754-1.754.463 0 .875.18 1.179.465 1.192-.834 2.83-1.397 4.637-1.48l.834-3.87a.25.25 0 0 1 .33-.197l3.066.646c.122-.323.438-.549.799-.549zm-9.29 9.389c-.615 0-1.114.499-1.114 1.114 0 .615.499 1.114 1.114 1.114.615 0 1.114-.499 1.114-1.114 0-.615-.499-1.114-1.114-1.114zm8.56 0c-.615 0-1.114.499-1.114 1.114 0 .615.499 1.114 1.114 1.114.615 0 1.114-.499 1.114-1.114 0-.615-.499-1.114-1.114-1.114zm-4.28 2.22c-1.433 0-2.46.745-2.61.895-.125.125-.125.328 0 .453s.328.125.453 0c.01-.01.822-.728 2.157-.728 1.334 0 2.146.718 2.156.728.125.125.328.125.454 0s.125-.328 0-.453c-.15-.15-1.177-.895-2.61-.895z" />
-    </svg>
-);
+import { XIcon, RedditIcon } from "@/components/shared/Icons";
 
 interface SchedulePostDialogProps {
     post: Post;

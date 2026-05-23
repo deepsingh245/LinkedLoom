@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { EditPostDialog } from "@/components/features/dashboard/EditPostDialog";
-import { useData } from "@/components/data-provider";
+import { useData } from "@/components/providers/data-provider";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
 
 export default function CalendarPage() {

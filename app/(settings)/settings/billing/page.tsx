@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Check, CreditCard, Download } from "lucide-react"
 
-import { useAuth } from "@/components/auth-provider"
+import { useAuth } from "@/components/providers/auth-provider"
 
 export default function BillingSettingsPage() {
     const { user, profile, loading } = useAuth();

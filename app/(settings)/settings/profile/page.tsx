@@ -6,12 +6,13 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Check, Camera, Loader2, Linkedin, Globe, Pencil } from "lucide-react"
-import { useAuth } from "@/components/auth-provider"
+import { useAuth } from "@/components/providers/auth-provider"
 import { updateUserProfile } from "@/lib/firebase/user"
 import { dangerToast, successToast } from "@/lib/toast"
 import { api } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { uploadProfilePhoto } from "@/lib/firebase/storage"
+import { XIcon, RedditIcon, MediumIcon } from "@/components/shared/Icons"
 import {
     Dialog,
     DialogContent,
@@ -19,30 +20,13 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 
-const XIcon = ({ className }: { className?: string }) => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className={className}>
-        <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932 6.064-6.932zm-1.294 19.497h2.039L6.486 3.24H4.298l13.31 17.41z" />
-    </svg>
-)
-
-const RedditIcon = ({ className }: { className?: string }) => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className={className}>
-        <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.056 1.597.011.138.011.273.011.412 0 2.303-2.56 4.182-5.72 4.182-3.16 0-5.72-1.879-5.72-4.182 0-.139 0-.274.011-.412a1.754 1.754 0 0 1-1.056-1.597c0-.968.786-1.754 1.754-1.754.463 0 .875.18 1.179.465 1.192-.834 2.83-1.397 4.637-1.48l.834-3.87a.25.25 0 0 1 .33-.197l3.066.646c.122-.323.438-.549.799-.549zm-9.29 9.389c-.615 0-1.114.499-1.114 1.114 0 .615.499 1.114 1.114 1.114.615 0 1.114-.499 1.114-1.114 0-.615-.499-1.114-1.114-1.114zm8.56 0c-.615 0-1.114.499-1.114 1.114 0 .615.499 1.114 1.114 1.114.615 0 1.114-.499 1.114-1.114 0-.615-.499-1.114-1.114-1.114zm-4.28 2.22c-1.433 0-2.46.745-2.61.895-.125.125-.125.328 0 .453s.328.125.453 0c.01-.01.822-.728 2.157-.728 1.334 0 2.146.718 2.156.728.125.125.328.125.454 0s.125-.328 0-.453c-.15-.15-1.177-.895-2.61-.895z" />
-    </svg>
-)
-
-const MediumIcon = ({ className }: { className?: string }) => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className={className}>
-        <path d="M13.54 12a6.8 6.8 0 11-13.54 0 6.8 6.8 0 0113.54 0zM20.966 12c0 3.542-.79 6.413-1.767 6.413-1.008 0-1.767-2.871-1.767-6.413 0-3.542.759-6.414 1.767-6.414 1.008 0 1.767 2.872 1.767 6.414zM24 12c0 3.171-.239 5.76-.501 5.76-.263 0-.502-2.589-.502-5.76 0-3.141.239-5.706.502-5.706.262 0 .501 2.565.501 5.706z" />
-    </svg>
-)
-
 export default function ProfileSettingsPage() {
     const { profile } = useAuth()
     const [loading, setLoading] = useState(false)
     const [connectingId, setConnectingId] = useState<string | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const [uploading, setUploading] = useState(false)
+    const [isEditing, setIsEditing] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [formData, setFormData] = useState({
         displayName: "",
@@ -106,12 +90,33 @@ export default function ProfileSettingsPage() {
         try {
             await updateUserProfile(profile.uid, formData)
             successToast("Your changes have been saved successfully.")
+            setIsEditing(false)
         } catch (error) {
             console.error(error)
             dangerToast("Failed to update profile. Please try again.")
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleCancel = () => {
+        if (profile) {
+            setFormData({
+                displayName: profile.displayName || "",
+                jobTitle: profile.jobTitle || "",
+                company: profile.company || "",
+                location: profile.location || "",
+                bio: profile.bio || "",
+                email: profile.email || "",
+                phone: profile.phone || "",
+                website: profile.website || "",
+                twitter: profile.twitter || "",
+                linkedin: profile.linkedin || "",
+                reddit: profile.reddit || "",
+                medium: profile.medium || "",
+            })
+        }
+        setIsEditing(false)
     }
 
     const handleUploadClick = () => {
@@ -200,15 +205,38 @@ export default function ProfileSettingsPage() {
             <Card className="bg-card border-border rounded-2xl shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between p-6 pb-4">
                     <CardTitle className="text-base font-semibold text-foreground">Basic Information</CardTitle>
-                    <Button 
-                        size="sm" 
-                        onClick={handleSave} 
-                        disabled={loading}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground hover:shadow-lg"
-                    >
-                        {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
-                        Save Changes
-                    </Button>
+                    {!isEditing ? (
+                        <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => setIsEditing(true)}
+                            className="flex items-center gap-1.5 border-border hover:border-primary/45 transition-colors font-semibold"
+                        >
+                            <Pencil className="w-3.5 h-3.5" />
+                            Edit Profile
+                        </Button>
+                    ) : (
+                        <div className="flex gap-2">
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={handleCancel}
+                                disabled={loading}
+                                className="border-border text-foreground hover:bg-accent font-semibold"
+                            >
+                                Cancel
+                            </Button>
+                            <Button 
+                                size="sm" 
+                                onClick={handleSave} 
+                                disabled={loading}
+                                className="bg-primary hover:bg-primary/90 text-primary-foreground hover:shadow-lg"
+                            >
+                                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
+                                Save Changes
+                            </Button>
+                        </div>
+                    )}
                 </CardHeader>
                 <CardContent className="p-6 pt-0 space-y-4">
                     <div className="grid grid-cols-2 gap-4">
@@ -218,7 +246,8 @@ export default function ProfileSettingsPage() {
                                 id="displayName"
                                 value={formData.displayName} 
                                 onChange={handleChange}
-                                className="bg-background border-border focus:border-primary shadow-none text-foreground" 
+                                disabled={!isEditing}
+                                className="bg-background border-border focus:border-primary shadow-none text-foreground disabled:opacity-70 disabled:cursor-not-allowed" 
                             />
                         </div>
                         <div className="space-y-2">
@@ -227,7 +256,8 @@ export default function ProfileSettingsPage() {
                                 id="jobTitle"
                                 value={formData.jobTitle} 
                                 onChange={handleChange}
-                                className="bg-background border-border focus:border-primary shadow-none text-foreground" 
+                                disabled={!isEditing}
+                                className="bg-background border-border focus:border-primary shadow-none text-foreground disabled:opacity-70 disabled:cursor-not-allowed" 
                             />
                         </div>
                     </div>
@@ -238,7 +268,8 @@ export default function ProfileSettingsPage() {
                                 id="company"
                                 value={formData.company} 
                                 onChange={handleChange}
-                                className="bg-background border-border focus:border-primary shadow-none text-foreground" 
+                                disabled={!isEditing}
+                                className="bg-background border-border focus:border-primary shadow-none text-foreground disabled:opacity-70 disabled:cursor-not-allowed" 
                             />
                         </div>
                         <div className="space-y-2">
@@ -247,7 +278,8 @@ export default function ProfileSettingsPage() {
                                 id="location"
                                 value={formData.location} 
                                 onChange={handleChange}
-                                className="bg-background border-border focus:border-primary shadow-none text-foreground" 
+                                disabled={!isEditing}
+                                className="bg-background border-border focus:border-primary shadow-none text-foreground disabled:opacity-70 disabled:cursor-not-allowed" 
                             />
                         </div>
                     </div>
@@ -257,7 +289,8 @@ export default function ProfileSettingsPage() {
                             id="bio"
                             value={formData.bio} 
                             onChange={handleChange}
-                            className="bg-background border-border focus:border-primary shadow-none resize-none h-24 text-foreground" 
+                            disabled={!isEditing}
+                            className="bg-background border-border focus:border-primary shadow-none resize-none h-24 text-foreground disabled:opacity-70 disabled:cursor-not-allowed" 
                         />
                         <p className="text-[11px] text-muted-foreground/75 font-medium">Shown on your public profile. Max 300 characters.</p>
                     </div>
@@ -277,7 +310,8 @@ export default function ProfileSettingsPage() {
                                 value={formData.email} 
                                 onChange={handleChange}
                                 type="email" 
-                                className="bg-background border-border focus:border-primary shadow-none text-foreground" 
+                                disabled={!isEditing}
+                                className="bg-background border-border focus:border-primary shadow-none text-foreground disabled:opacity-70 disabled:cursor-not-allowed" 
                             />
                         </div>
                         <div className="space-y-2">
@@ -287,7 +321,8 @@ export default function ProfileSettingsPage() {
                                 value={formData.phone} 
                                 onChange={handleChange}
                                 type="tel" 
-                                className="bg-background border-border focus:border-primary shadow-none text-foreground" 
+                                disabled={!isEditing}
+                                className="bg-background border-border focus:border-primary shadow-none text-foreground disabled:opacity-70 disabled:cursor-not-allowed" 
                             />
                         </div>
                     </div>
@@ -300,7 +335,8 @@ export default function ProfileSettingsPage() {
                                 value={formData.website} 
                                 onChange={handleChange}
                                 placeholder="https://example.com"
-                                className="bg-background border-border focus:border-primary shadow-none pl-9 text-foreground" 
+                                disabled={!isEditing}
+                                className="bg-background border-border focus:border-primary shadow-none pl-9 text-foreground disabled:opacity-70 disabled:cursor-not-allowed" 
                             />
                         </div>
                     </div>
@@ -410,17 +446,7 @@ export default function ProfileSettingsPage() {
                         </div>
                     </div>
                 </CardContent>
-                <CardFooter className="p-6 pt-0 flex justify-end">
-                     <Button 
-                        size="sm" 
-                        onClick={handleSave} 
-                        disabled={loading}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground hover:shadow-lg"
-                    >
-                        {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
-                        Save Changes
-                    </Button>
-                </CardFooter>
+
             </Card>
 
             <Card className="bg-destructive/5 border-destructive/20 rounded-2xl shadow-sm">

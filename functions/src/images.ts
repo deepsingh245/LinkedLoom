@@ -39,8 +39,8 @@ export const generateResizedImages = onObjectFinalized(
       return;
     }
 
-    const fileName = path.basename(filePath);
-    const fileDir = path.dirname(filePath);
+    const fileName = path.posix.basename(filePath);
+    const fileDir = path.posix.dirname(filePath);
 
     // Download file from bucket.
     const bucket = admin.storage().bucket(fileBucket);
@@ -51,10 +51,10 @@ export const generateResizedImages = onObjectFinalized(
 
     // Generate and upload each size
     for (const size of SIZES) {
-      const resizedFileName = `${path.parse(fileName).name}_${size.prefix}.webp`;
+      const resizedFileName = `${path.posix.parse(fileName).name}_${size.prefix}.webp`;
       const tempResizedFilePath = path.join(os.tmpdir(), resizedFileName);
       
-      const resizedPathInStorage = path.join("resized", fileDir, resizedFileName);
+      const resizedPathInStorage = path.posix.join("resized", fileDir, resizedFileName);
 
       try {
         await sharp(tempFilePath)

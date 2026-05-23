@@ -6,6 +6,8 @@ import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import { auth } from "@/lib/firebase";
+import { signInWithCustomToken } from "firebase/auth";
 
 export default function LinkedInCallbackPage() {
     const searchParams = useSearchParams();
@@ -15,6 +17,7 @@ export default function LinkedInCallbackPage() {
 
     useEffect(() => {
         const code = searchParams.get("code");
+        const state = searchParams.get("state");
         const error = searchParams.get("error");
         const errorDescription = searchParams.get("error_description");
 
@@ -24,9 +27,9 @@ export default function LinkedInCallbackPage() {
             return;
         }
 
-        if (!code) {
+        if (!code || !state) {
             setStatus("error");
-            setMessage("Authorization code missing.");
+            setMessage("Authorization code or state parameter missing.");
             return;
         }
 
@@ -37,14 +40,19 @@ export default function LinkedInCallbackPage() {
                 // For now, we rely on the default in backend or pass current URL origin + path
                 const redirectUri = window.location.origin + "/integrations/linkedin/callback";
 
-                await api.firebaseService.exchangeLinkedInToken(code, redirectUri);
+                const res = await api.firebaseService.exchangeLinkedInToken(code, state, redirectUri);
+                
+                if (res.customToken) {
+                    await signInWithCustomToken(auth, res.customToken);
+                }
+
                 setStatus("success");
                 setMessage("LinkedIn account connected successfully!");
                 toast.success("LinkedIn connected!");
 
                 // Redirect after delay
                 setTimeout(() => {
-                    router.push("/dashboard/scheduler");
+                    router.push("/settings/profile");
                 }, 2000);
             } catch (err: any) {
                 console.error("Token Exchange Error:", err);
@@ -53,10 +61,10 @@ export default function LinkedInCallbackPage() {
                 toast.error("Connection failed.");
             }
         };
-
+ 
         exchangeToken();
     }, [searchParams, router]);
-
+ 
     return (
         <div className="flex items-center justify-center min-h-screen bg-background">
             <Card className="w-100">
@@ -82,7 +90,7 @@ export default function LinkedInCallbackPage() {
                             <XCircle className="h-10 w-10 text-destructive" />
                             <p className="text-destructive font-medium text-center">{message}</p>
                             <button
-                                onClick={() => router.push("/dashboard/scheduler")}
+                                onClick={() => router.push("/settings/profile")}
                                 className="mt-4 text-sm text-primary hover:underline"
                             >
                                 Return to Dashboard

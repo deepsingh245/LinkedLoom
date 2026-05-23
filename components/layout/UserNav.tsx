@@ -15,7 +15,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useAuth } from "../auth-provider";
+import { useAuth } from "../providers/auth-provider";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { Routes } from "@/lib/routes";
