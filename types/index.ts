@@ -19,6 +19,7 @@ export interface Post {
   imageUrl?: string | null;
   articleUrl?: string | null;
   linkedinUrn?: string;
+  subreddit?: string;
   versions?: PostVersion[];
   user_id?: string;
   scheduledFor?: Date | string | null;

@@ -1,6 +1,7 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import * as admin from "firebase-admin";
 import { publishToLinkedInInternal } from "./linkedin";
+import { publishToRedditInternal } from "./reddit";
 
 export const checkScheduledPosts = onSchedule("every 10 minutes", async (event) => {
   const now = admin.firestore.Timestamp.now();
@@ -50,7 +51,6 @@ async function publishPost(userId: string, post: any) {
     const linkedinConnection = linkedinDoc.data();
     try {
       const result = await publishToLinkedInInternal(linkedinConnection, post.content, undefined, post.imageUrl);
-      // Update post with LinkedIn URN if successful
       if (result && result.id) {
           console.log("LinkedIn Publish Success:", result.id);
       }
@@ -58,17 +58,34 @@ async function publishPost(userId: string, post: any) {
       publishedAny = true;
     } catch (e) {
       console.error("LinkedIn Publish Failed", e);
-      throw e; // Rethrow to mark as failed in the caller
+      throw e;
     }
   }
-  
+
+  const redditDoc = await db.collection("users").doc(userId).collection("connections").doc("reddit").get();
+
+  if (redditDoc.exists) {
+    const redditConnection = redditDoc.data();
+    try {
+      const result = await publishToRedditInternal(
+        redditConnection,
+        post.content,
+        post.subreddit,
+        post.imageUrl
+      );
+      console.log("Reddit Publish Success:", result.postUrl);
+      results.push(result);
+      publishedAny = true;
+    } catch (e) {
+      console.error("Reddit Publish Failed", e);
+      // Don't rethrow — LinkedIn may have succeeded; mark failure only if all platforms fail
+    }
+  }
+
   if (!publishedAny) {
       throw new Error("User has no social connections linked, or all publishing attempts failed.");
   }
 
-  
-  // Add other platforms here (like twitter) checking for doc.exists like above
-  
   await Promise.all(results);
 }
 

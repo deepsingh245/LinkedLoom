@@ -85,7 +85,8 @@ linkedloom/
 │   │   ├── analytics/page.tsx        # /analytics — analytics charts (UI ready)
 │   │   ├── calendar/page.tsx         # /calendar — calendar view (UI ready)
 │   │   └── integrations/
-│   │       └── linkedin/callback/    # /integrations/linkedin/callback — OAuth callback handler
+│   │       ├── linkedin/callback/    # /integrations/linkedin/callback — OAuth callback handler
+│   │       └── reddit/callback/      # /integrations/reddit/callback — Reddit OAuth callback handler
 │   ├── (settings)/                   # Settings route group — has SettingsLayout + SettingsSidebar
 │   │   ├── layout.tsx                # Wraps: AuthProvider > SettingsLayout
 │   │   └── settings/
@@ -146,7 +147,7 @@ linkedloom/
 │       ├── analytics.ts              # getAnalyticsDashboardData — aggregates Firestore post data into DashboardData
 │       ├── user.ts                   # getUserProfile, updateUserProfile, subscribeToUserProfile (real-time listener)
 │       ├── storage.ts                # uploadPostAttachment, uploadProfilePhoto, getImageVariants, getStoragePathFromUrl
-│       ├── integrations.ts           # getLinkedInAuthUrl (HTTP), exchangeLinkedInToken (HTTP)
+│       ├── integrations.ts           # getLinkedInAuthUrl, exchangeLinkedInToken, getRedditAuthUrl, exchangeRedditToken, disconnectReddit (HTTP wrappers)
 │       ├── collections.ts            # Enum Collections { POSTS, ANALYTICS, USERS }
 │       ├── functions.ts              # Enum FirebaseFunctions { GENERATE_POST, GENERATE_IMAGE, ENHANCE_IMAGE_PROMPT, ... }
 │       └── interfaces.ts             # DashboardData interface
@@ -156,7 +157,8 @@ linkedloom/
 │   │   ├── index.ts                  # Entry point — exports all functions
 │   │   ├── ai.ts                     # generatePost (onCall), generateImage (onCall, Vertex AI), enhanceImagePrompt (onCall)
 │   │   ├── linkedin.ts               # getLinkedInAuthUrl, exchangeLinkedInToken, publishToLinkedIn, getLinkedInAnalytics, uploadMediaToLinkedIn (helper)
-│   │   ├── scheduler.ts              # checkScheduledPosts — runs every 10 minutes, publishes due posts
+│   │   ├── reddit.ts                 # getRedditAuthUrl, exchangeRedditToken, publishToReddit, getRedditAnalytics, publishToRedditInternal (helper)
+│   │   ├── scheduler.ts              # checkScheduledPosts — runs every 10 minutes, publishes due posts to LinkedIn + Reddit
 │   │   └── images.ts                 # generateResizedImages — Storage trigger on /attachments/ upload, generates 200x200/400x400/800x800 WebP variants
 │   ├── firestore.rules               # ⚠️ CURRENTLY WIDE OPEN: allow read, write: if true (must fix for production)
 │   ├── firestore.indexes.json        # Composite index: posts(user_id ASC, scheduledFor ASC)
@@ -195,6 +197,7 @@ linkedloom/
 | `/settings/preferences` | `app/(settings)/settings/preferences/page.tsx` | 🔒 Yes | Theme, notifications, AI defaults |
 | `/settings/billing` | `app/(settings)/settings/billing/page.tsx` | 🔒 Yes | Billing (UI only) |
 | `/integrations/linkedin/callback` | `app/(dashboard)/integrations/linkedin/callback/page.tsx` | Semi | LinkedIn OAuth callback |
+| `/integrations/reddit/callback` | `app/(dashboard)/integrations/reddit/callback/page.tsx` | 🔒 Yes | Reddit OAuth callback — requires logged-in user (passes Firebase ID token to backend) |
 | `/linkedin/callback` | `app/linkedin/callback/page.tsx` | Semi | Legacy LinkedIn OAuth callback |
 
 **Auth protection mechanism:** Client-side only via `AuthProvider`. If `user` is null, it calls `router.push(Routes.LOGIN)`. **No `middleware.ts` exists** — there is no server-side route guard.
@@ -324,6 +327,11 @@ api.firebaseService.getAnalyticsDashboardData(userId): Promise<DashboardData | n
 // LinkedIn Integration (HTTP calls to Cloud Functions)
 api.firebaseService.getLinkedInAuthUrl(): Promise<{ url: string; state: string }>
 api.firebaseService.exchangeLinkedInToken(code, state, redirectUri?): Promise<{ success, customToken? }>
+
+// Reddit Integration (HTTP calls to Cloud Functions)
+api.firebaseService.getRedditAuthUrl(): Promise<{ url: string; state: string }>
+api.firebaseService.exchangeRedditToken(code, state, redirectUri, idToken): Promise<{ success: boolean }>
+api.firebaseService.disconnectReddit(uid): Promise<void>
 ```
 
 ### Firebase Singletons (`lib/firebase.ts`)
@@ -427,6 +435,7 @@ interface Post {
   imageUrl?: string | null;
   articleUrl?: string | null;
   linkedinUrn?: string;
+  subreddit?: string;        // Target subreddit for Reddit posts (e.g. "r/entrepreneurship"); defaults to u_<username>
   versions?: PostVersion[];
   user_id?: string;
   scheduledFor?: Date | string | null;
@@ -533,6 +542,24 @@ registerSchema // email + password (min 6) + confirmPassword (must match)
 | `createdAt` | timestamp | |
 | `updatedAt` | timestamp | |
 
+### `users/{uid}/connections/reddit` (subcollection)
+
+| Field | Type | Notes |
+|---|---|---|
+| `provider` | string | `"reddit"` |
+| `providerUserId` | string | Reddit user ID (`t2_xxxxx`) |
+| `accessToken` | string | Short-lived (~1 hour) — auto-refreshed via `refreshToken` |
+| `refreshToken` | string | Long-lived (permanent scope — does not expire) |
+| `expiresAt` | Date | Access token expiry |
+| `name` | string | Reddit username (no `u/` prefix) |
+| `iconImg` | string | Profile image URL from Reddit |
+| `createdAt` | timestamp | |
+| `updatedAt` | timestamp | |
+
+**Reddit connected check:** `if (profile?.reddit)` — the field stores the Reddit username when connected.
+
+**Key difference from LinkedIn:** `exchangeRedditToken` requires a Firebase ID token from the frontend (Reddit doesn't expose email, so we can't match by email). The backend verifies the ID token to identify the current user, then stores the Reddit connection under their existing UID. No `signInWithCustomToken` is needed on the frontend after connecting.
+
 ### `posts/{postId}` (top-level)
 
 | Field | Type | Notes |
@@ -546,6 +573,7 @@ registerSchema // email + password (min 6) + confirmPassword (must match)
 | `mediaUrls` | string[] | Array version of imageUrl |
 | `articleUrl` | string | nullable |
 | `linkedinUrn` | string | LinkedIn post URN after publishing |
+| `subreddit` | string | nullable — target subreddit for Reddit (e.g. `entrepreneurship`); omit `r/` prefix; defaults to `u_<username>` |
 | `scheduledFor` | timestamp | **Indexed** — when to publish |
 | `publishedAt` | timestamp | nullable |
 | `createdAt` | timestamp | |
@@ -603,6 +631,31 @@ All functions are in `functions/src/`. Exported via `functions/src/index.ts`.
 3. Callback page calls `exchangeLinkedInToken` → receives `customToken`
 4. Frontend calls `signInWithCustomToken(auth, customToken)` → user is logged in
 
+### Reddit Functions (`functions/src/reddit.ts`)
+
+**These are `onRequest` HTTP endpoints — called via `fetch()`, NOT `httpsCallable()`.**
+
+| Function | URL | Auth | Input | Output |
+|---|---|---|---|---|
+| `getRedditAuthUrl` | `{API_URL}/getRedditAuthUrl` | None | GET | `{ url: string, state: string }` |
+| `exchangeRedditToken` | `{API_URL}/exchangeRedditToken` | Firebase ID token in body (verifies current user) | `{ code, state, redirectUri, idToken }` | `{ success: true }` |
+| `publishToReddit` | `{API_URL}/publishToReddit` | None (trusts userId from body ⚠️) | `{ userId, content, subreddit?, imageUrl? }` | `{ success: true, data: { postUrl, postId } }` |
+| `getRedditAnalytics` | `{API_URL}/getRedditAnalytics` | None (trusts userId from body ⚠️) | `{ userId }` | `{ success: true, data: DashboardData }` |
+
+**Reddit OAuth flow (connect from settings — user already logged in):**
+1. Frontend calls `getRedditAuthUrl` → gets URL + state
+2. User redirected to Reddit → returns to `/integrations/reddit/callback?code=...&state=...`
+3. Callback page gets current user's Firebase ID token via `auth.currentUser.getIdToken()`
+4. Callback page calls `exchangeRedditToken(code, state, redirectUri, idToken)` — no `signInWithCustomToken` needed
+5. Backend verifies ID token → stores Reddit connection under that UID → sets `users/{uid}.reddit = username`
+6. Profile page re-renders showing `u/username` and Disconnect button
+
+**Reddit posting model:**
+- Posts to `u_<username>` (user's own Reddit profile) by default
+- If `post.subreddit` is set (e.g. `"entrepreneurship"`), posts to `r/entrepreneurship` instead
+- Title = first line of content (max 300 chars); body = remaining lines (markdown)
+- Access tokens expire in ~1 hour — `publishToRedditInternal` auto-refreshes using `refreshToken`
+
 ### Scheduler (`functions/src/scheduler.ts`)
 
 ```
@@ -610,9 +663,10 @@ checkScheduledPosts — onSchedule("every 10 minutes")
 ```
 
 1. Queries `posts` where `status == "SCHEDULED"` AND `scheduledFor <= now`
-2. For each due post: fetches `users/{userId}/connections/linkedin`
-3. Calls `publishToLinkedInInternal(connection, post.content, undefined, post.imageUrl)`
-4. Updates post: `status = "PUBLISHED"` on success, `status = "FAILED"` on error
+2. For each due post, publishes to all connected platforms in parallel:
+   - Fetches `users/{userId}/connections/linkedin` → calls `publishToLinkedInInternal` if exists
+   - Fetches `users/{userId}/connections/reddit` → calls `publishToRedditInternal` if exists (uses `post.subreddit` if set)
+3. Updates post: `status = "PUBLISHED"` on success, `status = "FAILED"` only if ALL platforms fail
 
 ### Image Resizing (`functions/src/images.ts`)
 
@@ -661,6 +715,9 @@ GEMINI_API_KEY=              # Google Gemini API key for text generation
 LINKEDIN_CLIENT_ID=          # LinkedIn OAuth App client ID
 LINKEDIN_CLIENT_SECRET=      # LinkedIn OAuth App client secret
 LINKEDIN_REDIRECT_URI=       # Must match LinkedIn App settings
+REDDIT_CLIENT_ID=            # Reddit OAuth App client ID (from reddit.com/prefs/apps)
+REDDIT_CLIENT_SECRET=        # Reddit OAuth App client secret
+REDDIT_REDIRECT_URI=         # Must match Reddit App settings — e.g. https://yourdomain.com/integrations/reddit/callback
 PROJECT_ID=                  # GCP Project ID for Vertex AI (ai.ts)
 FRONTEND_URL=                # ⚠️ Currently missing — needed to fix hardcoded CORS
 ```
@@ -848,5 +905,5 @@ vercel --prod
 
 ---
 
-*This file was generated from a full codebase audit on 2026-05-23.*
+*This file was generated from a full codebase audit on 2026-05-23. Last updated 2026-05-25 (Reddit integration).*
 *Update this file whenever you add new routes, components, environment variables, or Cloud Functions.*

@@ -76,6 +76,8 @@ export function PostEditor() {
         }
     }, [connectedPlatforms, activePlatform]);
 
+    const [subreddit, setSubreddit] = React.useState("")
+
     const [imagePrompt, setImagePrompt] = React.useState("")
     const [imageUrl, setImageUrl] = React.useState<string | null>(null)
     const [referenceImageUrl, setReferenceImageUrl] = React.useState<string | null>(null)
@@ -94,6 +96,7 @@ export function PostEditor() {
                 if (draft.content) setContent(draft.content);
                 if (draft.tone) setTone(draft.tone.toLowerCase());
                 if (draft.topic) setTopic(draft.topic);
+                if (draft.subreddit) setSubreddit(draft.subreddit);
                 if (draft.imageUrl) {
                     setImageUrl(draft.imageUrl);
                     setShowImageOptions(true);
@@ -295,6 +298,7 @@ export function PostEditor() {
             mediaUrls: imageUrl ? [imageUrl] : [],
             imageUrl: imageUrl || null,
             linkedinUrn: "",
+            subreddit: subreddit.trim() || undefined,
             versions: []
         };
     }
@@ -440,6 +444,9 @@ export function PostEditor() {
                         setHour={setHour}
                         minute={minute}
                         setMinute={setMinute}
+                        showSubredditField={connectedPlatforms.includes("reddit")}
+                        subreddit={subreddit}
+                        setSubreddit={setSubreddit}
                     />
                 </div>
 

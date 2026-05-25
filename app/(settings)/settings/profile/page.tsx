@@ -60,6 +60,37 @@ export default function ProfileSettingsPage() {
         }
     }
 
+    const handleConnectReddit = async () => {
+        try {
+            setConnectingId("reddit");
+            const data = await api.firebaseService.getRedditAuthUrl();
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                dangerToast("Failed to initialize Reddit connection.");
+            }
+        } catch (error) {
+            console.error(error);
+            dangerToast("Reddit connection failed.");
+        } finally {
+            setConnectingId(null);
+        }
+    }
+
+    const handleDisconnectReddit = async () => {
+        if (!profile?.uid) return;
+        try {
+            setConnectingId("reddit-disconnect");
+            await api.firebaseService.disconnectReddit(profile.uid);
+            successToast("Reddit account disconnected.");
+        } catch (error) {
+            console.error(error);
+            dangerToast("Failed to disconnect Reddit.");
+        } finally {
+            setConnectingId(null);
+        }
+    }
+
     useEffect(() => {
         if (profile) {
             setFormData({
@@ -404,24 +435,54 @@ export default function ProfileSettingsPage() {
                         </div>
 
                         {/* Reddit */}
-                        <div className="flex items-center justify-between p-4 bg-background border border-border rounded-xl opacity-60">
+                        <div className="flex items-center justify-between p-4 bg-background border border-border rounded-xl hover:border-primary/30 transition-colors">
                             <div className="flex items-center gap-3">
                                 <div className="w-9 h-9 flex items-center justify-center bg-[#ff4500]/10 rounded-lg">
                                     <RedditIcon className="w-5 h-5 text-[#ff4500]" />
                                 </div>
                                 <div>
                                     <p className="text-sm font-medium text-foreground">Reddit</p>
-                                    <p className="text-[11px] text-muted-foreground">Coming Soon</p>
+                                    <p className="text-[11px] text-muted-foreground">
+                                        {profile?.reddit ? `u/${profile.reddit}` : "Community Platform"}
+                                    </p>
                                 </div>
                             </div>
-                            <Button 
-                                size="sm" 
-                                variant="outline"
-                                disabled
-                                className="h-8 border-border text-xs cursor-not-allowed text-muted-foreground"
-                            >
-                                Connect
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                {profile?.reddit && (
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-8 text-xs text-muted-foreground hover:text-destructive px-2"
+                                        onClick={handleDisconnectReddit}
+                                        disabled={connectingId === "reddit-disconnect"}
+                                    >
+                                        {connectingId === "reddit-disconnect" ? (
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                        ) : (
+                                            "Disconnect"
+                                        )}
+                                    </Button>
+                                )}
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className={cn(
+                                        "transition-colors duration-200",
+                                        profile?.reddit
+                                            ? "bg-[#ff4500]/10 border-[#ff4500]/30 text-[#ff4500] hover:bg-[#ff4500]/20"
+                                            : "bg-background border-border text-foreground hover:bg-primary hover:border-primary hover:text-primary-foreground font-semibold"
+                                    )}
+                                    onClick={handleConnectReddit}
+                                    disabled={connectingId === "reddit" || connectingId === "reddit-disconnect"}
+                                >
+                                    {connectingId === "reddit" ? (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <RedditIcon className="mr-2 h-4 w-4" />
+                                    )}
+                                    {profile?.reddit ? "Connected" : "Connect"}
+                                </Button>
+                            </div>
                         </div>
 
                         {/* Medium */}

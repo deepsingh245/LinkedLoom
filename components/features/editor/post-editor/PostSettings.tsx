@@ -2,6 +2,7 @@ import * as React from "react"
 import { format, set } from "date-fns"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -22,6 +23,9 @@ interface PostSettingsProps {
     setHour: (val: string) => void
     minute: string
     setMinute: (val: string) => void
+    showSubredditField?: boolean
+    subreddit?: string
+    setSubreddit?: (val: string) => void
 }
 
 export function PostSettings({
@@ -32,6 +36,9 @@ export function PostSettings({
     setHour,
     minute,
     setMinute,
+    showSubredditField,
+    subreddit,
+    setSubreddit,
 }: PostSettingsProps) {
     return (
         <Card className="animate-fadeUp animation-delay-200 p-5 rounded-2xl border border-border bg-card shadow-sm transition-all hover:border-border/80">
@@ -88,6 +95,23 @@ export function PostSettings({
                     </PopoverContent>
                 </Popover>
             </div>
+            {showSubredditField && (
+                <div className="mt-3">
+                    <Label className="text-[12.5px] text-muted-foreground mb-1.5 block font-medium">
+                        Subreddit <span className="text-muted-foreground/60">(optional)</span>
+                    </Label>
+                    <Input
+                        value={subreddit || ""}
+                        onChange={(e) => setSubreddit?.(e.target.value)}
+                        placeholder="e.g. r/entrepreneurship"
+                        disabled={saving}
+                        className="h-11 bg-background border border-border text-foreground text-[13.5px] rounded-[10px] focus:border-primary placeholder:text-muted-foreground/50"
+                    />
+                    <p className="text-[11px] text-muted-foreground/60 mt-1">
+                        Leave blank to post to your Reddit profile (u/username)
+                    </p>
+                </div>
+            )}
         </Card>
     )
 }
