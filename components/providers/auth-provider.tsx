@@ -28,27 +28,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const router = useRouter()
 
     useEffect(() => {
+        let unsubscribeProfile: (() => void) | null = null
+
         const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+            if (unsubscribeProfile) {
+                unsubscribeProfile()
+                unsubscribeProfile = null
+            }
+
             setUser(firebaseUser)
-            
+
             if (firebaseUser) {
-                // Subscribe to profile updates
-                const unsubscribeProfile = subscribeToUserProfile(firebaseUser.uid, (userProfile) => {
+                unsubscribeProfile = subscribeToUserProfile(firebaseUser.uid, (userProfile) => {
                     setProfile(userProfile)
                     setLoading(false)
                 })
-                
-                return () => {
-                    unsubscribeProfile()
-                }
             } else {
                 setProfile(null)
                 setLoading(false)
                 router.push(Routes.LOGIN)
             }
         })
-        
-        return () => unsubscribeAuth()
+
+        return () => {
+            unsubscribeAuth()
+            if (unsubscribeProfile) unsubscribeProfile()
+        }
     }, [router])
 
     return (
