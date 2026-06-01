@@ -8,11 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { EditPostDialog } from "@/components/features/dashboard/EditPostDialog";
-import { useData } from "@/components/providers/data-provider";
+import { useAuth } from "@/components/providers/auth-provider";
+import { useScheduledPosts } from "@/lib/query/hooks/use-posts";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
 
 export default function CalendarPage() {
-    const { scheduledPosts, loading, refreshData } = useData();
+    const { user } = useAuth();
+    const { data: scheduledPosts, isLoading: loading } = useScheduledPosts(user?.uid);
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [selectedPost, setSelectedPost] = useState<Post | null>(null);
     const [showEdit, setShowEdit] = useState(false);
@@ -138,7 +140,6 @@ export default function CalendarPage() {
                     post={selectedPost}
                     open={showEdit}
                     onOpenChange={setShowEdit}
-                    onPostUpdated={refreshData}
                 />
             )}
         </div>

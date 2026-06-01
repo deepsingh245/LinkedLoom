@@ -25,43 +25,16 @@ import {
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/components/providers/auth-provider";
+import { useScheduledPosts, useDraftPosts } from "@/lib/query/hooks/use-posts";
 
 export function SchedulerView() {
     const [date, setDate] = React.useState<Date | undefined>(new Date())
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const { user } = useAuth();
-    const [scheduledPosts, setScheduledPosts] = React.useState<Post[]>([]);
-    const [drafts, setDrafts] = React.useState<Post[]>([]);
-    // const [selectedDraft, setSelectedDraft] = React.useState<string | number | undefined>(undefined)
-
-    React.useEffect(() => {
-        const fetchScheduledPosts = async () => {
-            if (!user?.uid) return;
-            try {
-                const data = await api.firebaseService.getScheduledPosts(user.uid)
-                setScheduledPosts(data)
-            } catch (error) {
-                console.error("Failed to fetch scheduled posts", error)
-                dangerToast("Failed to fetch scheduled posts")
-            }
-        }
-        fetchScheduledPosts()
-    }, [user?.uid])
-
-    React.useEffect(() => {
-        const fetchDrafts = async () => {
-            if (!user?.uid) return;
-            try {
-                const data = await api.firebaseService.getDraftPosts(user.uid)
-                setDrafts(data)
-            } catch (error) {
-                console.error("Failed to fetch drafts", error)
-                dangerToast("Failed to fetch drafts")
-            }
-        }
-        fetchDrafts()
-    }, [user?.uid])
+    
+    const { data: scheduledPosts = [] } = useScheduledPosts(user?.uid);
+    const { data: drafts = [] } = useDraftPosts(user?.uid);
 
     const handleConnectLinkedIn = async () => {
         try {

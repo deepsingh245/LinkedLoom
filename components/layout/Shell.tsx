@@ -5,8 +5,7 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "./Sidebar";
 import { UserNav } from "@/components/layout/UserNav";
-import { useData } from "@/components/providers/data-provider";
-import { RefreshCw, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 

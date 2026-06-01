@@ -12,6 +12,7 @@ import { dangerToast, successToast } from "@/lib/toast"
 import { api } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { uploadProfilePhoto } from "@/lib/firebase/storage"
+import { useDisconnectReddit } from "@/lib/query/hooks/use-integrations"
 import { XIcon, RedditIcon, MediumIcon } from "@/components/shared/Icons"
 import {
     Dialog,
@@ -77,18 +78,11 @@ export default function ProfileSettingsPage() {
         }
     }
 
-    const handleDisconnectReddit = async () => {
+    const disconnectMutation = useDisconnectReddit();
+
+    const handleDisconnectReddit = () => {
         if (!profile?.uid) return;
-        try {
-            setConnectingId("reddit-disconnect");
-            await api.firebaseService.disconnectReddit(profile.uid);
-            successToast("Reddit account disconnected.");
-        } catch (error) {
-            console.error(error);
-            dangerToast("Failed to disconnect Reddit.");
-        } finally {
-            setConnectingId(null);
-        }
+        disconnectMutation.mutate(profile.uid);
     }
 
     useEffect(() => {

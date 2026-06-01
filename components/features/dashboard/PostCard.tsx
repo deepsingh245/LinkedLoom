@@ -2,12 +2,6 @@
 
 import { Button } from "@/components/ui/button";
 import {
-    Card,
-    CardContent,
-    CardFooter,
-    CardHeader,
-} from "@/components/ui/card";
-import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
@@ -20,44 +14,35 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { SchedulePostDialog } from "./SchedulePostDialog";
 import { SharedAlertDialog } from "@/components/shared/SharedAlertDialog";
-import { api } from "@/lib/api";
-import { toast } from "sonner";
+import { useAuth } from "@/components/providers/auth-provider";
+import { useDeletePost, useUnschedulePost } from "@/lib/query/hooks/use-posts";
 import { Badge } from "@/components/ui/badge";
 import { SmartImage } from "@/components/ui/smart-image";
 
 interface PostCardProps {
     post: Post;
-    onUpdate: () => void;
 }
 
-export function PostCard({ post, onUpdate }: PostCardProps) {
+export function PostCard({ post }: PostCardProps) {
     const [showSchedule, setShowSchedule] = useState(false);
     const [showDelete, setShowDelete] = useState(false);
     const router = useRouter();
+    const { user } = useAuth();
+
+    const deleteMutation = useDeletePost(user?.uid);
+    const unscheduleMutation = useUnschedulePost(user?.uid);
 
     const handleEdit = () => {
         localStorage.setItem("draft_post", JSON.stringify(post));
         router.push("/create");
     };
 
-    const handleDelete = async () => {
-        try {
-            await api.firebaseService.deletePost(String(post.id));
-            toast.success("Post deleted");
-            onUpdate();
-        } catch (error) {
-            toast.error("Failed to delete post");
-        }
+    const handleDelete = () => {
+        deleteMutation.mutate(String(post.id));
     };
 
-    const handleUnschedule = async () => {
-        try {
-            await api.firebaseService.unschedulePost(String(post.id));
-            toast.success("Post unscheduled and moved to drafts");
-            onUpdate();
-        } catch (error) {
-            toast.error("Failed to unschedule post");
-        }
+    const handleUnschedule = () => {
+        unscheduleMutation.mutate(String(post.id));
     };
 
     const getBadgeVariant = (status: string): "default" | "outline" | "published" | "scheduled" | "draft" => {
@@ -141,7 +126,6 @@ export function PostCard({ post, onUpdate }: PostCardProps) {
                 post={post}
                 open={showSchedule}
                 onOpenChange={setShowSchedule}
-                onPostUpdated={onUpdate}
             />
 
             <SharedAlertDialog
@@ -155,3 +139,4 @@ export function PostCard({ post, onUpdate }: PostCardProps) {
         </>
     );
 }
+

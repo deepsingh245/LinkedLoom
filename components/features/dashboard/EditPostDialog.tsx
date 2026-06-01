@@ -10,43 +10,40 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { api } from "@/lib/api";
 import { Post } from "@/types";
 import { Loader2, Wand2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { toast } from "sonner";
+import { useAuth } from "@/components/providers/auth-provider";
+import { useUpdatePost } from "@/lib/query/hooks/use-posts";
+import { successToast } from "@/lib/toast";
 
 interface EditPostDialogProps {
     post: Post;
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onPostUpdated: () => void;
 }
 
 export function EditPostDialog({
     post,
     open,
     onOpenChange,
-    onPostUpdated,
 }: EditPostDialogProps) {
     const [content, setContent] = useState(post.content);
-    const [loading, setLoading] = useState(false);
     const router = useRouter();
+    const { user } = useAuth();
+    const updateMutation = useUpdatePost(user?.uid);
 
-    const handleSave = async () => {
-        try {
-            setLoading(true);
-            await api.firebaseService.updatePost(post.id, { content });
-            toast.success("Post updated successfully");
-            onPostUpdated();
-            onOpenChange(false);
-        } catch (error) {
-            toast.error("Failed to update post");
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
+    const handleSave = () => {
+        updateMutation.mutate(
+            { postId: post.id, data: { content } },
+            {
+                onSuccess: () => {
+                    successToast("Post updated successfully");
+                    onOpenChange(false);
+                },
+            }
+        );
     };
 
     const handleEditWithAI = () => {
@@ -86,8 +83,8 @@ export function EditPostDialog({
                         <Wand2 className="h-4 w-4" />
                         Edit with AI
                     </Button>
-                    <Button onClick={handleSave} disabled={loading}>
-                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Button onClick={handleSave} disabled={updateMutation.isPending}>
+                        {updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Save Changes
                     </Button>
                 </DialogFooter>

@@ -18,7 +18,8 @@ import {
 import Link from "next/link"
 import { Routes } from "@/lib/routes"
 import { PostCard } from "@/components/features/dashboard/PostCard"
-import { useData } from "@/components/providers/data-provider"
+import { useAuth } from "@/components/providers/auth-provider"
+import { usePosts, useScheduledPosts, useDraftPosts } from "@/lib/query/hooks/use-posts"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -27,7 +28,11 @@ import { SmartImage } from "@/components/ui/smart-image"
 import { Post } from "@/types"
 
 export default function SchedulePage() {
-    const { posts, scheduledPosts, draftPosts, loading, refreshData } = useData();
+    const { user } = useAuth();
+    const { data: posts = [], isLoading: postsLoading } = usePosts(user?.uid);
+    const { data: scheduledPosts = [], isLoading: scheduledLoading } = useScheduledPosts(user?.uid);
+    const { data: draftPosts = [] } = useDraftPosts(user?.uid);
+    const loading = postsLoading || scheduledLoading;
     const [searchQuery, setSearchQuery] = useState("")
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
     const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest")
@@ -156,28 +161,28 @@ export default function SchedulePage() {
                 {/* ... existing content ... */}
 
                 <TabsContent value="all" className="mt-0 outline-none">
-                    <PostDisplay posts={processPosts(posts)} refreshData={refreshData} searchQuery={searchQuery} viewMode={viewMode} />
+                    <PostDisplay posts={processPosts(posts)} searchQuery={searchQuery} viewMode={viewMode} />
                 </TabsContent>
 
                 <TabsContent value="scheduled" className="mt-0 outline-none">
-                    <PostDisplay posts={processPosts(scheduledPosts)} refreshData={refreshData} searchQuery={searchQuery} viewMode={viewMode} label="No scheduled posts" />
+                    <PostDisplay posts={processPosts(scheduledPosts)} searchQuery={searchQuery} viewMode={viewMode} label="No scheduled posts" />
                 </TabsContent>
 
                 <TabsContent value="drafts" className="mt-0 outline-none">
-                    <PostDisplay posts={processPosts(draftPosts)} refreshData={refreshData} searchQuery={searchQuery} viewMode={viewMode} label="No drafts found" />
+                    <PostDisplay posts={processPosts(draftPosts)} searchQuery={searchQuery} viewMode={viewMode} label="No drafts found" />
                 </TabsContent>
             </Tabs>
         </div>
     )
 }
 
-function PostDisplay({ posts, refreshData, searchQuery, viewMode, label = "No posts found" }: { posts: Post[], refreshData: () => void, searchQuery: string, viewMode: "grid" | "list", label?: string }) {
+function PostDisplay({ posts, searchQuery, viewMode, label = "No posts found" }: { posts: Post[], searchQuery: string, viewMode: "grid" | "list", label?: string }) {
     if (posts.length > 0) {
         if (viewMode === "grid") {
             return (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {posts.map((post) => (
-                        <PostCard key={post.id} post={post} onUpdate={refreshData} />
+                        <PostCard key={post.id} post={post} />
                     ))}
                 </div>
             )

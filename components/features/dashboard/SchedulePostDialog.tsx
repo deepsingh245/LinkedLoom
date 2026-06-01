@@ -21,9 +21,10 @@ import { api } from "@/lib/api";
 import { Post } from "@/types";
 import { format, set, isBefore } from "date-fns";
 import { Loader2, Linkedin } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
+import { useSchedulePost } from "@/lib/query/hooks/use-posts";
 import { cn } from "@/lib/utils";
 import { XIcon, RedditIcon } from "@/components/shared/Icons";
 
@@ -31,16 +32,15 @@ interface SchedulePostDialogProps {
     post: Post;
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onPostUpdated: () => void;
 }
 
 export function SchedulePostDialog({
     post,
     open,
     onOpenChange,
-    onPostUpdated,
 }: SchedulePostDialogProps) {
-    const { profile } = useAuth();
+    const { user, profile } = useAuth();
+    const scheduleMutation = useSchedulePost(user?.uid);
     
     const defaultDate = post.scheduledFor ? new Date(post.scheduledFor) : undefined;
     
@@ -51,7 +51,6 @@ export function SchedulePostDialog({
     const [minute, setMinute] = useState<string>(
         defaultDate ? (Math.round(defaultDate.getMinutes() / 5) * 5).toString().padStart(2, '0') : "00"
     );
-    const [loading, setLoading] = useState(false);
     const [connectingId, setConnectingId] = useState<string | null>(null);
 
     const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
@@ -62,7 +61,7 @@ export function SchedulePostDialog({
         return set(date, { hours: parseInt(hour), minutes: parseInt(minute), seconds: 0, milliseconds: 0 });
     }, [date, hour, minute]);
 
-    const handleSchedule = async () => {
+    const handleSchedule = () => {
         if (!finalDate) {
             toast.error("Please select a date and time");
             return;
@@ -73,18 +72,10 @@ export function SchedulePostDialog({
             return;
         }
 
-        try {
-            setLoading(true);
-            await api.firebaseService.schedulePost(post.id, finalDate.toISOString());
-            toast.success("Post scheduled successfully");
-            onPostUpdated();
-            onOpenChange(false);
-        } catch (error) {
-            toast.error("Failed to schedule post");
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
+        scheduleMutation.mutate(
+            { postId: post.id, scheduledFor: finalDate.toISOString() },
+            { onSuccess: () => onOpenChange(false) }
+        );
     };
 
     const handleConnectLinkedIn = async () => {
@@ -236,8 +227,8 @@ export function SchedulePostDialog({
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button onClick={handleSchedule} disabled={loading || !date || !finalDate || !profile?.linkedin} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/20">
-                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Button onClick={handleSchedule} disabled={scheduleMutation.isPending || !date || !finalDate || !profile?.linkedin} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/20">
+                        {scheduleMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Schedule Post
                     </Button>
                 </DialogFooter>

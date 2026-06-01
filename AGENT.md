@@ -1,14 +1,13 @@
 # AGENT.md — LinkedLoom Codebase Reference
 
-> **Purpose**: This file is the single source of truth for any AI agent working on this project.
-> Read this file **first** — it eliminates the need to scan directories or read files you already know about.
+> **AI INSTRUCTION**: Read this file entirely before making ANY changes. It contains the exact technical stack, file structures, state management rules, database schemas, and coding patterns for the **LinkedLoom** project. Do not query or search the codebase for these basics; rely on this map to immediately begin implementation.
 > All paths are relative to the project root: `c:\Users\simra\Documents\repos\linkedloom\`
 
 ---
 
 ## Table of Contents
 
-1. [Project Overview](#1-project-overview)
+1. [Project Overview & Architecture](#1-project-overview-and-architecture)
 2. [Tech Stack](#2-tech-stack)
 3. [Full Directory Structure](#3-full-directory-structure)
 4. [App Routes (Next.js App Router)](#4-app-routes-nextjs-app-router)
@@ -25,20 +24,50 @@
 
 ---
 
-## 1. Project Overview
+## 1. Project Overview & Architecture
 
-**LinkedLoom** is a full-stack SaaS application for AI-powered LinkedIn content creation and scheduling.
+**LinkedLoom** is a full-stack SaaS application for AI-powered content creation, scheduling, and analytics, specifically supporting LinkedIn and Reddit integrations.
 
 **Core user flows:**
-1. User registers/logs in (email+password, Google OAuth, or LinkedIn OAuth)
-2. User creates a post: types manually OR generates via AI (Gemini), optionally uploads/generates an image
-3. User saves as draft or schedules post for future LinkedIn publishing
-4. Scheduler Cloud Function publishes scheduled posts automatically every 10 minutes
-5. Dashboard shows posts, analytics, and scheduled content
+1. User registers/logs in (email+password, Google OAuth, or LinkedIn OAuth).
+2. User creates a post: types manually OR generates via AI (Gemini), optionally uploads or generates an image.
+3. User saves as draft or schedules post for future social publishing.
+4. Scheduler Cloud Function publishes scheduled posts automatically every 10 minutes.
+5. Dashboard shows posts, engagement analytics, and scheduled content.
 
 **Project has two separate roots:**
-- `/` — Next.js 16 frontend (deployed to Vercel or similar)
-- `/functions/` — Firebase Cloud Functions v2 (deployed to Google Cloud)
+- `/` — Next.js 16 frontend (deployed to Vercel or similar).
+- `/functions/` — Firebase Cloud Functions v2 (deployed to Google Cloud).
+
+### High-Level Data Flow
+
+```
+Browser (Next.js 16)
+    │
+    ├── Firebase SDK (Auth / Firestore / Storage) ←→ Firestore DB
+    │
+    └── fetch() / httpsCallable()
+            │
+            ▼
+    Firebase Cloud Functions v2 (Node 22)
+            │
+            ├── LinkedIn API (OAuth, UGC Posts, Analytics)
+            ├── Reddit API (OAuth, Submit, User posts)
+            └── Google Gemini / Vertex AI (text + image generation)
+```
+
+### Services & Responsibilities
+
+| Service | Platform | Role |
+|---|---|---|
+| Frontend | Vercel / Next.js 16 | UI, auth state, direct Firestore subscriptions |
+| Backend Logic | Firebase Cloud Functions v2 | OAuth exchanges, AI calls, image resizing, scheduled publishing |
+| Database | Firebase Firestore | Users, posts, connections, analytics cache |
+| File Storage | Firebase Storage | Post images, profile photos; triggers image resizing function |
+| Authentication | Firebase Auth | Email/password, Google OAuth, LinkedIn custom-token login |
+| AI Engine | Google Gemini + Vertex AI | Text generation (`gemini-2.5-flash-lite`), image generation (Vertex AI) |
+
+---
 
 ---
 
@@ -61,6 +90,7 @@
 | Date Handling | date-fns v4 | |
 | Charts | Recharts | Used in analytics dashboard |
 | Theme | next-themes | System/Light/Dark |
+| Server State | TanStack Query v5 | Caching, dedup, optimistic updates, auto-invalidation |
 
 ---
 
@@ -905,5 +935,86 @@ vercel --prod
 
 ---
 
-*This file was generated from a full codebase audit on 2026-05-23. Last updated 2026-05-25 (Reddit integration).*
+## 15. Server State Management (TanStack Query v5)
+
+All server-state (Firestore data fetching, mutations, caching) is managed via **TanStack Query v5** (`@tanstack/react-query`).
+
+### Architecture
+
+```
+app/layout.tsx
+  └── QueryProvider (components/providers/query-provider.tsx)
+        └── QueryClientProvider (shared singleton from lib/query/query-client.ts)
+              ├── Uses queryKeys factory (lib/query/query-keys.ts) for type-safe keys
+              ├── Default staleTime: 5 min, gcTime: 30 min
+              └── ReactQueryDevtools (dev-only, auto tree-shaken)
+```
+
+### Hook Files
+
+| File | Hooks | Purpose |
+|---|---|---|
+| `lib/query/hooks/use-posts.ts` | `usePosts`, `useScheduledPosts`, `useDraftPosts`, `useCreatePost`, `useUpdatePost`, `useDeletePost`, `useSchedulePost`, `useUnschedulePost`, `usePublishPostNow` | All post CRUD. `useScheduledPosts` and `useDraftPosts` use `select` to derive from same cache — zero extra Firestore reads. |
+| `lib/query/hooks/use-analytics.ts` | `useAnalyticsDashboard` | Dashboard analytics with 10-min stale time. |
+| `lib/query/hooks/use-ai.ts` | `useGeneratePost`, `useGenerateImage`, `useEnhanceImagePrompt` | AI mutation wrappers (no caching needed). |
+| `lib/query/hooks/use-integrations.ts` | `useDisconnectReddit` | Integration mutations. |
+
+### Key Patterns
+
+1. **Derived queries with `select`**: `useScheduledPosts` and `useDraftPosts` share the same `queryKey` as `usePosts` but use `select` to filter. This means only ONE Firestore query runs no matter how many pages consume post data.
+
+2. **Optimistic mutations**: `useDeletePost`, `useSchedulePost`, `useUnschedulePost` optimistically update the cache before the server responds, rolling back on error.
+
+3. **Auto-invalidation**: All mutation hooks call `queryClient.invalidateQueries()` on `onSettled`, ensuring a fresh background refetch after every mutation.
+
+4. **Auth dependency**: All query hooks accept `userId: string | undefined` and set `enabled: !!userId` so queries don't fire before authentication completes.
+
+### How to Add a New Query
+
+```typescript
+// 1. Add key to lib/query/query-keys.ts
+export const queryKeys = {
+  // ...existing
+  newFeature: {
+    list: (userId: string) => ['newFeature', userId] as const,
+  },
+};
+
+// 2. Create hook in lib/query/hooks/use-new-feature.ts
+export function useNewFeature(userId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.newFeature.list(userId!),
+    queryFn: () => api.firebaseService.getNewFeatureData(userId!),
+    enabled: !!userId,
+  });
+}
+
+// 3. Use in component
+const { data, isLoading, error } = useNewFeature(user?.uid);
+```
+
+### How to Add a New Mutation
+
+```typescript
+export function useNewMutation(userId?: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: NewData) => api.firebaseService.createThing(data),
+    onSuccess: () => {
+      if (userId) queryClient.invalidateQueries({ queryKey: queryKeys.newFeature.list(userId) });
+      successToast('Created!');
+    },
+    onError: () => dangerToast('Failed.'),
+  });
+}
+```
+
+### Important: AuthProvider is NOT on TanStack Query
+
+The `AuthProvider` uses a Firestore `onSnapshot` (real-time push listener) for the user profile. This is intentionally **not** migrated to TanStack Query because `onSnapshot` is push-based (instant updates) while TanStack Query is polling-based. Leave `AuthProvider` as-is.
+
+---
+
+*This file was generated from a full codebase audit on 2026-05-23. Last updated 2026-05-27 (TanStack Query v5 migration).*
 *Update this file whenever you add new routes, components, environment variables, or Cloud Functions.*
+

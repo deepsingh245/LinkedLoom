@@ -19,7 +19,8 @@ import { useRouter } from "next/navigation";
 import { Routes } from "@/lib/routes";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useData } from "@/components/providers/data-provider";
+import { useAuth } from "@/components/providers/auth-provider";
+import { useAnalyticsDashboard } from "@/lib/query/hooks/use-analytics";
 
 const EmptyAnalyticsState = ({ router }: { router: ReturnType<typeof useRouter> }) => (
     <div className="flex flex-col items-center justify-center h-100 border-2 border-dashed border-border rounded-xl relative z-10 bg-muted/30 group hover:border-primary/30 transition-all duration-500">
@@ -41,8 +42,10 @@ const EmptyAnalyticsState = ({ router }: { router: ReturnType<typeof useRouter> 
     </div>
 );
 
+
 export function AnalyticsView() {
-    const { dashboardData, loading } = useData();
+    const { user } = useAuth();
+    const { data: dashboardData, isLoading: loading } = useAnalyticsDashboard(user?.uid);
     const router = useRouter();
     const isChartEmpty = !loading && (!dashboardData || (dashboardData.totalPosts === 0 && (!dashboardData.chartData || dashboardData.chartData.length === 0)));
 

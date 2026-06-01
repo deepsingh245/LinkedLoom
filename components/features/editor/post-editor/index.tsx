@@ -17,6 +17,7 @@ import { httpsCallable } from "firebase/functions"
 import { functions } from "@/lib/firebase"
 import { FirebaseFunctions } from "@/lib/firebase/functions"
 import { uploadPostAttachment } from "@/lib/firebase/storage"
+import { useCreatePost, useUpdatePost, useSchedulePost } from "@/lib/query/hooks/use-posts"
 
 // Import subcomponents
 import { AIGeneration } from "./AIGeneration"
@@ -55,8 +56,13 @@ export function PostEditor() {
     const [generating, setGenerating] = React.useState(false)
     const [generatingImage, setGeneratingImage] = React.useState(false)
     const [enhancingPrompt, setEnhancingPrompt] = React.useState(false)
-    const [saving, setSaving] = React.useState(false)
     const [activePlatform, setActivePlatform] = React.useState<string>("linkedin")
+
+    // TanStack Query mutations for CRUD operations
+    const createMutation = useCreatePost();
+    const updateMutation = useUpdatePost(user?.uid);
+    const scheduleMutation = useSchedulePost(user?.uid);
+    const saving = createMutation.isPending || updateMutation.isPending || scheduleMutation.isPending;
 
     const [excludeIcons, setExcludeIcons] = React.useState(false)
     const [creativeExpansion, setCreativeExpansion] = React.useState(false)
@@ -316,7 +322,6 @@ export function PostEditor() {
         if (!user) return dangerToast("User not authenticated");
         if (!content.trim()) return dangerToast("Post content cannot be empty")
         
-        setSaving(true)
         try {
             const storageUrl = await uploadImageIfNeeded();
             const payload = createBasePayload();
@@ -324,17 +329,18 @@ export function PostEditor() {
             payload.mediaUrls = storageUrl ? [storageUrl] : [];
 
             if (editingPostId) {
-                await api.firebaseService.updatePost(editingPostId, payload);
-                successToast("Post updated successfully!");
+                updateMutation.mutate(
+                    { postId: editingPostId, data: payload },
+                    { onSuccess: () => successToast("Post updated successfully!") }
+                );
             } else {
-                await api.firebaseService.createPost(payload);
-                successToast("Draft saved successfully!");
+                createMutation.mutate(payload as Partial<Post>, {
+                    onSuccess: () => successToast("Draft saved successfully!"),
+                });
             }
         } catch (error) {
             console.error("Failed to save draft:", error)
             dangerToast("Failed to save draft.")
-        } finally {
-            setSaving(false)
         }
     }
 
@@ -349,22 +355,28 @@ export function PostEditor() {
             return dangerToast("You cannot schedule a post in the past.")
         }
 
-        setSaving(true)
         try {
             const storageUrl = await uploadImageIfNeeded();
             const payload = createBasePayload();
             payload.imageUrl = storageUrl;
             payload.mediaUrls = storageUrl ? [storageUrl] : [];
-            const post = await api.firebaseService.createPost(payload)
-            await api.firebaseService.schedulePost(String(post.id), finalDate.toISOString())
-
-            successToast(`Post scheduled for ${format(finalDate, "PPP 'at' p")}!`)
-            setDate(undefined)
+            
+            createMutation.mutate(payload as Partial<Post>, {
+                onSuccess: (post) => {
+                    scheduleMutation.mutate(
+                        { postId: String(post.id), scheduledFor: finalDate.toISOString() },
+                        {
+                            onSuccess: () => {
+                                successToast(`Post scheduled for ${format(finalDate, "PPP 'at' p")}!`);
+                                setDate(undefined);
+                            },
+                        }
+                    );
+                },
+            });
         } catch (error) {
             console.error("Failed to schedule post:", error)
             dangerToast("Failed to schedule post.")
-        } finally {
-            setSaving(false)
         }
     }
 

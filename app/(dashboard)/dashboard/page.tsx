@@ -9,12 +9,17 @@ import {
     Eye
 } from "lucide-react";
 import Link from "next/link";
-import { useData } from "@/components/providers/data-provider";
+import { useAuth } from "@/components/providers/auth-provider";
+import { useAnalyticsDashboard } from "@/lib/query/hooks/use-analytics";
+import { useScheduledPosts } from "@/lib/query/hooks/use-posts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 
 export default function DashboardPage() {
-    const { dashboardData, scheduledPosts, loading } = useData();
+    const { user } = useAuth();
+    const { data: dashboardData, isLoading: analyticsLoading } = useAnalyticsDashboard(user?.uid);
+    const { data: scheduledPosts, isLoading: postsLoading } = useScheduledPosts(user?.uid);
+    const loading = analyticsLoading || postsLoading;
 
     // Calculate dynamic values
     const totalContent = (dashboardData?.totalPosts ?? 0) + (dashboardData?.totalDrafts ?? 0);
