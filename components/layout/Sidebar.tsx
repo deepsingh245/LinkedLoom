@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
     LayoutDashboard,
     PenTool,
@@ -15,72 +17,62 @@ interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> { }
 
 export function Sidebar({ className }: SidebarProps) {
     const router = useRouter()
-    const pathname = usePathname()
     const handleLogout = () => {
         localStorage.removeItem('token')
         localStorage.removeItem('user')
         router.push('/login')
     }
     return (
-        <div className={cn("w-64 border-r border-border bg-background p-4 flex flex-col h-screen", className)}>
-            <div className="flex items-center gap-3 mb-4 px-2">
-                <div className="w-8 h-8 rounded-lg bg-linear-to-br from-primary to-primary/80 flex items-center justify-center text-primary-foreground font-bold text-lg shadow-[0_0_15px_rgba(99,212,150,0.3)]">
-                    L
+        <div className={cn("pb-12 h-screen border-r bg-sidebar", className)}>
+            <div className="space-y-4 py-4">
+                <div className="px-3 py-2">
+                    <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight text-primary flex items-center gap-2">
+                        <span className="text-2xl">⚡</span> LinkGenie
+                    </h2>
+                    <div className="space-y-1">
+                        <NavItem href="/dashboard" icon={<LayoutDashboard className="mr-2 h-4 w-4" />}>
+                            Dashboard
+                        </NavItem>
+                        <NavItem href="/create" icon={<PenTool className="mr-2 h-4 w-4" />}>
+                            Create Post
+                        </NavItem>
+                        <NavItem href="/schedule" icon={<Calendar className="mr-2 h-4 w-4" />}>
+                            Schedule
+                        </NavItem>
+                        {/* <NavItem href="/analytics" icon={<BarChart3 className="mr-2 h-4 w-4" />}>
+                            Analytics
+                        </NavItem> */}
+                    </div>
                 </div>
-                <span className="font-display font-semibold text-xl tracking-tight text-foreground">LinkedLoom</span>
-            </div>
-            
-            <div className="flex-1 space-y-2">
-                <p className="px-2 text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-4 mt-8">Menu</p>
-
-                <NavItem href="/dashboard" active={pathname === "/dashboard"} icon={<LayoutDashboard className="h-4.5 w-4.5" />}>
-                    Dashboard
-                </NavItem>
-                <NavItem href="/create" active={pathname === "/create"} icon={<PenTool className="h-4.5 w-4.5" />}>
-                    Create Post
-                </NavItem>
-                <NavItem href="/schedule" active={pathname === "/schedule"} icon={<Calendar className="h-4.5 w-4.5" />}>
-                    Content Library
-                </NavItem>
-                <NavItem href="/analytics" active={pathname === "/analytics"} icon={<BarChart3 className="h-4.5 w-4.5" />}>
-                    Analytics
-                </NavItem>
-            </div>
-            
-            <div className="pt-6 border-t border-border mt-auto">
-                <NavItem href="/settings/profile" active={pathname.startsWith("/settings")} icon={<Settings className="h-4.5 w-4.5" />}>
-                    Settings
-                </NavItem>
-                <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-[14px] font-medium rounded-xl text-destructive hover:bg-destructive/10 transition-all duration-200 mt-2"
-                >
-                    <LogOut className="h-4.5 w-4.5" />
-                    Logout
-                </button>
+                <div className="px-3 py-2">
+                    <h2 className="mb-2 px-4 text-xs font-semibold tracking-tight text-muted-foreground uppercase">
+                        Settings
+                    </h2>
+                    <div className="space-y-1">
+                        <NavItem href="/settings" icon={<Settings className="mr-2 h-4 w-4" />}>
+                            Settings
+                        </NavItem>
+                        <Button variant="ghost" className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={handleLogout}>
+                            <LogOut className="mr-2 h-4 w-4" />
+                            Logout
+                        </Button>
+                    </div>
+                </div>
             </div>
         </div>
     );
 }
 
-function NavItem({ href, icon, children, active }: { href: string; icon: React.ReactNode; children: React.ReactNode; active?: boolean }) {
+function NavItem({ href, icon, children }: { href: string; icon: React.ReactNode; children: React.ReactNode }) {
+    // Simple mock of usePathname since we are in a server component mostly, but sidebar is client usually.
+    // Actually sidebar should be client to check active state.
     return (
-        <Link 
-            href={href}
-            className={cn(
-                "flex items-center gap-3 px-4 py-3 text-[14px] font-medium rounded-xl transition-all duration-200 group",
-                active 
-                    ? "bg-accent text-foreground shadow-[inset_2px_0_0_var(--primary)]" 
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
-            )}
-        >
-            <div className={cn(
-                "transition-colors", 
-                active ? "text-primary" : "text-muted-foreground/70 group-hover:text-primary"
-            )}>
+        <Button asChild variant="ghost" className="w-full justify-start">
+            <Link href={href}>
                 {icon}
-            </div>
-            {children}
-        </Link>
+                {children}
+            </Link>
+        </Button>
     );
 }

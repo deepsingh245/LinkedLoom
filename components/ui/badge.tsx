@@ -4,20 +4,17 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-[20px] px-2.5 py-[3px] text-[11px] font-semibold tracking-[0.3px] transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {
         default:
-          "bg-primary border-transparent text-primary-foreground hover:bg-primary/80",
-        pill: "bg-surface-container border border-primary/20 rounded-full px-4 py-1.5 shadow-[0_0_20px_rgba(105,246,184,0.1)] text-primary uppercase text-[10px] sm:text-xs font-bold tracking-widest",
-        published:
-          "border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:border-[#1a4030] dark:bg-[#0d2318] dark:text-[#63d496]",
-        draft:
-          "border border-amber-500/20 bg-amber-500/10 text-amber-600 dark:border-[#2a2a18] dark:bg-[#1a1a10] dark:text-[#c8b464]",
-        scheduled:
-          "border border-blue-500/20 bg-blue-500/10 text-blue-600 dark:border-[#1a2840] dark:bg-[#0d1828] dark:text-[#6490d4]",
-        outline: "text-foreground border-border",
+          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+        secondary:
+          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        destructive:
+          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
+        outline: "text-foreground",
       },
     },
     defaultVariants: {

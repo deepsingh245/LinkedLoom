@@ -1,5 +1,3 @@
-"use client"
-
 import {
     Avatar,
     AvatarFallback,
@@ -13,83 +11,56 @@ import {
     DropdownMenuItem,
     DropdownMenuLabel,
     DropdownMenuSeparator,
+    DropdownMenuShortcut,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useAuth } from "../providers/auth-provider";
-import { useRouter } from "next/navigation";
-import { api } from "@/lib/api";
-import { Routes } from "@/lib/routes";
-import { User, Settings, LogOut } from "lucide-react";
+import { useAuth } from "../auth-provider";
+import { User } from "@/types";
 
 export function UserNav() {
-    const { profile } = useAuth();
-    const router = useRouter();
-
-    const handleLogout = async () => {
-        try {
-            await api.firebaseService.logout();
-            router.push(Routes.LOGIN);
-        } catch (error) {
-            console.error(error);
-        }
-    };
+    const user = useAuth() as unknown as User;
 
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-9 w-9 rounded-full border border-border p-0 hover:bg-accent transition-all cursor-pointer">
-                    <Avatar className="h-full w-full">
-                        <AvatarImage src={profile?.photoURL || ''} alt={profile?.displayName || ''} className="object-cover" />
-                        <AvatarFallback className="bg-muted text-primary font-medium text-xs">
-                            {profile?.displayName 
-                                ? profile.displayName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
-                                : profile?.email?.substring(0, 2).toUpperCase() || '??'}
-                        </AvatarFallback>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                        <AvatarImage src={user.image} alt="@shadcn" />
+                        <AvatarFallback>SC</AvatarFallback>
                     </Avatar>
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent 
-                className="w-60 bg-popover/95 backdrop-blur-xl border border-border p-1 shadow-lg z-100 animate-in fade-in slide-in-from-top-2 duration-200" 
-                align="end" 
-                forceMount
-            >
-                <DropdownMenuLabel className="font-normal px-3 py-3 border-b border-border">
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-semibold leading-none text-foreground">
-                            {profile?.displayName || profile?.email || 'User'}
+                        <p className="text-sm font-medium leading-none">
+                            {user?.name}
                         </p>
-                        <p className="text-[11px] leading-none text-muted-foreground truncate mt-1">
-                            {profile?.email}
+                        <p className="text-xs leading-none text-muted-foreground">
+                            {user?.email}
                         </p>
                     </div>
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator className="hidden" />
-                <DropdownMenuGroup className="p-1">
-                    <DropdownMenuItem 
-                        onClick={() => router.push(Routes.SETTINGS_PROFILE)}
-                        className="rounded-lg text-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer transition-colors px-3 py-2.5 text-[13px] flex items-center"
-                    >
-                        <User className="mr-2.5 h-4 w-4 opacity-70 group-hover:opacity-100" />
-                        <span>Profile</span>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                    <DropdownMenuItem>
+                        Profile
+                        <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
                     </DropdownMenuItem>
-                    <DropdownMenuItem 
-                        onClick={() => router.push(Routes.SETTINGS_PREFERENCES)}
-                        className="rounded-lg text-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer transition-colors px-3 py-2.5 text-[13px] flex items-center"
-                    >
-                        <Settings className="mr-2.5 h-4 w-4 opacity-70 group-hover:opacity-100" />
-                        <span>Settings</span>
+                    <DropdownMenuItem>
+                        Billing
+                        <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                        Settings
+                        <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
                     </DropdownMenuItem>
                 </DropdownMenuGroup>
-                <DropdownMenuSeparator className="mx-2" />
-                <div className="p-1">
-                    <DropdownMenuItem 
-                        onClick={handleLogout}
-                        className="rounded-lg text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer transition-colors px-3 py-2.5 text-[13px] flex items-center"
-                    >
-                        <LogOut className="mr-2.5 h-4 w-4 opacity-70 group-hover:opacity-100" />
-                        <span>Log out</span>
-                    </DropdownMenuItem>
-                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                    Log out
+                    <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
+                </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
     )
