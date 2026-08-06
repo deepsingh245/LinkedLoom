@@ -9,19 +9,21 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        default: "bg-linear-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-[1px] hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-semibold border-none",
+        gradient: "bg-linear-to-r from-primary to-secondary text-on-primary-container font-bold hover:opacity-80 transition-all duration-300 active:scale-95 border-none",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+          "border border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground font-sans font-medium transition-all",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "border border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 font-sans font-medium transition-all",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        lime: "bg-[#b8ff52] text-black hover:bg-[#a6e64a] font-bold shadow-[0_0_20px_rgba(184,255,82,0.3)] hover:shadow-[0_0_30px_rgba(184,255,82,0.5)] transition-all border-none",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
+        default: "h-auto px-[20px] py-[10px] text-[14px] rounded-[10px]",
+        sm: "h-auto px-4.5 py-[9px] text-[13.5px] rounded-[10px]",
         lg: "h-11 rounded-md px-8",
         icon: "h-10 w-10",
       },

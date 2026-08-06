@@ -1,9 +1,245 @@
-import { SchedulerView } from "@/components/features/scheduler/SchedulerView";
+"use client"
+
+import { useState } from "react"
+import { Calendar as CalendarIcon, Filter, List, Grid, Search, Plus, LayoutGrid, Clock, FileText, Type } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+    DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu"
+import Link from "next/link"
+import { Routes } from "@/lib/routes"
+import { PostCard } from "@/components/features/dashboard/PostCard"
+import { useAuth } from "@/components/providers/auth-provider"
+import { usePosts, useScheduledPosts, useDraftPosts } from "@/lib/query/hooks/use-posts"
+import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils"
+import { Badge } from "@/components/ui/badge"
+import { SmartImage } from "@/components/ui/smart-image"
+
+import { Post } from "@/types"
 
 export default function SchedulePage() {
+    const { user } = useAuth();
+    const { data: posts = [], isLoading: postsLoading } = usePosts(user?.uid);
+    const { data: scheduledPosts = [], isLoading: scheduledLoading } = useScheduledPosts(user?.uid);
+    const { data: draftPosts = [] } = useDraftPosts(user?.uid);
+    const loading = postsLoading || scheduledLoading;
+    const [searchQuery, setSearchQuery] = useState("")
+    const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+    const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest")
+    const [filterType, setFilterType] = useState<"all" | "image" | "text">("all")
+
+    const processPosts = (items: Post[]) => {
+        let filtered = items?.filter(post => 
+            post.content?.toLowerCase().includes(searchQuery.toLowerCase())
+        ) || [];
+
+        if (filterType === "image") {
+            filtered = filtered.filter(post => post.imageUrl);
+        } else if (filterType === "text") {
+            filtered = filtered.filter(post => !post.imageUrl);
+        }
+
+        return [...filtered].sort((a, b) => {
+            const dateA = new Date(a.date || a.createdAt || 0).getTime();
+            const dateB = new Date(b.date || b.createdAt || 0).getTime();
+            return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
+        });
+    };
+
+    if (loading) {
+        return (
+            <div className="p-4 sm:p-6 md:p-8 space-y-8 animate-fade-in max-w-400 mx-auto">
+                <div className="flex justify-between items-center">
+                    <Skeleton className="h-10 w-48" />
+                    <Skeleton className="h-11 w-32 rounded-xl" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[1, 2, 3].map((i) => (
+                        <Skeleton key={i} className="h-64 rounded-2xl" />
+                    ))}
+                </div>
+            </div>
+        )
+    }
+
     return (
-        <div className="h-full flex flex-col space-y-4">
-            <SchedulerView />
+        <div className="p-4 sm:p-6 md:p-8 space-y-8 animate-fade-in max-w-400 mx-auto">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                    <h1 className="text-3xl font-display font-bold text-foreground tracking-tight">Schedule</h1>
+                    <p className="text-muted-foreground mt-1 font-medium">Manage and organize your publishing strategy</p>
+                </div>
+                
+                <Link href={Routes.CREATE_POST}>
+                    <Button className="bg-linear-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-px hover:shadow-[0_12px_28px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-bold border-none h-11 px-6 rounded-xl shadow-lg ring-1 ring-white/10 flex items-center gap-2">
+                        <Plus className="w-5 h-5 mr-2 stroke-[2.5]" />
+                        Create New Post
+                    </Button>
+                </Link>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-card p-4 rounded-2xl border border-border shadow-sm">
+                <div className="relative w-full sm:w-96 group">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60 group-focus-within:text-primary transition-colors" />
+                    <Input 
+                        placeholder="Search posts..." 
+                        className="pl-10 bg-background border-border text-foreground h-11 rounded-xl focus:ring-primary/20 focus:border-primary/50 transition-all font-medium"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+                
+                <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="flex-1 md:flex-none bg-background border-border text-muted-foreground hover:text-foreground hover:bg-accent h-11 rounded-xl transition-all font-semibold shadow-sm">
+                                <Filter className="w-4 h-4 mr-2" />
+                                Filter
+                                {filterType !== 'all' && <Badge className="ml-2 bg-primary/20 text-primary text-[10px] h-4 min-w-4 px-1">{filterType}</Badge>}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-56 bg-popover border-border text-popover-foreground">
+                            <DropdownMenuLabel>Filter by Type</DropdownMenuLabel>
+                            <DropdownMenuSeparator className="bg-border" />
+                            <DropdownMenuCheckboxItem checked={filterType === 'all'} onCheckedChange={() => setFilterType('all')}>All Content</DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem checked={filterType === 'image'} onCheckedChange={() => setFilterType('image')}>Posts with Images</DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem checked={filterType === 'text'} onCheckedChange={() => setFilterType('text')}>Text Only</DropdownMenuCheckboxItem>
+                            <DropdownMenuSeparator className="bg-border" />
+                            <DropdownMenuLabel>Sort Order</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => setSortOrder('newest')} className="flex items-center justify-between">Newest First {sortOrder === 'newest' && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSortOrder('oldest')} className="flex items-center justify-between">Oldest First {sortOrder === 'oldest' && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <div className="h-11 bg-background p-1 rounded-xl border border-border flex gap-1">
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className={cn("h-9 w-9 rounded-lg transition-all", viewMode === "grid" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}
+                            onClick={() => setViewMode("grid")}
+                        >
+                            <Grid className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className={cn("h-9 w-9 rounded-lg transition-all", viewMode === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}
+                             onClick={() => setViewMode("list")}
+                        >
+                            <List className="w-4 h-4" />
+                        </Button>
+                    </div>
+                </div>
+            </div>
+
+            <Tabs defaultValue="scheduled" className="w-full space-y-8">
+                <TabsList className="bg-muted border border-border p-1 h-12 rounded-2xl w-full">
+                    <TabsTrigger value="all" className="flex-1 rounded-xl px-2 sm:px-6 md:px-8 h-10 data-[state=active]:bg-card data-[state=active]:text-primary font-bold transition-all flex items-center justify-center gap-1.5 min-w-0 text-xs sm:text-sm">
+                        <LayoutGrid className="w-4 h-4 shrink-0" />
+                        <span className="truncate">All Content</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="scheduled" className="flex-1 rounded-xl px-2 sm:px-6 md:px-8 h-10 data-[state=active]:bg-card data-[state=active]:text-chart-2 font-bold transition-all flex items-center justify-center gap-1.5 min-w-0 text-xs sm:text-sm">
+                        <Clock className="w-4 h-4 shrink-0" />
+                        <span className="truncate">Scheduled</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="drafts" className="flex-1 rounded-xl px-2 sm:px-6 md:px-8 h-10 data-[state=active]:bg-card data-[state=active]:text-chart-4 font-bold transition-all flex items-center justify-center gap-1.5 min-w-0 text-xs sm:text-sm">
+                        <FileText className="w-4 h-4 shrink-0" />
+                        <span className="truncate">Drafts</span>
+                    </TabsTrigger>
+                </TabsList>
+                
+                {/* ... existing content ... */}
+
+                <TabsContent value="all" className="mt-0 outline-none">
+                    <PostDisplay posts={processPosts(posts)} searchQuery={searchQuery} viewMode={viewMode} />
+                </TabsContent>
+
+                <TabsContent value="scheduled" className="mt-0 outline-none">
+                    <PostDisplay posts={processPosts(scheduledPosts)} searchQuery={searchQuery} viewMode={viewMode} label="No scheduled posts" />
+                </TabsContent>
+
+                <TabsContent value="drafts" className="mt-0 outline-none">
+                    <PostDisplay posts={processPosts(draftPosts)} searchQuery={searchQuery} viewMode={viewMode} label="No drafts found" />
+                </TabsContent>
+            </Tabs>
         </div>
+    )
+}
+
+function PostDisplay({ posts, searchQuery, viewMode, label = "No posts found" }: { posts: Post[], searchQuery: string, viewMode: "grid" | "list", label?: string }) {
+    if (posts.length > 0) {
+        if (viewMode === "grid") {
+            return (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {posts.map((post) => (
+                        <PostCard key={post.id} post={post} />
+                    ))}
+                </div>
+            )
+        } else {
+            return (
+                <div className="space-y-4">
+                    {posts.map((post) => (
+                        <div key={post.id} className="group relative flex items-center justify-between p-4 bg-card border border-border rounded-2xl hover:border-primary/30 transition-all cursor-pointer">
+                            <div className="flex items-center gap-4 flex-1">
+                                {post.imageUrl ? (
+                                    <div className="w-16 h-16 rounded-xl overflow-hidden border border-border">
+                                        <SmartImage src={post.imageUrl} alt="" className="w-full h-full object-cover" />
+                                    </div>
+                                ) : (
+                                    <div className="w-16 h-16 rounded-xl bg-muted border border-border flex items-center justify-center text-muted-foreground">
+                                        <Type className="w-6 h-6" />
+                                    </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors">{post.content}</p>
+                                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {post.date ? new Date(post.date).toLocaleDateString() : 'No date'}</span>
+                                        <span>•</span>
+                                        <span className="uppercase font-bold tracking-wider">{post.status}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Link href={Routes.CREATE_POST}>
+                                    <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-accent text-muted-foreground">Edit</Button>
+                                </Link>
+                                <div className="h-8 w-px bg-border mx-2" />
+                                <Badge variant="outline" className="border-border text-muted-foreground">{post.status}</Badge>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )
+        }
+    }
+
+    return (
+        <Card className="flex flex-col items-center justify-center p-20 bg-card border border-border rounded-3xl shadow-sm hover:border-accent transition-all">
+            <div className="w-20 h-20 bg-muted rounded-3xl flex items-center justify-center mb-8 border border-border shadow-md group-hover:scale-110 transition-transform">
+                <CalendarIcon className="w-10 h-10 text-muted-foreground" />
+            </div>
+            <h3 className="text-2xl font-bold text-foreground mb-3">{label}</h3>
+            <p className="text-muted-foreground text-center max-w-sm mb-10 leading-relaxed font-medium">
+                {searchQuery ? "We couldn't find any posts matching your search criteria." : "Start organizing your content strategy by creating your first post."}
+            </p>
+            {!searchQuery && (
+                <Link href={Routes.CREATE_POST}>
+                    <Button variant="outline" className="border-border text-foreground hover:bg-accent h-12 px-10 rounded-xl font-bold transition-all">
+                        Create your first post
+                    </Button>
+                </Link>
+            )}
+        </Card>
     )
 }

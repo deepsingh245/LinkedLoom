@@ -1,0 +1,90 @@
+LINKEDLOOM SOCIAL MEDIA INTEGRATION CHECKLIST
+
+1.  USER CONSENT & CONTROL
+
+-   User explicitly clicks Post/Schedule
+-   Show final preview before posting
+-   No automatic posting without action
+-   Clear UI indication of posting
+
+2.  AUTH & TOKEN MANAGEMENT
+
+-   Use OAuth only
+-   Encrypt tokens in database
+-   Store expiry time
+-   Implement refresh token flow
+-   Handle revoked access
+
+3.  RATE LIMIT MANAGEMENT
+
+-   Per-user rate limits
+-   Global rate limits
+-   Queue system (Pub/Sub)
+-   Handle 429 errors
+-   Exponential backoff
+
+4.  AI CONTENT SAFETY
+
+-   Unique content per user
+-   Allow user edits
+-   Avoid duplicate AI outputs
+-   Store hash to detect duplicates
+
+5.  ANTI-SPAM & ABUSE
+
+-   Limit posts per day per user
+-   Detect repeated content
+-   Cooldown between posts
+-   Abuse detection system
+
+6.  MULTI-ACCOUNT RULES
+
+-   No bulk posting across accounts
+-   No identical content blasts
+-   One user → one account → one action
+
+7.  DATA USAGE
+
+-   Store only necessary data (IDs, content)
+-   Do not resell data
+-   Do not scrape platforms
+-   Do not train AI on platform data (X)
+
+8.  CONTENT POLICY
+
+-   Filter harmful or illegal content
+-   Basic moderation layer
+
+9.  SCHEDULING SAFETY
+
+-   Idempotent jobs
+-   Status tracking (pending/posted/failed)
+-   Retry with limits
+
+10. ERROR HANDLING
+
+-   Handle 401, 403, 429, 5xx
+-   Log failures
+-   Store error messages
+
+11. USER TRANSPARENCY
+
+-   Explain permissions
+-   Allow disconnect
+-   Show connected accounts
+
+12. BRANDING RULES
+
+-   No white-labeling (X)
+-   Follow platform branding
+
+13. SCALING SAFETY
+
+-   Throttle queue
+-   Spread scheduled posts
+-   Limit concurrency
+
+FINAL CHECK - Prevent duplicate posts? - Prevent spam? - Respect rate
+limits? - Require user consent? - Handle failures?
+
+If any answer is NO → do not launch.
