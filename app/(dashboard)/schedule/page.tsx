@@ -58,7 +58,7 @@ export default function SchedulePage() {
 
     if (loading) {
         return (
-            <div className="p-8 space-y-8 animate-fade-in max-w-400 mx-auto">
+            <div className="p-4 sm:p-6 md:p-8 space-y-8 animate-fade-in max-w-400 mx-auto">
                 <div className="flex justify-between items-center">
                     <Skeleton className="h-10 w-48" />
                     <Skeleton className="h-11 w-32 rounded-xl" />
@@ -73,7 +73,7 @@ export default function SchedulePage() {
     }
 
     return (
-        <div className="p-8 space-y-8 animate-fade-in max-w-400 mx-auto">
+        <div className="p-4 sm:p-6 md:p-8 space-y-8 animate-fade-in max-w-400 mx-auto">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
                     <h1 className="text-3xl font-display font-bold text-foreground tracking-tight">Schedule</h1>
@@ -88,8 +88,8 @@ export default function SchedulePage() {
                 </Link>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-card p-4 rounded-2xl border border-border shadow-sm">
-                <div className="relative w-full md:w-96 group">
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-card p-4 rounded-2xl border border-border shadow-sm">
+                <div className="relative w-full sm:w-96 group">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60 group-focus-within:text-primary transition-colors" />
                     <Input 
                         placeholder="Search posts..." 
@@ -99,7 +99,7 @@ export default function SchedulePage() {
                     />
                 </div>
                 
-                <div className="flex items-center gap-2 w-full md:w-auto">
+                <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" className="flex-1 md:flex-none bg-background border-border text-muted-foreground hover:text-foreground hover:bg-accent h-11 rounded-xl transition-all font-semibold shadow-sm">
@@ -143,18 +143,18 @@ export default function SchedulePage() {
             </div>
 
             <Tabs defaultValue="scheduled" className="w-full space-y-8">
-                <TabsList className="bg-muted border border-border p-1 h-12 rounded-2xl">
-                    <TabsTrigger value="all" className="rounded-xl px-8 h-10 data-[state=active]:bg-card data-[state=active]:text-primary font-bold transition-all flex items-center gap-2">
-                        <LayoutGrid className="w-4 h-4" />
-                        All Content
+                <TabsList className="bg-muted border border-border p-1 h-12 rounded-2xl w-full">
+                    <TabsTrigger value="all" className="flex-1 rounded-xl px-2 sm:px-6 md:px-8 h-10 data-[state=active]:bg-card data-[state=active]:text-primary font-bold transition-all flex items-center justify-center gap-1.5 min-w-0 text-xs sm:text-sm">
+                        <LayoutGrid className="w-4 h-4 shrink-0" />
+                        <span className="truncate">All Content</span>
                     </TabsTrigger>
-                    <TabsTrigger value="scheduled" className="rounded-xl px-8 h-10 data-[state=active]:bg-card data-[state=active]:text-chart-2 font-bold transition-all flex items-center gap-2">
-                        <Clock className="w-4 h-4" />
-                        Scheduled
+                    <TabsTrigger value="scheduled" className="flex-1 rounded-xl px-2 sm:px-6 md:px-8 h-10 data-[state=active]:bg-card data-[state=active]:text-chart-2 font-bold transition-all flex items-center justify-center gap-1.5 min-w-0 text-xs sm:text-sm">
+                        <Clock className="w-4 h-4 shrink-0" />
+                        <span className="truncate">Scheduled</span>
                     </TabsTrigger>
-                    <TabsTrigger value="drafts" className="rounded-xl px-8 h-10 data-[state=active]:bg-card data-[state=active]:text-chart-4 font-bold transition-all flex items-center gap-2">
-                        <FileText className="w-4 h-4" />
-                        Drafts
+                    <TabsTrigger value="drafts" className="flex-1 rounded-xl px-2 sm:px-6 md:px-8 h-10 data-[state=active]:bg-card data-[state=active]:text-chart-4 font-bold transition-all flex items-center justify-center gap-1.5 min-w-0 text-xs sm:text-sm">
+                        <FileText className="w-4 h-4 shrink-0" />
+                        <span className="truncate">Drafts</span>
                     </TabsTrigger>
                 </TabsList>
                 
