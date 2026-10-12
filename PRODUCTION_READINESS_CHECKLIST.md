@@ -20,7 +20,7 @@ Legend: ✅ done in code · ⏳ done in code but **not deployed yet** · ❌ sti
 | 5 | Auth on `publishToLinkedIn` / `getLinkedInAnalytics` | ❌ | No `verifyIdToken`; they trust `userId` from the body. Do what `reddit.ts` `authenticate()` does |
 | 6 | Auth on Reddit endpoints | ✅ | All verify the Firebase ID token; tokens refreshed + persisted |
 | 7 | Reddit: rate-limit handling, daily post cap, User-Agent, revoke on disconnect | ✅ | `functions/src/reddit.ts` |
-| 8 | Reddit API access approval | 🧑 | Submit the access request; app can't be used with Reddit until approved. See `REDDIT_INTEGRATION.md` |
+| 8 | Reddit API access approval | 🧑 | Submit the access request; app can't be used with Reddit until approved. See `docs/reddit-integration/` |
 | 9 | Privacy Policy + Terms pages | ✅ | `/privacy`, `/terms`. 🧑 set `NEXT_PUBLIC_CONTACT_EMAIL` (placeholder shown until set) |
 | 10 | `oauthStates` expiry | ◐ | Reddit rejects states > 10 min. Stale docs are never cleaned up (add a TTL policy or scheduled cleanup); LinkedIn flow not re-checked |
 | 11 | Next.js route-level auth (`middleware.ts`/`proxy.ts`) | ❌ | Not present |

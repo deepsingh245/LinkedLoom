@@ -80,7 +80,7 @@ REDDIT_MAX_POSTS_PER_DAY=5
 
 `firebase deploy --only functions` uploads `functions/.env` with the code. Using different values for prod vs dev: create `functions/.env.linkedloom` (loaded for project id `linkedloom`) – it overrides `.env`.
 
-Redirect URIs must match **exactly** what is registered in the LinkedIn app and the Reddit app (see `REDDIT_INTEGRATION.md`).
+Redirect URIs must match **exactly** what is registered in the LinkedIn app and the Reddit app (see `docs/reddit-integration/`).
 
 ---
 
@@ -199,6 +199,7 @@ Point `NEXT_PUBLIC_API_URL` at `http://127.0.0.1:5001/linkedloom/us-central1` wh
 ## 12. Related docs
 
 - `README.md` – overview
-- `REDDIT_INTEGRATION.md` – Reddit setup + policy compliance
+- `docs/reddit-integration/` – Reddit setup + policy compliance
+- `docs/ai-autopilot/` – AI Autopilot architecture, MVP plan and milestones
 - `PRODUCTION_READINESS_CHECKLIST.md` – launch blockers and status
 - `AGENT.md` – codebase map for AI assistants

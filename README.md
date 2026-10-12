@@ -15,7 +15,8 @@ AI-powered post writer, scheduler and analytics for **LinkedIn** and **Reddit**.
 | I want to… | Read |
 |---|---|
 | Deploy rules / indexes / storage / functions / frontend | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) |
-| Set up or debug Reddit, Reddit API access/policy | [`REDDIT_INTEGRATION.md`](REDDIT_INTEGRATION.md) |
+| Set up or debug Reddit, Reddit API access/policy | [`docs/reddit-integration/`](docs/reddit-integration/README.md) |
+| Plan/build the AI Autopilot feature (personas → research → drafts → publish) | [`docs/ai-autopilot/`](docs/ai-autopilot/README.md) |
 | Know what's blocking launch | [`PRODUCTION_READINESS_CHECKLIST.md`](PRODUCTION_READINESS_CHECKLIST.md) |
 | Understand the whole codebase quickly (also for AI assistants) | [`AGENT.md`](AGENT.md) |
 | Navigate the code structure | `graphify-out/GRAPH_REPORT.md` (local, gitignored – rebuild with `/graphify . --update`) |
@@ -76,7 +77,7 @@ Useful scripts: `npm run lint`, `npm run build` (root) · `npm run build`, `npm 
 ## Platform setup
 
 - **LinkedIn** – app at <https://www.linkedin.com/developers/apps>; redirect `https://<domain>/integrations/linkedin/callback`; keys `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_REDIRECT_URI`.
-- **Reddit** – needs Reddit API access approval first, then a **web app** at <https://www.reddit.com/prefs/apps>; redirect `https://<domain>/integrations/reddit/callback`; keys `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_REDIRECT_URI`, `REDDIT_USER_AGENT`. Details and policy checklist: [`REDDIT_INTEGRATION.md`](REDDIT_INTEGRATION.md).
+- **Reddit** – needs Reddit API access approval first, then a **web app** at <https://www.reddit.com/prefs/apps>; redirect `https://<domain>/integrations/reddit/callback`; keys `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_REDIRECT_URI`, `REDDIT_USER_AGENT`. Details and policy checklist: [`docs/reddit-integration/`](docs/reddit-integration/README.md).
 - **Firebase** – Blaze plan (Functions + external APIs), enable Auth (email, Google), Firestore, Storage; add the prod domain to Auth → Authorized domains.
 
 ## Project structure
