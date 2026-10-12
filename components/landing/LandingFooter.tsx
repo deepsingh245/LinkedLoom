@@ -31,8 +31,8 @@ export function LandingFooter() {
           <div>
             <h4 className="text-white text-xs font-black tracking-widest uppercase mb-6">Legal</h4>
             <ul className="space-y-4">
-              <li><Link href="#" className="text-sm text-on-surface-variant hover:text-figma-lime transition-colors opacity-60 hover:opacity-100">Privacy Policy</Link></li>
-              <li><Link href="#" className="text-sm text-on-surface-variant hover:text-figma-lime transition-colors opacity-60 hover:opacity-100">Terms of Service</Link></li>
+              <li><Link href="/privacy" className="text-sm text-on-surface-variant hover:text-figma-lime transition-colors opacity-60 hover:opacity-100">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="text-sm text-on-surface-variant hover:text-figma-lime transition-colors opacity-60 hover:opacity-100">Terms of Service</Link></li>
             </ul>
           </div>
         </div>

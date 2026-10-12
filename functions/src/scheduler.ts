@@ -68,6 +68,7 @@ async function publishPost(userId: string, post: any) {
     const redditConnection = redditDoc.data();
     try {
       const result = await publishToRedditInternal(
+        userId,
         redditConnection,
         post.content,
         post.subreddit,

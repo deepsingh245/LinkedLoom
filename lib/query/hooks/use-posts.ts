@@ -211,7 +211,7 @@ export function useUnschedulePost(userId?: string) {
 }
 
 /**
- * Publish a post immediately to LinkedIn.
+ * Publish a post immediately to LinkedIn and/or Reddit.
  */
 export function usePublishPostNow(userId?: string) {
   const queryClient = useQueryClient();
@@ -221,13 +221,15 @@ export function usePublishPostNow(userId?: string) {
       content,
       articleUrl,
       imageUrl,
+      options,
     }: {
       content: string;
       articleUrl?: string;
       imageUrl?: string;
+      options?: { linkedin?: boolean; reddit?: boolean; subreddit?: string };
     }) => {
       if (!userId) throw new Error('User not authenticated');
-      return api.firebaseService.publishPostNow(userId, content, articleUrl, imageUrl);
+      return api.firebaseService.publishPostNow(userId, content, articleUrl, imageUrl, options);
     },
     onSuccess: () => {
       if (userId) {

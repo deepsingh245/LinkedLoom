@@ -1,7 +1,4 @@
-import { httpsCallable } from "firebase/functions";
-import { functions, db } from "../firebase";
-import { FirebaseFunctions } from "./functions";
-import { doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { auth } from "../firebase";
 
 export const getLinkedInAuthUrl = async () => {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -60,8 +57,22 @@ export const exchangeRedditToken = async (
     return await response.json() as { success: boolean };
 };
 
-export const disconnectReddit = async (uid: string) => {
-    const userRef = doc(db, "users", uid);
-    await updateDoc(userRef, { reddit: null, updatedAt: new Date() });
-    await deleteDoc(doc(db, "users", uid, "connections", "reddit"));
+/**
+ * Disconnect Reddit via the backend: revokes tokens at Reddit and deletes
+ * stored credentials and Reddit-derived data (client can't touch connections).
+ */
+export const disconnectReddit = async (_uid?: string) => {
+    const idToken = await auth.currentUser?.getIdToken();
+    if (!idToken) throw new Error("You must be logged in to disconnect Reddit.");
+
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+    const response = await fetch(`${baseUrl}/disconnectReddit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+    });
+
+    if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error?.message || "Failed to disconnect Reddit");
+    }
 };

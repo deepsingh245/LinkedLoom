@@ -1,0 +1,33 @@
+rules_version = '2';
+
+// Upload paths used by the app (lib/firebase/storage.ts):
+//   users/{uid}/attachments/*   post images
+//   users/{uid}/profile/*       profile pictures
+// Resized WebP copies are written by the generateResizedImages Cloud Function
+// (Admin SDK, bypasses rules) to resized/users/{uid}/...
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+    function isValidImage() {
+      return request.resource.contentType.matches('image/.*')
+        && request.resource.size < 10 * 1024 * 1024; // 10 MB
+    }
+
+    match /users/{uid}/{allPaths=**} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && isValidImage();
+      allow delete: if isOwner(uid);
+    }
+
+    match /resized/users/{uid}/{allPaths=**} {
+      allow read: if isOwner(uid);
+      allow write: if false;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

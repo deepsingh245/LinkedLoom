@@ -1,5 +1,5 @@
 import { collection, query, where, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
-import { db } from "../firebase";
+import { db, auth } from "../firebase";
 import { Post } from "@/types";
 import { DashboardData } from "./interfaces";
 import { Collections } from "./collections";
@@ -147,27 +147,58 @@ export const publishPostNow = async (
   userId: string,
   content: string,
   articleUrl?: string,
-  imageUrl?: string
+  imageUrl?: string,
+  options: { linkedin?: boolean; reddit?: boolean; subreddit?: string } = { linkedin: true }
 ): Promise<any> => {
   try {
-    // 1. Call the backend HTTP endpoint to perform the actual LinkedIn API request
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/publishToLinkedIn`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        userId,
-        content,
-        articleUrl,
-        imageUrl,
-      }),
-    });
+    const { linkedin = false, reddit = false, subreddit } = options;
+    if (!linkedin && !reddit) throw new Error("No platform selected.");
 
-    const result = await response.json();
+    let linkedinData: any = null;
+    let redditData: any = null;
 
-    if (!response.ok || !result.success) {
-      throw new Error(result.message || "Failed to publish to LinkedIn");
+    // 1. Call the backend HTTP endpoints to perform the actual platform API requests
+    if (linkedin) {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/publishToLinkedIn`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId,
+          content,
+          articleUrl,
+          imageUrl,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Failed to publish to LinkedIn");
+      }
+      linkedinData = result.data;
+    }
+
+    if (reddit) {
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) throw new Error("You must be logged in to publish to Reddit.");
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/publishToReddit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ content, subreddit, imageUrl }),
+      });
+
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Failed to publish to Reddit");
+      }
+      redditData = result.data;
     }
 
     // 2. Save the successful post to Firestore history
@@ -176,14 +207,16 @@ export const publishPostNow = async (
       content,
       articleUrl: articleUrl || null,
       imageUrl: imageUrl || null,
-      linkedinUrn: result.data.id || null, // URN tracking
+      linkedinUrn: linkedinData?.id || null, // URN tracking
+      subreddit: subreddit || null,
+      redditUrl: redditData?.postUrl || null,
       status: "PUBLISHED",
       publishedAt: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
     });
 
-    return result.data;
+    return { linkedin: linkedinData, reddit: redditData, ...(linkedinData || {}) };
   } catch (error) {
     console.error("Error publishing post immediately: ", error);
     throw error;

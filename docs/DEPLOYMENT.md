@@ -1,0 +1,204 @@
+# LinkedLoom – Deployment & Ops Cheat Sheet
+
+Private project. This is the "I forgot how to do X" doc.
+
+- Firebase project: `linkedloom` (alias `default` in `functions/.firebaserc`)
+- **Production branch: `prod-v3`** (see §1 – it doesn't exist yet as of 2026-10-12)
+- All `firebase` commands run from the **`functions/`** folder (that's where `firebase.json` lives, there is none in the repo root).
+
+---
+
+## 1. Branches
+
+| Branch | Purpose |
+|---|---|
+| `prod-v3` | **Production.** Only deploy from here. |
+| `prod-v2` | Previous production line (currently checked out; all the Reddit work is here). |
+| `dev` | Integration/testing |
+| `main` | Stable base |
+| `feature/*` | Feature work |
+
+> `prod-v3` is **not created yet** (only `prod-v2` exists locally and on origin). To create it from the current state:
+> ```bash
+> git checkout prod-v2
+> git checkout -b prod-v3
+> git push -u origin prod-v3
+> ```
+> Before that, commit the pending changes (`git status`).
+
+Flow: `feature/x` → `dev` → `prod-v3` → deploy. Never deploy functions/rules from a feature branch.
+
+---
+
+## 2. One-time setup on a new machine
+
+```bash
+npm install -g firebase-tools
+firebase login
+cd functions && npm install && cd ..
+npm install
+```
+
+Check the project: `cd functions && firebase use` (should say `linkedloom`).
+
+---
+
+## 3. Environment variables
+
+### Frontend – `.env` / `.env.local` in the repo root (never commit)
+
+```bash
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=
+NEXT_PUBLIC_API_URL=https://us-central1-linkedloom.cloudfunctions.net   # local emulator: http://127.0.0.1:5001/linkedloom/us-central1
+NEXT_PUBLIC_CONTACT_EMAIL=you@yourdomain.com                            # shown on /privacy and /terms
+```
+
+Where the frontend env goes in prod: set the same variables in your host's dashboard (Vercel etc.), then redeploy – `NEXT_PUBLIC_*` values are baked in at build time.
+
+### Backend – `functions/.env` (never commit)
+
+```bash
+GEMINI_API_KEY=
+PROJECT_ID=linkedloom
+
+LINKEDIN_CLIENT_ID=
+LINKEDIN_CLIENT_SECRET=
+LINKEDIN_REDIRECT_URI=https://<prod-domain>/integrations/linkedin/callback
+
+REDDIT_CLIENT_ID=
+REDDIT_CLIENT_SECRET=
+REDDIT_REDIRECT_URI=https://<prod-domain>/integrations/reddit/callback
+REDDIT_USER_AGENT=web:linkedloom:1.0 (by /u/<your_reddit_username>)
+REDDIT_MAX_POSTS_PER_DAY=5
+```
+
+`firebase deploy --only functions` uploads `functions/.env` with the code. Using different values for prod vs dev: create `functions/.env.linkedloom` (loaded for project id `linkedloom`) – it overrides `.env`.
+
+Redirect URIs must match **exactly** what is registered in the LinkedIn app and the Reddit app (see `REDDIT_INTEGRATION.md`).
+
+---
+
+## 4. Firestore rules
+
+File: `functions/firestore.rules`. Summary of what they enforce:
+- `users/{uid}`: only that user. `users/{uid}/connections/*` and `redditPosts/*` (OAuth tokens): **nobody from the client**, backend only.
+- `posts/{id}`: only the owner (`user_id == auth.uid`).
+- Everything else (`oauthStates`, `analytics`): backend only.
+
+Deploy:
+```bash
+cd functions
+firebase deploy --only firestore:rules
+```
+
+Test before deploying (emulator): `firebase emulators:start --only firestore,auth` and run the app against it. Rollback: Firebase Console → Firestore → Rules → history → pick the old version → Publish.
+
+> Admin SDK (Cloud Functions) ignores rules, so scheduler/publish/OAuth still work.
+
+## 5. Firestore indexes
+
+File: `functions/firestore.indexes.json`. The scheduler query needs `(status, scheduledFor)`; the schedule page needs `(user_id, scheduledFor)`.
+
+```bash
+firebase deploy --only firestore:indexes
+```
+Building takes a few minutes; if you see `FAILED_PRECONDITION: The query requires an index` in the logs, click the link in the error and then copy the generated index into the JSON file so it's tracked.
+
+## 6. Storage rules
+
+File: `functions/storage.rules` (wired in `functions/firebase.json` → `"storage"`). Before 2026-10-12 this file did not exist, so the bucket was running on whatever default rules were set in the console.
+
+What it allows:
+- `users/{uid}/attachments/*` and `users/{uid}/profile/*`: owner can read/write/delete; uploads must be `image/*` and < 10 MB.
+- `resized/users/{uid}/**`: owner read; no client writes (the `generateResizedImages` function writes them).
+- everything else denied.
+
+Deploy:
+```bash
+firebase deploy --only storage
+```
+First time on a project, Storage must be enabled in the console (Build → Storage → Get started) and the bucket name must equal `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`.
+
+Note: images are shared to LinkedIn/Reddit through the **download URL** (it contains a token and works regardless of rules), so tightening read rules doesn't break publishing.
+
+## 7. Cloud Functions
+
+Deploy everything:
+```bash
+cd functions
+npm run build          # must pass (tsc)
+firebase deploy --only functions
+```
+Deploy specific ones (faster, safer):
+```bash
+firebase deploy --only functions:exchangeRedditToken,functions:publishToReddit
+```
+Whole "release" in one go:
+```bash
+firebase deploy --only functions,firestore:rules,firestore:indexes,storage
+```
+
+Functions in this repo: `generatePost`, `generateImage`, `enhanceImagePrompt` (ai.ts) · LinkedIn: `getLinkedInAuthUrl`, `exchangeLinkedInToken`, `publishToLinkedIn`, `getLinkedInAnalytics` · Reddit: `getRedditAuthUrl`, `exchangeRedditToken`, `publishToReddit`, `disconnectReddit`, `getRedditAnalytics` · `checkScheduledPosts` (every 10 min) · `generateResizedImages` (Storage trigger).
+
+Requirements: project on the **Blaze** plan; Node 22; Cloud Scheduler + Pub/Sub APIs are enabled automatically on first deploy of `checkScheduledPosts`.
+
+Logs:
+```bash
+firebase functions:log
+firebase functions:log --only checkScheduledPosts
+```
+or Console → Functions → pick function → Logs.
+
+Delete a function that no longer exists in code: `firebase functions:delete <name>`.
+
+## 8. Frontend
+
+```bash
+npm run lint
+npm run build          # must pass before every deploy
+```
+Deploy to your host (Vercel/other) from `prod-v3`. Set env vars there (§3). After first deploy:
+1. Add the domain to Firebase Auth → Settings → **Authorized domains**.
+2. Update LinkedIn/Reddit redirect URIs to the prod domain.
+3. Set `REDDIT_REDIRECT_URI`/`LINKEDIN_REDIRECT_URI` in `functions/.env` and redeploy functions.
+
+## 9. Local development / emulators
+
+```bash
+# terminal 1 (functions folder)
+firebase emulators:start          # auth 9099, functions 5001, firestore 8080, storage 9199, UI 4000
+# terminal 2 (root)
+npm run dev
+```
+Point `NEXT_PUBLIC_API_URL` at `http://127.0.0.1:5001/linkedloom/us-central1` while using emulators.
+
+## 10. Release checklist (copy/paste)
+
+```text
+[ ] git status clean, on prod-v3, merged from dev
+[ ] npm run lint && npm run build          (root)
+[ ] cd functions && npm run build
+[ ] functions/.env has all prod values (§3), redirect URIs = prod URLs
+[ ] firebase deploy --only firestore:rules,firestore:indexes,storage
+[ ] firebase deploy --only functions
+[ ] deploy frontend, env vars set on host
+[ ] smoke test: login, create post, schedule, connect LinkedIn, connect Reddit, disconnect Reddit
+[ ] check function logs for errors
+```
+
+## 11. Knowledge graph (optional)
+
+`graphify-out/` is generated locally and is gitignored. Rebuild after big changes: `/graphify . --update` in Claude Code.
+
+## 12. Related docs
+
+- `README.md` – overview
+- `REDDIT_INTEGRATION.md` – Reddit setup + policy compliance
+- `PRODUCTION_READINESS_CHECKLIST.md` – launch blockers and status
+- `AGENT.md` – codebase map for AI assistants

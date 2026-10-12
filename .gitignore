@@ -53,3 +53,5 @@ yarn-error.log*
 next-env.d.ts
 
 /tasks
+# graphify
+graphify-out/

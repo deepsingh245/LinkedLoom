@@ -5,6 +5,50 @@
 
 ---
 
+## Current Status (re-verified against the code on 2026-10-12, branch `prod-v2`; production branch will be `prod-v3`)
+
+Legend: ✅ done in code · ⏳ done in code but **not deployed yet** · ❌ still open · 🧑 manual step for you
+
+**Verdict: NOT ready for production.** Open launch blockers: LinkedIn CORS, LinkedIn endpoint auth, route auth middleware, Reddit API approval, and deploying the new rules.
+
+| # | Item | Status | Notes |
+|---|---|---|---|
+| 1 | Firestore rules were `allow read, write: if true` | ⏳ | Replaced with owner-only rules, tokens backend-only. Run `firebase deploy --only firestore:rules` from `functions/` |
+| 2 | Storage rules | ⏳ | `functions/storage.rules` didn't exist before; created and wired into `functions/firebase.json`. Run `firebase deploy --only storage` |
+| 3 | Firestore indexes | ⏳ | Added `(status, scheduledFor)` for the scheduler. Run `firebase deploy --only firestore:indexes` |
+| 4 | CORS hardcoded to `http://localhost:3000` | ❌ | Still in `functions/src/linkedin.ts` (`publishToLinkedIn`, `getLinkedInAnalytics`). LinkedIn publish/analytics will fail from the prod domain. Remove those `res.set(...)` lines (`cors: true` is already set) or restrict to the prod origin |
+| 5 | Auth on `publishToLinkedIn` / `getLinkedInAnalytics` | ❌ | No `verifyIdToken`; they trust `userId` from the body. Do what `reddit.ts` `authenticate()` does |
+| 6 | Auth on Reddit endpoints | ✅ | All verify the Firebase ID token; tokens refreshed + persisted |
+| 7 | Reddit: rate-limit handling, daily post cap, User-Agent, revoke on disconnect | ✅ | `functions/src/reddit.ts` |
+| 8 | Reddit API access approval | 🧑 | Submit the access request; app can't be used with Reddit until approved. See `REDDIT_INTEGRATION.md` |
+| 9 | Privacy Policy + Terms pages | ✅ | `/privacy`, `/terms`. 🧑 set `NEXT_PUBLIC_CONTACT_EMAIL` (placeholder shown until set) |
+| 10 | `oauthStates` expiry | ◐ | Reddit rejects states > 10 min. Stale docs are never cleaned up (add a TTL policy or scheduled cleanup); LinkedIn flow not re-checked |
+| 11 | Next.js route-level auth (`middleware.ts`/`proxy.ts`) | ❌ | Not present |
+| 12 | `app/error.tsx` / `app/global-error.tsx` | ❌ | Not present |
+| 13 | `.env.example` | ❌ | Not present |
+| 14 | `// TODO` comment in `lib/firebase.ts` | ❌ | Line 7 |
+| 15 | Hardcoded `'linkedloom'` project fallback in `ai.ts` | ❌ | `process.env.PROJECT_ID || 'linkedloom'` (harmless while it is the real project; keep `PROJECT_ID` set) |
+| 16 | `supportEmail: support@undefined.firebaseapp.com` | ❌ | `functions/firebase.json` auth provider block |
+| 17 | Rate limiting on AI functions | ❌ | Only retry-on-429 to Gemini exists; no per-user limits |
+| 18 | `maxInstances` / global function options | ❌ | Not set |
+| 19 | Security headers / CSP in `next.config.ts` | ❌ | Not set |
+| 20 | CI/CD | ❌ | No `.github/` |
+| 21 | Branch `prod-v3` | ❌ | Doesn't exist yet (see `docs/DEPLOYMENT.md` §1) |
+| 22 | Budget alerts, Firestore backups, App Check | 🧑 | Console settings |
+| 23 | `localStorage` draft cleared on logout | ❌ | `draft_post` is still written in `PostCard`/`EditPostDialog` |
+| 24 | Docs: README, deployment guide | ✅ | `README.md`, `docs/DEPLOYMENT.md` |
+
+### Do these next (in order)
+1. Commit, create `prod-v3` (see `docs/DEPLOYMENT.md` §1).
+2. Fix #4 and #5 (LinkedIn CORS + auth) – these break or expose production.
+3. `firebase deploy --only firestore:rules,firestore:indexes,storage` (test in the emulator first) then deploy functions.
+4. Set `NEXT_PUBLIC_CONTACT_EMAIL`, deploy the site, submit the Reddit access request with the `/privacy` link.
+5. Add `middleware.ts`, error boundaries, `.env.example`, security headers, `maxInstances`, AI rate limits.
+6. Console: authorized domains, budget alerts, backups.
+
+> The detailed sections below were written 2026-05-23; where they conflict with the table above, the table is current.
+
+---
 ## Table of Contents
 
 1. [🔴 Critical Blockers — Must Fix Before Launch](#-critical-blockers--must-fix-before-launch)
@@ -883,4 +927,4 @@ These risks were identified from the codebase and may not be obvious until they 
 
 ---
 
-*Last updated: 2026-05-23 · Generated from LinkedLoom codebase audit*
+*Last updated: 2026-10-12 · Status table re-verified against the code; detailed sections from the 2026-05-23 audit*
