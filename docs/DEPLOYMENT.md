@@ -77,7 +77,16 @@ REDDIT_CLIENT_SECRET=
 REDDIT_REDIRECT_URI=https://<prod-domain>/integrations/reddit/callback
 REDDIT_USER_AGENT=web:linkedloom:1.0 (by /u/<your_reddit_username>)
 REDDIT_MAX_POSTS_PER_DAY=5
+
+# AI (Autopilot Phase 2) – managed keys LinkedLoom pays for
+OPENAI_API_KEY=                 # only needed if managed calls use OpenAI (default managed provider is Gemini)
+AUTOPILOT_TRIAL_CREDITS=200     # credits every new workspace starts with
+EDITOR_TEXT_DAILY_CAP=100       # Create Post text generations per user per day (metered, free)
+EDITOR_IMAGE_DAILY_CAP=30       # Create Post images per user per day
+BYOK_DAILY_CALL_CAP=200         # AI calls per workspace per day on users' own keys
 ```
+
+Users' own keys (BYOK) are **not** in `.env`: they go to Google Cloud Secret Manager at runtime (see §7.1). Managed keys still come from `.env`; moving them to `firebase functions:secrets:set` is a later hardening step (remove them from `.env` at the same time, or deploy fails on the name clash).
 
 `firebase deploy --only functions` uploads `functions/.env` with the code. Using different values for prod vs dev: create `functions/.env.linkedloom` (loaded for project id `linkedloom`) – it overrides `.env`.
 
@@ -147,7 +156,25 @@ firebase deploy --only functions,firestore:rules,firestore:indexes,storage
 
 Functions in this repo: `generatePost`, `generateImage`, `enhanceImagePrompt` (ai.ts) · LinkedIn: `getLinkedInAuthUrl`, `exchangeLinkedInToken`, `publishToLinkedIn`, `getLinkedInAnalytics` · Reddit: `getRedditAuthUrl`, `exchangeRedditToken`, `publishToReddit`, `disconnectReddit`, `getRedditAnalytics` · `checkScheduledPosts` (every 10 min) · `generateResizedImages` (Storage trigger).
 
+AI Autopilot: personas `createPersona`, `updatePersona`, `setPersonaStatus`, `deletePersona`, `setAutopilotEnabled` · AI `addAIConnection`, `testAIConnection`, `revokeAIConnection`, `testPersonaGeneration` · credits `adminGrantCredits`, `sweepCreditReservations` (every 15 min).
+
 Requirements: project on the **Blaze** plan; Node 22; Cloud Scheduler + Pub/Sub APIs are enabled automatically on first deploy of `checkScheduledPosts`.
+
+### 7.1 One-time setup for AI Autopilot (BYOK keys in Secret Manager)
+
+1. Enable the API: `gcloud services enable secretmanager.googleapis.com --project linkedloom`.
+2. Find the runtime service account of the functions (Console → Cloud Run → a function → Security; for 2nd-gen functions it's usually `PROJECT_NUMBER-compute@developer.gserviceaccount.com`).
+3. Let it manage only BYOK secrets (names start with `byok-`):
+   ```bash
+   gcloud projects add-iam-policy-binding linkedloom \
+     --member="serviceAccount:<RUNTIME_SA>" --role="roles/secretmanager.admin" \
+     --condition='expression=resource.name.startsWith("projects/<PROJECT_NUMBER>/secrets/byok-"),title=byok-secrets-only'
+   ```
+   (`secrets.create` is checked on the project, so if creation is denied with the condition, use a custom role with `secretmanager.secrets.create` on the project plus the conditional binding for access/delete.)
+4. Cost: Secret Manager bills per active secret version and per access; resolved keys are cached in memory for 5 minutes per instance.
+5. Index: deploy `firestore:indexes` – the sweeper needs the `creditReservations (status, expiresAt)` collection-group index.
+6. Admin grants: give your own account the admin claim once with the Admin SDK (`getAuth().setCustomUserClaims(uid, { admin: true })`), then call `adminGrantCredits`.
+7. ⚠️ Prices in `functions/src/ai-core/pricing.ts` and model ids in `registry.ts` are placeholders – verify against the official Gemini/OpenAI pages and bump `PRICE_VERSION` before charging anyone.
 
 Logs:
 ```bash
@@ -182,10 +209,11 @@ Point `NEXT_PUBLIC_API_URL` at `http://127.0.0.1:5001/linkedloom/us-central1` wh
 ### Tests (functions folder)
 
 ```bash
-npm test             # unit tests (Autopilot persona validation), no emulator needed
+npm test             # unit tests (persona validation, pricing, redaction, structured output), no emulator needed
 npm run test:rules   # Firestore rules tests in the emulator (needs Java)
-npm run test:e2e     # builds, then runs the Autopilot callables against auth+firestore+functions emulators
+npm run test:e2e     # builds, then runs callables + credits ledger in auth+firestore+functions emulators
 ```
+`test:e2e` runs on the offline project `demo-linkedloom-test`; `functions/.env.demo-linkedloom-test` switches AI providers to a deterministic mock (no real AI calls, no keys needed) and lowers the editor daily cap to 3 so the cap can be tested.
 Windows gotcha: after `emulators:exec` finishes, the Firestore emulator (a `java` process on port 8080) sometimes keeps running, and the next run fails with "port taken". Find it with `Get-NetTCPConnection -LocalPort 8080 -State Listen` and stop that `java` process.
 
 ## 10. Release checklist (copy/paste)

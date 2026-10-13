@@ -89,6 +89,8 @@ export const personaFormSchema = z.object({
     allowImages: z.boolean(),
   }),
   ai: z.object({
+    // "managed" = LinkedLoom credits; otherwise the id of one of the user's AI connections (BYOK).
+    connectionId: z.string().min(1),
     modelProfile: z.enum(["economy", "balanced", "quality"]),
     monthlyCreditLimit: z.number().int().min(0).max(L.monthlyCreditLimitMax),
   }),

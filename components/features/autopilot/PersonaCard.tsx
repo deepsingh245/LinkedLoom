@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Archive, ArchiveRestore, MoreVertical, Pause, Pencil, Play, Trash2 } from "lucide-react"
+import { Archive, ArchiveRestore, MoreVertical, Pause, Pencil, Play, Sparkles, Trash2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -37,9 +37,10 @@ interface PersonaCardProps {
     busy?: boolean
     onStatusChange: (status: PersonaStatus) => void
     onDelete: () => void
+    onTest?: () => void
 }
 
-export function PersonaCard({ persona, busy, onStatusChange, onDelete }: PersonaCardProps) {
+export function PersonaCard({ persona, busy, onStatusChange, onDelete, onTest }: PersonaCardProps) {
     const [confirmDelete, setConfirmDelete] = useState(false)
     const badge = statusBadge[persona.status]
     const archived = persona.status === "archived"
@@ -66,6 +67,9 @@ export function PersonaCard({ persona, busy, onStatusChange, onDelete }: Persona
                             <DropdownMenuItem asChild>
                                 <Link href={`${Routes.AUTOPILOT}/${persona.id}`}><Pencil className="mr-2 h-4 w-4" /> Edit</Link>
                             </DropdownMenuItem>
+                        )}
+                        {!archived && onTest && (
+                            <DropdownMenuItem onClick={onTest}><Sparkles className="mr-2 h-4 w-4" /> Test generate</DropdownMenuItem>
                         )}
                         {persona.status === "active" && (
                             <DropdownMenuItem onClick={() => onStatusChange("paused")}><Pause className="mr-2 h-4 w-4" /> Pause</DropdownMenuItem>
@@ -105,7 +109,7 @@ export function PersonaCard({ persona, busy, onStatusChange, onDelete }: Persona
             <div className="mt-auto grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                 <span>{persona.publishing.postsPerDay} post{persona.publishing.postsPerDay === 1 ? "" : "s"}/day · LinkedIn</span>
                 <span className="truncate text-right" title={persona.publishing.timezone}>{windows}</span>
-                <span>Manual approval</span>
+                <span>{persona.ai.connectionId ? "Your AI key" : "LinkedLoom credits"} · manual approval</span>
                 <span className="text-right">v{persona.version}</span>
             </div>
 

@@ -4,11 +4,13 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/components/providers/auth-provider"
 import { Routes } from "@/lib/routes"
 import { useCreatePersona } from "@/lib/query/hooks/use-autopilot"
+import { useAIConnections } from "@/lib/query/hooks/use-ai-billing"
 import { PersonaForm, emptyPersona } from "@/components/features/autopilot/PersonaForm"
 
 export default function NewPersonaPage() {
     const router = useRouter()
     const { user } = useAuth()
+    const { data: connections = [] } = useAIConnections(user?.uid)
     const createPersona = useCreatePersona(user?.uid)
 
     return (
@@ -19,6 +21,7 @@ export default function NewPersonaPage() {
             </div>
             <PersonaForm
                 defaultValues={emptyPersona()}
+                connections={connections}
                 submitLabel="Create persona"
                 onCancel={() => router.push(Routes.AUTOPILOT)}
                 onSubmit={async (input) => {

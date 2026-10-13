@@ -9,6 +9,8 @@ export const Routes = {
     ANALYTICS: "/analytics",
     AUTOPILOT: "/autopilot",
     AUTOPILOT_NEW: "/autopilot/new",
+    AUTOPILOT_AI: "/autopilot/ai",
+    AUTOPILOT_CREDITS: "/autopilot/credits",
     SETTINGS_PROFILE: "/settings/profile",
     SETTINGS_PREFERENCES: "/settings/preferences",
     SETTINGS: "/settings/profile",

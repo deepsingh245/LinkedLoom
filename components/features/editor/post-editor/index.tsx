@@ -16,6 +16,7 @@ import { Post } from "@/types"
 import { httpsCallable } from "firebase/functions"
 import { functions } from "@/lib/firebase"
 import { FirebaseFunctions } from "@/lib/firebase/functions"
+import { callableErrorMessage } from "@/lib/firebase/errors"
 import { uploadPostAttachment } from "@/lib/firebase/storage"
 import { useCreatePost, useUpdatePost, useSchedulePost } from "@/lib/query/hooks/use-posts"
 
@@ -139,7 +140,7 @@ export function PostEditor() {
             }
         } catch (error) {
             console.error("Generate failed:", error)
-            dangerToast("Failed to generate content.")
+            dangerToast(callableErrorMessage(error, "Failed to generate content."))
         } finally {
             setGenerating(false)
         }
@@ -168,7 +169,7 @@ export function PostEditor() {
             }
         } catch (error) {
             console.error("Image generation failed:", error)
-            dangerToast("Failed to generate image.")
+            dangerToast(callableErrorMessage(error, "Failed to generate image."))
         } finally {
             setGeneratingImage(false)
         }
@@ -247,7 +248,7 @@ export function PostEditor() {
             }
         } catch (error) {
             console.error("Enhance prompt failed:", error);
-            dangerToast("Failed to enhance prompt.");
+            dangerToast(callableErrorMessage(error, "Failed to enhance prompt."));
         } finally {
             setEnhancingPrompt(false);
         }
@@ -287,7 +288,7 @@ export function PostEditor() {
             }
         } catch (error) {
             console.error("Context-based image generation failed:", error);
-            dangerToast("Failed to generate image from context.");
+            dangerToast(callableErrorMessage(error, "Failed to generate image from context."));
         } finally {
             setGeneratingImage(false);
         }

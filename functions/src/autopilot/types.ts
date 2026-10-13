@@ -40,7 +40,12 @@ export type AuditAction =
     | "persona.update"
     | "persona.status"
     | "persona.delete"
-    | "autopilot.toggle";
+    | "autopilot.toggle"
+    | "ai.connection.add"
+    | "ai.connection.test"
+    | "ai.connection.revoke"
+    | "credits.grant"
+    | "persona.testGenerate";
 
 export type AuditLog = {
     action: AuditAction;

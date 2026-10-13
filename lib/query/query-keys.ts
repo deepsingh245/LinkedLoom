@@ -25,5 +25,9 @@ export const queryKeys = {
     personas: (userId: string) => ['autopilot', userId, 'personas'] as const,
     persona: (userId: string, personaId: string) => ['autopilot', userId, 'personas', personaId] as const,
     settings: (userId: string) => ['autopilot', userId, 'settings'] as const,
+    connections: (userId: string) => ['autopilot', userId, 'connections'] as const,
+    wallet: (userId: string) => ['autopilot', userId, 'wallet'] as const,
+    ledger: (userId: string) => ['autopilot', userId, 'ledger'] as const,
+    usage: (userId: string) => ['autopilot', userId, 'usage'] as const,
   },
 } as const;

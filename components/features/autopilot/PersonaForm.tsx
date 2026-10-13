@@ -13,6 +13,9 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { TagInput } from "./TagInput"
 import { PERSONA_LIMITS, personaFormSchema, type PersonaFormValues } from "@/lib/schemas/persona"
 import type { Persona, PersonaInput } from "@/types/autopilot"
+import type { AIConnection } from "@/types/ai"
+
+const MANAGED = "managed"
 
 const browserTimeZone = () => {
     try {
@@ -43,7 +46,7 @@ export const emptyPersona = (): PersonaFormValues => ({
         approvalMode: "manual",
         allowImages: false,
     },
-    ai: { modelProfile: "balanced", monthlyCreditLimit: 1000 },
+    ai: { connectionId: MANAGED, modelProfile: "balanced", monthlyCreditLimit: 1000 },
 })
 
 export const personaToFormValues = (p: Persona): PersonaFormValues => ({
@@ -59,7 +62,7 @@ export const personaToFormValues = (p: Persona): PersonaFormValues => ({
         minSourceCount: p.research.minSourceCount,
     },
     publishing: { ...p.publishing, approvalMode: "manual" },
-    ai: { modelProfile: p.ai.modelProfile, monthlyCreditLimit: p.ai.monthlyCreditLimit },
+    ai: { connectionId: p.ai.connectionId ?? MANAGED, modelProfile: p.ai.modelProfile, monthlyCreditLimit: p.ai.monthlyCreditLimit },
 })
 
 /** Strip empty optional strings so the backend clears them instead of storing "". */
@@ -67,6 +70,11 @@ const toInput = (v: PersonaFormValues): PersonaInput => ({
     ...v,
     description: v.description?.trim() || undefined,
     identity: { ...v.identity, customInstructions: v.identity.customInstructions?.trim() || undefined },
+    ai: {
+        modelProfile: v.ai.modelProfile,
+        monthlyCreditLimit: v.ai.monthlyCreditLimit,
+        ...(v.ai.connectionId !== MANAGED ? { connectionId: v.ai.connectionId } : {}),
+    },
 })
 
 const numberField = (onChange: (v: number) => void) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -78,9 +86,11 @@ interface PersonaFormProps {
     onSubmit: (input: PersonaInput) => Promise<unknown>
     onCancel?: () => void
     disabled?: boolean
+    /** BYOK connections the persona can use instead of managed credits. */
+    connections?: AIConnection[]
 }
 
-export function PersonaForm({ defaultValues, submitLabel, onSubmit, onCancel, disabled }: PersonaFormProps) {
+export function PersonaForm({ defaultValues, submitLabel, onSubmit, onCancel, disabled, connections = [] }: PersonaFormProps) {
     const form = useForm<PersonaFormValues>({
         resolver: zodResolver(personaFormSchema),
         defaultValues,
@@ -311,6 +321,26 @@ export function PersonaForm({ defaultValues, submitLabel, onSubmit, onCancel, di
                             <CardDescription>Quality vs cost, and a hard monthly limit.</CardDescription>
                         </CardHeader>
                         <CardContent className="grid gap-4 md:grid-cols-2">
+                            <FormField control={form.control} name="ai.connectionId" render={({ field }) => (
+                                <FormItem className="md:col-span-2">
+                                    <FormLabel>Billing</FormLabel>
+                                    <Select value={field.value} onValueChange={field.onChange}>
+                                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            <SelectItem value={MANAGED}>LinkedLoom credits (managed)</SelectItem>
+                                            {connections.filter((c) => c.status === "active" || c.id === field.value).map((c) => (
+                                                <SelectItem key={c.id} value={c.id}>
+                                                    Your {c.provider === "openai" ? "OpenAI" : "Gemini"} key · {c.label} ({c.keyHint})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormDescription>
+                                        With your own key you pay the provider directly and no credits are used. Manage keys under AI keys.
+                                    </FormDescription>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
                             <FormField control={form.control} name="ai.modelProfile" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Model profile</FormLabel>

@@ -18,6 +18,9 @@ import {
 } from "@/lib/query/hooks/use-autopilot"
 import { PersonaCard } from "@/components/features/autopilot/PersonaCard"
 import { KillSwitch } from "@/components/features/autopilot/KillSwitch"
+import { AutopilotNav } from "@/components/features/autopilot/AutopilotNav"
+import { TestGenerateDialog } from "@/components/features/autopilot/TestGenerateDialog"
+import type { Persona } from "@/types/autopilot"
 
 export default function AutopilotPage() {
     const { user } = useAuth()
@@ -27,6 +30,7 @@ export default function AutopilotPage() {
     const deletePersona = useDeletePersona(user?.uid)
     const setEnabled = useSetAutopilotEnabled(user?.uid)
     const [showArchived, setShowArchived] = useState(false)
+    const [testing, setTesting] = useState<Persona | null>(null)
 
     const live = personas.filter((p) => p.status !== "archived")
     const archived = personas.filter((p) => p.status === "archived")
@@ -63,6 +67,8 @@ export default function AutopilotPage() {
                 )}
             </div>
 
+            <AutopilotNav />
+
             <KillSwitch
                 enabled={settings?.autopilotEnabled ?? true}
                 pending={setEnabled.isPending}
@@ -86,6 +92,7 @@ export default function AutopilotPage() {
                         <PersonaCard
                             key={persona.id}
                             persona={persona}
+                            onTest={() => setTesting(persona)}
                             busy={busyId === persona.id}
                             onStatusChange={(status) => setStatus.mutate({ personaId: persona.id, status })}
                             onDelete={() => deletePersona.mutate(persona.id)}
@@ -113,6 +120,15 @@ export default function AutopilotPage() {
                         </div>
                     )}
                 </div>
+            )}
+
+            {testing && (
+                <TestGenerateDialog
+                    persona={testing}
+                    userId={user?.uid}
+                    open={!!testing}
+                    onOpenChange={(open) => !open && setTesting(null)}
+                />
             )}
         </div>
     )

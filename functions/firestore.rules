@@ -52,6 +52,34 @@ service cloud.firestore {
         allow read: if isWorkspaceMember(workspaceId);
         allow write: if false;
       }
+
+      // AI + billing (Phase 2). Readable metadata only; written by Cloud Functions.
+      // BYOK key references (aiConnectionSecrets) are deliberately absent here,
+      // so the catch-all below denies them to every client.
+      match /aiConnections/{connectionId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+      match /creditWallets/{walletId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+      match /creditLedger/{entryId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+      match /creditReservations/{reservationId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+      match /usageRecords/{recordId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+      match /personaUsage/{usageId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
     }
 
     // Everything else (oauthStates, analytics, ...) is backend-only.

@@ -9,5 +9,9 @@ export enum FirebaseFunctions {
     SET_PERSONA_STATUS = "setPersonaStatus",
     DELETE_PERSONA = "deletePersona",
     SET_AUTOPILOT_ENABLED = "setAutopilotEnabled",
+    ADD_AI_CONNECTION = "addAIConnection",
+    TEST_AI_CONNECTION = "testAIConnection",
+    REVOKE_AI_CONNECTION = "revokeAIConnection",
+    TEST_PERSONA_GENERATION = "testPersonaGeneration",
 }
 

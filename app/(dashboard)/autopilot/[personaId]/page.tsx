@@ -9,12 +9,14 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/components/providers/auth-provider"
 import { Routes } from "@/lib/routes"
 import { usePersona, useUpdatePersona } from "@/lib/query/hooks/use-autopilot"
+import { useAIConnections } from "@/lib/query/hooks/use-ai-billing"
 import { PersonaForm, personaToFormValues } from "@/components/features/autopilot/PersonaForm"
 
 export default function EditPersonaPage({ params }: { params: Promise<{ personaId: string }> }) {
     const { personaId } = use(params)
     const router = useRouter()
     const { user } = useAuth()
+    const { data: connections = [] } = useAIConnections(user?.uid)
     const { data: persona, isLoading } = usePersona(user?.uid, personaId)
     const updatePersona = useUpdatePersona(user?.uid)
 
@@ -50,6 +52,7 @@ export default function EditPersonaPage({ params }: { params: Promise<{ personaI
             <PersonaForm
                 key={persona.version}
                 defaultValues={personaToFormValues(persona)}
+                connections={connections}
                 submitLabel="Save changes"
                 onCancel={() => router.push(Routes.AUTOPILOT)}
                 onSubmit={async (input) => {

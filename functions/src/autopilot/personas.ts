@@ -1,6 +1,5 @@
-import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
-import { ZodError, ZodType } from "zod";
 import { PERSONA_LIMITS } from "./limits";
 import {
     deletePersonaSchema,
@@ -10,26 +9,8 @@ import {
     updatePersonaSchema,
 } from "./schema";
 import { ensureWorkspace, personasRef, settingsRef, writeAudit } from "./workspace";
-
-function requireUid(request: CallableRequest): string {
-    if (!request.auth) {
-        throw new HttpsError("unauthenticated", "User must be logged in.");
-    }
-    return request.auth.uid;
-}
-
-function parse<T>(schema: ZodType<T>, data: unknown): T {
-    try {
-        return schema.parse(data);
-    } catch (error) {
-        if (error instanceof ZodError) {
-            const issue = error.issues[0];
-            const field = issue?.path?.join(".");
-            throw new HttpsError("invalid-argument", field ? `${field}: ${issue.message}` : issue?.message || "Invalid input.");
-        }
-        throw error;
-    }
-}
+import { parse, requireUid } from "../shared/callable";
+import { assertConnectionUsable } from "../ai-core/connections-store";
 
 /**
  * Create a persona in the caller's personal workspace (workspaces/{uid}).
@@ -39,6 +20,7 @@ export const createPersona = onCall(async (request) => {
     const uid = requireUid(request);
     const input = parse(personaInputSchema, request.data);
     const workspaceId = await ensureWorkspace(uid);
+    if (input.ai.connectionId) await assertConnectionUsable(workspaceId, input.ai.connectionId);
     const collection = personasRef(workspaceId);
     const ref = collection.doc();
 
@@ -75,6 +57,7 @@ export const updatePersona = onCall(async (request) => {
     const uid = requireUid(request);
     const { personaId, expectedVersion, persona } = parse(updatePersonaSchema, request.data);
     const workspaceId = await ensureWorkspace(uid);
+    if (persona.ai.connectionId) await assertConnectionUsable(workspaceId, persona.ai.connectionId);
     const ref = personasRef(workspaceId).doc(personaId);
 
     const version = await getFirestore().runTransaction(async (tx) => {
