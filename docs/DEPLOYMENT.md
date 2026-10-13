@@ -57,6 +57,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=
 NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=
 NEXT_PUBLIC_API_URL=https://us-central1-linkedloom.cloudfunctions.net   # local emulator: http://127.0.0.1:5001/linkedloom/us-central1
 NEXT_PUBLIC_CONTACT_EMAIL=you@yourdomain.com                            # shown on /privacy and /terms
+NEXT_PUBLIC_AUTOPILOT_ENABLED=false                                      # "true" shows the AI Autopilot nav + /autopilot pages (keep false in prod until launch)
 ```
 
 Where the frontend env goes in prod: set the same variables in your host's dashboard (Vercel etc.), then redeploy – `NEXT_PUBLIC_*` values are baked in at build time.
@@ -177,6 +178,15 @@ firebase emulators:start          # auth 9099, functions 5001, firestore 8080, s
 npm run dev
 ```
 Point `NEXT_PUBLIC_API_URL` at `http://127.0.0.1:5001/linkedloom/us-central1` while using emulators.
+
+### Tests (functions folder)
+
+```bash
+npm test             # unit tests (Autopilot persona validation), no emulator needed
+npm run test:rules   # Firestore rules tests in the emulator (needs Java)
+npm run test:e2e     # builds, then runs the Autopilot callables against auth+firestore+functions emulators
+```
+Windows gotcha: after `emulators:exec` finishes, the Firestore emulator (a `java` process on port 8080) sometimes keeps running, and the next run fails with "port taken". Find it with `Get-NetTCPConnection -LocalPort 8080 -State Listen` and stop that `java` process.
 
 ## 10. Release checklist (copy/paste)
 

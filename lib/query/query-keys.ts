@@ -20,4 +20,10 @@ export const queryKeys = {
     linkedinAuth: () => ['integrations', 'linkedin', 'authUrl'] as const,
     redditAuth: () => ['integrations', 'reddit', 'authUrl'] as const,
   },
+  autopilot: {
+    all: (userId: string) => ['autopilot', userId] as const,
+    personas: (userId: string) => ['autopilot', userId, 'personas'] as const,
+    persona: (userId: string, personaId: string) => ['autopilot', userId, 'personas', personaId] as const,
+    settings: (userId: string) => ['autopilot', userId, 'settings'] as const,
+  },
 } as const;

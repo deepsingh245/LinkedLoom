@@ -7,3 +7,4 @@ export * from "./linkedin";
 export * from "./reddit";
 export * from "./scheduler";
 export * from "./images";
+export * from "./autopilot/personas";

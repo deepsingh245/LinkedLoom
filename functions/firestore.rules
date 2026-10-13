@@ -22,6 +22,38 @@ service cloud.firestore {
       allow read, update, delete: if request.auth != null && resource.data.user_id == request.auth.uid;
     }
 
+    // AI Autopilot workspaces. Personal workspace id == owner uid; members/{uid}
+    // prepares for teams. Clients only read: every write goes through callable
+    // Cloud Functions (functions/src/autopilot), which validate and audit.
+    function isWorkspaceMember(workspaceId) {
+      return request.auth != null && (
+        request.auth.uid == workspaceId ||
+        exists(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid))
+      );
+    }
+
+    match /workspaces/{workspaceId} {
+      allow read: if isWorkspaceMember(workspaceId);
+      allow write: if false;
+
+      match /members/{memberId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+      match /personas/{personaId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+      match /settings/{settingId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+      match /auditLogs/{logId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+    }
+
     // Everything else (oauthStates, analytics, ...) is backend-only.
     match /{document=**} {
       allow read, write: if false;

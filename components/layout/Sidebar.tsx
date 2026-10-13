@@ -7,9 +7,14 @@ import {
     Calendar,
     BarChart3,
     Settings,
-    LogOut
+    LogOut,
+    Bot
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Routes } from "@/lib/routes";
+
+// AI Autopilot is hidden until it is ready for users.
+const AUTOPILOT_ENABLED = process.env.NEXT_PUBLIC_AUTOPILOT_ENABLED === "true";
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> { }
 
@@ -45,6 +50,11 @@ export function Sidebar({ className }: SidebarProps) {
                 <NavItem href="/analytics" active={pathname === "/analytics"} icon={<BarChart3 className="h-4.5 w-4.5" />}>
                     Analytics
                 </NavItem>
+                {AUTOPILOT_ENABLED && (
+                    <NavItem href={Routes.AUTOPILOT} active={pathname.startsWith(Routes.AUTOPILOT)} icon={<Bot className="h-4.5 w-4.5" />}>
+                        Autopilot
+                    </NavItem>
+                )}
             </div>
             
             <div className="pt-6 border-t border-border mt-auto">

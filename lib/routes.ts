@@ -7,6 +7,8 @@ export const Routes = {
     SCHEDULE: "/schedule",
     CALENDAR: "/calendar",
     ANALYTICS: "/analytics",
+    AUTOPILOT: "/autopilot",
+    AUTOPILOT_NEW: "/autopilot/new",
     SETTINGS_PROFILE: "/settings/profile",
     SETTINGS_PREFERENCES: "/settings/preferences",
     SETTINGS: "/settings/profile",

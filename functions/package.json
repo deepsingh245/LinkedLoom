@@ -8,7 +8,10 @@
     "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "test": "vitest run test/schema.test.ts",
+    "test:rules": "firebase emulators:exec --only firestore \"vitest run test/rules.test.ts\"",
+    "test:e2e": "npm run build && firebase emulators:exec --only auth,firestore,functions \"vitest run test/callables.e2e.test.ts --testTimeout=30000 --hookTimeout=60000\""
   },
   "engines": {
     "node": "22"
@@ -21,9 +24,11 @@
     "cors": "^2.8.6",
     "firebase-admin": "^11.10.0 || ^12.0.0",
     "firebase-functions": "^5.0.0",
-    "sharp": "^0.34.5"
+    "sharp": "^0.34.5",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
     "@types/cors": "^2.8.19",
     "@types/sharp": "^0.31.1",
     "@typescript-eslint/eslint-plugin": "^5.12.0",
@@ -31,8 +36,10 @@
     "eslint": "^8.9.0",
     "eslint-config-google": "^0.14.0",
     "eslint-plugin-import": "^2.25.4",
+    "firebase": "^13.0.0",
     "firebase-functions-test": "^3.1.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.4"
   },
   "private": true
 }
