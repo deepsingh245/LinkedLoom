@@ -80,6 +80,21 @@ service cloud.firestore {
         allow read: if isWorkspaceMember(workspaceId);
         allow write: if false;
       }
+
+      // Research & drafts (Phase 3). Written by Cloud Functions only.
+      // runLocks is intentionally absent: the catch-all denies it to clients.
+      match /workflowRuns/{runId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+      match /contentItems/{contentId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+      match /researchItems/{itemId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
     }
 
     // Everything else (oauthStates, analytics, ...) is backend-only.

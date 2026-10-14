@@ -3,7 +3,7 @@ import { HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { releaseReservation, reserveCredits, settleReservation } from "../billing/credits";
 import { resolveConnectionKey } from "./connections-store";
-import { costMicroUsd, creditsFor, estimateMaxCredits, PRICE_VERSION } from "./pricing";
+import { costMicroUsd, estimateMaxCredits, microUsdToCredits, PRICE_VERSION } from "./pricing";
 import { getProvider } from "./providers";
 import { isMockEnabled } from "./providers/mock";
 import { errorMessage } from "./redact";
@@ -13,6 +13,7 @@ import {
     AIRequest,
     AIResult,
     BillingMode,
+    GroundedResult,
     ModelProfile,
     ProviderError,
     ProviderId,
@@ -43,6 +44,8 @@ export interface RunContext {
 }
 
 export interface RunPrompt {
+    /** Upper bound of non-token charges (e.g. grounding queries) so the credit reservation covers them. */
+    extraMaxCostMicroUsd?: number;
     prompt: string;
     system?: string;
     maxOutputTokens: number;
@@ -119,7 +122,7 @@ async function run<R extends AIResult>(
     const promptChars = prompt.prompt.length + (prompt.system?.length ?? 0);
     const reservationId = charge ?
         await reserveCredits(ctx.workspaceId, {
-            amount: estimateMaxCredits(model, promptChars, prompt.maxOutputTokens),
+            amount: estimateMaxCredits(model, promptChars, prompt.maxOutputTokens) + microUsdToCredits(prompt.extraMaxCostMicroUsd ?? 0),
             idempotencyKey,
             feature: ctx.feature,
             personaId: ctx.personaId,
@@ -161,8 +164,8 @@ async function run<R extends AIResult>(
     }
 
     // 5. Settle actual cost + meter
-    const cost = costMicroUsd(model, result.usage);
-    const credits = reservationId ? await settleReservation(ctx.workspaceId, reservationId, creditsFor(model, result.usage)) : 0;
+    const cost = costMicroUsd(model, result.usage) + (result.extraCostMicroUsd ?? 0);
+    const credits = reservationId ? await settleReservation(ctx.workspaceId, reservationId, microUsdToCredits(cost)) : 0;
     await recordUsage(ctx.workspaceId, idempotencyKey, { ...base, usage: result.usage, costMicroUsd: cost, credits, status: "ok" });
 
     return { ...result, meta: { provider, model, billingMode, credits, idempotencyKey } };
@@ -170,6 +173,14 @@ async function run<R extends AIResult>(
 
 export function runAI(ctx: RunContext, prompt: RunPrompt) {
     return run(ctx, prompt, (provider, request, apiKey) => provider.generateText(request, { apiKey, timeoutMs: TIMEOUT_MS }));
+}
+
+/** Web-search grounded generation (Gemini). Callers should check the persona's provider first; this fails cleanly otherwise. */
+export function runAIGrounded(ctx: RunContext, prompt: RunPrompt): Promise<GroundedResult & { meta: RunMeta }> {
+    return run(ctx, prompt, (provider, request, apiKey) => {
+        if (!provider.search) throw new ProviderError("bad_request", `${provider.id} doesn't support web search grounding.`);
+        return provider.search(request, { apiKey, timeoutMs: TIMEOUT_MS });
+    });
 }
 
 export function runAIStructured<T>(ctx: RunContext, prompt: RunPrompt, spec: StructuredSpec<T>): Promise<StructuredAIResult<T> & { meta: RunMeta }> {

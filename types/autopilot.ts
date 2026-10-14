@@ -28,6 +28,7 @@ export interface PersonaInput {
     feedUrls: string[];
     freshnessHours: number;
     minSourceCount: number;
+    webSearch?: boolean;
   };
   publishing: {
     accountIds: AutopilotPlatform[];

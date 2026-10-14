@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { AIProvider, AIRequest, AIResult, ProviderError, ProviderId, StructuredAIResult, StructuredSpec } from "../types";
+import { AIProvider, AIRequest, AIResult, GroundedResult, ProviderError, ProviderId, StructuredAIResult, StructuredSpec } from "../types";
+import { GROUNDING_COST_MICRO_USD_PER_QUERY } from "../pricing";
 import { parseStructured } from "./structured";
 
 /**
@@ -35,6 +36,66 @@ function sampleFor(schema: unknown): unknown {
     return out;
 }
 
+// ---------- Research pipeline responders (spec.name → deterministic output derived from the prompt) ----------
+
+interface MockSource {
+    id: string;
+    url: string;
+    body: string;
+}
+
+function parseSources(prompt: string): MockSource[] {
+    const out: MockSource[] = [];
+    const re = /<<<SOURCE id=(\S+) url=(\S+?)>>>\n([\s\S]*?)\n<<<END SOURCE \1>>>/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(prompt))) out.push({ id: m[1], url: m[2], body: m[3].replace(/^Title:[^\n]*\n/, "") });
+    return out;
+}
+
+const firstSentence = (text: string) => {
+    const line = text.split("\n").find((l) => l.trim().length >= 20) ?? text;
+    const end = line.search(/[.!?](\s|$)/);
+    return (end > 15 ? line.slice(0, end + 1) : line).slice(0, 200).trim();
+};
+
+function researchResponse(name: string, request: AIRequest): unknown {
+    const full = `${request.system ?? ""}\n${request.prompt}`;
+
+    if (name === "research_extract") {
+        return {
+            articles: parseSources(request.prompt).map((s) => ({
+                id: s.id,
+                relevance: s.body.includes("[mock:irrelevant]") ? 0.05 : 0.9,
+                claims: s.body.includes("[mock:no-claims]") ? [] : [{ claim: firstSentence(s.body), quote: firstSentence(s.body) }],
+            })),
+        };
+    }
+
+    if (name === "research_draft") {
+        const claimRe = /^- \[(\S+?)\] (.+?) \(quote: "/gm;
+        const claims: Array<{ id: string; claim: string }> = [];
+        let m: RegExpExecArray | null;
+        while ((m = claimRe.exec(request.prompt))) claims.push({ id: m[1], claim: m[2] });
+        const ids = Array.from(new Set(claims.map((c) => c.id)));
+        const ordinals = ["the first source", "the second source", "the third source", "the fourth source", "the fifth source", "the sixth source"];
+        const domains = ids.map((_, i) => ordinals[i] ?? "another source").join(" and ");
+        let post = `According to ${domains}, ${claims.map((c) => c.claim.replace(/[.!?]+$/, "")).join(". Also, ")}. This matters for teams building with AI today and it is worth watching closely.`;
+        if (full.includes("[mock:invent-number]")) post += " Revenue grew 73% last year.";
+        if (full.includes("[mock:unsupported]")) post += " It will certainly transform every industry overnight.";
+        if (full.includes("[mock:leak]")) post += " <<<SOURCE id=x>>>";
+        return { post, hashtags: ["AI", "Tech"], sourceIds: ids.length ? ids : ["s1"] };
+    }
+
+    if (name === "research_check") {
+        const postText = request.prompt.split("\n\n<<<SOURCE")[0].replace(/^POST:\n/, "");
+        const sources = parseSources(request.prompt);
+        const supported = sources[0] ? firstSentence(sources[0].body) : undefined;
+        const claims = [{ text: postText.slice(0, 120), supported: !postText.includes("[mock:unsupported]") && !postText.includes("transform every industry"), quote: supported }];
+        return { claims };
+    }
+    return undefined;
+}
+
 export function mockProvider(id: ProviderId): AIProvider {
     return {
         id,
@@ -45,9 +106,27 @@ export function mockProvider(id: ProviderId): AIProvider {
         },
         async generateStructured<T>(request: AIRequest, spec: StructuredSpec<T>): Promise<StructuredAIResult<T>> {
             failIfAsked(request.prompt);
-            const text = JSON.stringify(sampleFor(spec.schema));
+            const text = JSON.stringify(researchResponse(spec.name, request) ?? sampleFor(spec.schema));
             return { text, usage: usageFor(request, text), model: request.model, provider: id, data: parseStructured(text, spec) };
         },
+        ...(id === "gemini" ?
+            {
+                async search(request: AIRequest): Promise<GroundedResult> {
+                    failIfAsked(request.prompt);
+                    const urls = Array.from(request.prompt.matchAll(/\[mock:url=(\S+?)\]/g)).map((m) => m[1]);
+                    const text = `Mock grounded answer about: ${request.prompt.slice(0, 60)}`;
+                    return {
+                        text,
+                        usage: usageFor(request, text),
+                        model: request.model,
+                        provider: id,
+                        sources: urls.map((u, i) => ({ url: u, title: `Mock result ${i + 1}` })),
+                        queries: ["mock query"],
+                        extraCostMicroUsd: GROUNDING_COST_MICRO_USD_PER_QUERY,
+                    };
+                },
+            } :
+            {}),
         async validateKey(apiKey) {
             if (!apiKey.startsWith("test-valid")) throw new ProviderError("auth", "Mock: key rejected.", 401);
         },

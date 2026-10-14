@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Archive, ArchiveRestore, MoreVertical, Pause, Pencil, Play, Sparkles, Trash2 } from "lucide-react"
+import { Archive, ArchiveRestore, MoreVertical, Pause, Pencil, Play, Search, Sparkles, Trash2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -38,9 +38,10 @@ interface PersonaCardProps {
     onStatusChange: (status: PersonaStatus) => void
     onDelete: () => void
     onTest?: () => void
+    onResearch?: () => void
 }
 
-export function PersonaCard({ persona, busy, onStatusChange, onDelete, onTest }: PersonaCardProps) {
+export function PersonaCard({ persona, busy, onStatusChange, onDelete, onTest, onResearch }: PersonaCardProps) {
     const [confirmDelete, setConfirmDelete] = useState(false)
     const badge = statusBadge[persona.status]
     const archived = persona.status === "archived"
@@ -67,6 +68,9 @@ export function PersonaCard({ persona, busy, onStatusChange, onDelete, onTest }:
                             <DropdownMenuItem asChild>
                                 <Link href={`${Routes.AUTOPILOT}/${persona.id}`}><Pencil className="mr-2 h-4 w-4" /> Edit</Link>
                             </DropdownMenuItem>
+                        )}
+                        {persona.status === "active" && onResearch && (
+                            <DropdownMenuItem onClick={onResearch}><Search className="mr-2 h-4 w-4" /> Run research</DropdownMenuItem>
                         )}
                         {!archived && onTest && (
                             <DropdownMenuItem onClick={onTest}><Sparkles className="mr-2 h-4 w-4" /> Test generate</DropdownMenuItem>

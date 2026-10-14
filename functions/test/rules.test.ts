@@ -93,13 +93,17 @@ describe("workspaces", () => {
 });
 
 describe("AI + billing collections", () => {
-    const readable = ["aiConnections/c1", "creditWallets/main", "creditLedger/l1", "creditReservations/r1", "usageRecords/u1", "personaUsage/p1_202610"];
+    const readable = [
+        "aiConnections/c1", "creditWallets/main", "creditLedger/l1", "creditReservations/r1", "usageRecords/u1", "personaUsage/p1_202610",
+        "workflowRuns/run1", "contentItems/content1", "researchItems/item1",
+    ];
 
     beforeEach(async () => {
         await env.withSecurityRulesDisabled(async (ctx) => {
             const db = ctx.firestore();
             for (const path of readable) await setDoc(doc(db, `workspaces/alice/${path}`), { x: 1 });
             await setDoc(doc(db, "workspaces/alice/aiConnectionSecrets/c1"), { secretRef: "projects/p/secrets/byok-alice-c1" });
+            await setDoc(doc(db, "workspaces/alice/runLocks/p1"), { runId: "r1" });
             await setDoc(doc(db, "_emulatorSecrets/byok-alice-c1"), { value: "sk-secret" });
         });
     });
@@ -118,6 +122,7 @@ describe("AI + billing collections", () => {
     it("key references and emulator secrets are denied to everyone, including the owner", async () => {
         await assertFails(getDoc(doc(asAlice(), "workspaces/alice/aiConnectionSecrets/c1")));
         await assertFails(getDocs(collection(asAlice(), "workspaces/alice/aiConnectionSecrets")));
+        await assertFails(getDoc(doc(asAlice(), "workspaces/alice/runLocks/p1"))); // research run locks are server-only
         await assertFails(getDoc(doc(asAlice(), "_emulatorSecrets/byok-alice-c1")));
         await assertFails(getDoc(doc(asAnon(), "_emulatorSecrets/byok-alice-c1")));
     });

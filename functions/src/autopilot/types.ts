@@ -45,7 +45,11 @@ export type AuditAction =
     | "ai.connection.test"
     | "ai.connection.revoke"
     | "credits.grant"
-    | "persona.testGenerate";
+    | "persona.testGenerate"
+    | "research.run"
+    | "content.update"
+    | "content.status"
+    | "content.export";
 
 export type AuditLog = {
     action: AuditAction;

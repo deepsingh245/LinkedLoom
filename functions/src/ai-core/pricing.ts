@@ -7,7 +7,10 @@ import type { TokenUsage } from "./types";
  * ⚠️ PLACEHOLDER VALUES – verify against the official Gemini and OpenAI pricing pages and
  * bump PRICE_VERSION before charging real customers.
  */
-export const PRICE_VERSION = "2026-10-draft";
+export const PRICE_VERSION = "2026-10-draft-2";
+
+/** Google Search grounding is billed per search query on top of tokens. PLACEHOLDER – verify on the Gemini pricing page. */
+export const GROUNDING_COST_MICRO_USD_PER_QUERY = 35_000;
 
 const PRICES: Record<string, { inputPerMTok: number; outputPerMTok: number }> = {
     "gemini-2.5-flash-lite": { inputPerMTok: 0.1, outputPerMTok: 0.4 },

@@ -10,6 +10,8 @@ export const Routes = {
     AUTOPILOT: "/autopilot",
     AUTOPILOT_NEW: "/autopilot/new",
     AUTOPILOT_AI: "/autopilot/ai",
+    AUTOPILOT_DRAFTS: "/autopilot/drafts",
+    AUTOPILOT_RUNS: "/autopilot/runs",
     AUTOPILOT_CREDITS: "/autopilot/credits",
     SETTINGS_PROFILE: "/settings/profile",
     SETTINGS_PREFERENCES: "/settings/preferences",

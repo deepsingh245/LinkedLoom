@@ -4,6 +4,7 @@ import * as FirebaseAnalytics from './firebase/analytics';
 import * as FirebaseIntegrations from './firebase/integrations';
 import * as FirebaseAutopilot from './firebase/autopilot';
 import * as FirebaseAI from './firebase/ai';
+import * as FirebaseResearch from './firebase/research';
 
 export const api = {
   firebaseService: {
@@ -13,5 +14,6 @@ export const api = {
     ...FirebaseIntegrations,
     ...FirebaseAutopilot,
     ...FirebaseAI,
+    ...FirebaseResearch,
   },
 };

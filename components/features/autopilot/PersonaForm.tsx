@@ -37,7 +37,7 @@ export const emptyPersona = (): PersonaFormValues => ({
     name: "",
     description: "",
     identity: { role: "", targetAudience: "", tone: "professional", language: "English", customInstructions: "" },
-    research: { topics: [], keywords: [], excludedTopics: [], feedUrls: [], freshnessHours: 48, minSourceCount: 2 },
+    research: { topics: [], keywords: [], excludedTopics: [], feedUrls: [], freshnessHours: 48, minSourceCount: 2, webSearch: false },
     publishing: {
         accountIds: ["linkedin"],
         postsPerDay: 1,
@@ -60,6 +60,7 @@ export const personaToFormValues = (p: Persona): PersonaFormValues => ({
         feedUrls: p.research.feedUrls ?? [],
         freshnessHours: p.research.freshnessHours,
         minSourceCount: p.research.minSourceCount,
+        webSearch: p.research.webSearch ?? false,
     },
     publishing: { ...p.publishing, approvalMode: "manual" },
     ai: { connectionId: p.ai.connectionId ?? MANAGED, modelProfile: p.ai.modelProfile, monthlyCreditLimit: p.ai.monthlyCreditLimit },
@@ -220,6 +221,20 @@ export function PersonaForm({ defaultValues, submitLabel, onSubmit, onCancel, di
                                     <FormItem>
                                         <FormLabel>Freshness window (hours)</FormLabel>
                                         <FormControl><Input type="number" min={1} max={PERSONA_LIMITS.freshnessHoursMax} value={field.value} onChange={numberField(field.onChange)} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                                <FormField control={form.control} name="research.webSearch" render={({ field }) => (
+                                    <FormItem className="md:col-span-2">
+                                        <FormLabel>Web search (Gemini)</FormLabel>
+                                        <Select value={field.value ? "on" : "off"} onValueChange={(v) => field.onChange(v === "on")}>
+                                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="off">Off – only my RSS feeds</SelectItem>
+                                                <SelectItem value="on">On – also search Google for fresh articles</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormDescription>Extra cost per run (search is billed per query). Needs Gemini billing: LinkedLoom credits or your own Gemini key.</FormDescription>
                                         <FormMessage />
                                     </FormItem>
                                 )} />

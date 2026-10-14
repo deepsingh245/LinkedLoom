@@ -54,6 +54,8 @@ export const personaInputSchema = z
             feedUrls: z.array(httpsUrl).max(L.feedUrlsMax).transform((u) => Array.from(new Set(u))),
             freshnessHours: z.number().int().min(L.freshnessHoursMin).max(L.freshnessHoursMax),
             minSourceCount: z.number().int().min(L.minSourceCountMin).max(L.minSourceCountMax),
+            // Let the research run use Gemini Google Search (metered). Older personas without it default to off.
+            webSearch: z.boolean().default(false),
         }),
         publishing: z.object({
             accountIds: z.array(z.enum(PLATFORMS)).min(1, { message: "Pick at least one platform." }).max(PLATFORMS.length),

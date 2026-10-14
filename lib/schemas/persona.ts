@@ -62,6 +62,7 @@ export const personaFormSchema = z.object({
       .max(L.feedUrlsMax, { message: `Up to ${L.feedUrlsMax} feeds.` }),
     freshnessHours: z.number().int().min(1).max(L.freshnessHoursMax),
     minSourceCount: z.number().int().min(1).max(L.minSourceCountMax),
+    webSearch: z.boolean(),
   }),
   publishing: z.object({
     accountIds: z.array(z.enum(["linkedin"])).min(1, { message: "Pick at least one platform." }),

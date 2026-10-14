@@ -12,6 +12,10 @@ import type { LedgerEntry } from "@/types/ai"
 
 const FEATURE_LABELS: Record<string, string> = {
     "autopilot.testGenerate": "Persona test",
+    "autopilot.research.search": "Research · web search",
+    "autopilot.research.extract": "Research · read articles",
+    "autopilot.research.generate": "Research · write drafts",
+    "autopilot.research.verify": "Research · fact-check",
     "editor.generatePost": "Create Post · text",
     "editor.enhanceImagePrompt": "Create Post · prompt",
     "editor.generateImage": "Create Post · image",

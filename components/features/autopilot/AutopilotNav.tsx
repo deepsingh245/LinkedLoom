@@ -2,12 +2,14 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Bot, Coins, KeyRound } from "lucide-react"
+import { Bot, Coins, FileText, History, KeyRound } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Routes } from "@/lib/routes"
 
 const items = [
     { href: Routes.AUTOPILOT, label: "Personas", icon: Bot },
+    { href: Routes.AUTOPILOT_DRAFTS, label: "Drafts", icon: FileText },
+    { href: Routes.AUTOPILOT_RUNS, label: "Runs", icon: History },
     { href: Routes.AUTOPILOT_AI, label: "AI keys", icon: KeyRound },
     { href: Routes.AUTOPILOT_CREDITS, label: "Credits & usage", icon: Coins },
 ]

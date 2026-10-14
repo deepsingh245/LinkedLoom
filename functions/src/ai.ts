@@ -1,5 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { VertexAI } from "@google-cloud/vertexai";
+import type { VertexAI } from "@google-cloud/vertexai";
 import { runAI } from "./ai-core/execute";
 import { costMicroUsd, PRICE_VERSION } from "./ai-core/pricing";
 import { consumeDailyQuota, recordUsage } from "./ai-core/usage";
@@ -19,14 +19,18 @@ const textCap = {
     message: `You've reached today's limit of ${TEXT_DAILY_CAP} AI text generations. Try again tomorrow.`,
 };
 
-const vertexAI = new VertexAI({
-    project: process.env.PROJECT_ID || "linkedloom",
-    location: "us-central1",
-});
-
-const imageModel = vertexAI.getGenerativeModel({
-    model: IMAGE_MODEL,
-});
+// Lazy: Vertex AI is heavy to load and only needed for image generation.
+let imageModelInstance: ReturnType<VertexAI["getGenerativeModel"]> | undefined;
+const getImageModel = () => {
+    if (!imageModelInstance) {
+        const { VertexAI: Vertex } = require("@google-cloud/vertexai") as typeof import("@google-cloud/vertexai");
+        imageModelInstance = new Vertex({
+            project: process.env.PROJECT_ID || "linkedloom",
+            location: "us-central1",
+        }).getGenerativeModel({ model: IMAGE_MODEL });
+    }
+    return imageModelInstance;
+};
 
 async function retryWithBackoff<T>(
     fn: () => Promise<T>,
@@ -108,7 +112,7 @@ export const generateImage = onCall(
             }
 
             const result = await retryWithBackoff(() =>
-                imageModel.generateContent({
+                getImageModel().generateContent({
                     contents: [{
                         role: "user",
                         parts: parts,

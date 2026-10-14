@@ -21,6 +21,10 @@ export default function PrivacyPage() {
                 <ul>
                     <li><strong>Account data:</strong> name, email address and profile details you provide when you sign up or edit your profile.</li>
                     <li><strong>Content you create:</strong> drafts, scheduled and published posts, tone and platform settings, and images you upload or generate.</li>
+                    <li>
+                        <strong>AI Autopilot (research):</strong> persona settings you create (topics, feed URLs, schedule), research runs, and the drafts they
+                        produce, including titles, links, dates and short quoted excerpts of the public web pages used as sources. We do not store full copies of articles.
+                    </li>
                     <li><strong>LinkedIn connection:</strong> when you connect LinkedIn, an access token and basic profile identifiers needed to publish on your behalf.</li>
                     <li>
                         <strong>Reddit connection:</strong> when you connect Reddit, your Reddit username and user ID, profile icon URL,
@@ -40,6 +44,10 @@ export default function PrivacyPage() {
                 <ul>
                     <li>To publish and schedule posts you create, only at your request and only to the accounts you connected.</li>
                     <li>To show you post history and analytics for your own posts.</li>
+                    <li>
+                        When you run research for a persona, to fetch the RSS feeds and public web pages you configured (and, if you turn it on, pages found through
+                        Google Search via Gemini) and to have AI write and fact-check sourced drafts for you to review. Drafts are never published automatically.
+                    </li>
                     <li>To generate drafts and images with AI when you ask for it. Only the text you enter or the draft you select is sent to the AI provider.</li>
                     <li>To secure the service, prevent abuse (for example, a daily limit on Reddit posts per user) and fix problems.</li>
                 </ul>
@@ -54,7 +62,8 @@ export default function PrivacyPage() {
                 <p>We share data only with providers that run the service for us:</p>
                 <ul>
                     <li>Google Firebase / Google Cloud (authentication, database, file storage, hosting and server functions).</li>
-                    <li>Google AI services (Gemini / Vertex AI) to generate text and images when you request them.</li>
+                    <li>Google AI services (Gemini / Vertex AI) to generate text and images when you request them, and to search the web when you enable web search.</li>
+                    <li>OpenAI, only if you connect your own OpenAI API key; your key is stored in Google Cloud Secret Manager and used only to run your requests.</li>
                     <li>LinkedIn and Reddit, when you publish or sync through the accounts you connected.</li>
                 </ul>
                 <p className="mt-3">We may also disclose information if required by law.</p>

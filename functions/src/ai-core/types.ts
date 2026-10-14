@@ -28,6 +28,18 @@ export interface AIResult {
     usage: TokenUsage;
     model: string;
     provider: ProviderId;
+    /** Per-request charges that aren't tokens (e.g. Google Search grounding queries), in micro-USD. */
+    extraCostMicroUsd?: number;
+}
+
+export interface GroundedSource {
+    url: string;
+    title: string;
+}
+
+export interface GroundedResult extends AIResult {
+    sources: GroundedSource[];
+    queries: string[];
 }
 
 export interface StructuredAIResult<T> extends AIResult {
@@ -43,6 +55,8 @@ export interface AIProvider {
     id: ProviderId;
     generateText(request: AIRequest, options: CallOptions): Promise<AIResult>;
     generateStructured<T>(request: AIRequest, spec: StructuredSpec<T>, options: CallOptions): Promise<StructuredAIResult<T>>;
+    /** Web-search-grounded generation (providers that support it). Sources are the pages the answer is based on. */
+    search?(request: AIRequest, options: CallOptions): Promise<GroundedResult>;
     /** Cheap call that proves the key works (e.g. list models). Throws ProviderError on failure. */
     validateKey(apiKey: string, timeoutMs: number): Promise<void>;
 }

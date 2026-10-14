@@ -1,9 +1,12 @@
-import OpenAI, { APIConnectionError, APIError } from "openai";
 import { AIProvider, AIRequest, AIResult, CallOptions, ProviderError, StructuredAIResult, StructuredSpec } from "../types";
 import { parseStructured, toProviderJsonSchema } from "./structured";
 
+// Lazy: the SDK is slow to load and only needed when an OpenAI call is actually made.
+const sdk = () => require("openai") as typeof import("openai");
+
 function toProviderError(error: unknown): ProviderError {
     if (error instanceof ProviderError) return error;
+    const { APIConnectionError, APIError } = sdk();
     // Connection errors (incl. timeouts) happen after we may have sent the request.
     if (error instanceof APIConnectionError) return new ProviderError("ambiguous", "OpenAI request did not complete.");
     if (error instanceof APIError) {
@@ -17,7 +20,7 @@ function toProviderError(error: unknown): ProviderError {
 }
 
 // maxRetries 0: retries are decided by our own billing/idempotency logic, not hidden in the SDK.
-const client = (apiKey: string, timeoutMs: number) => new OpenAI({ apiKey, timeout: timeoutMs, maxRetries: 0 });
+const client = (apiKey: string, timeoutMs: number) => new (sdk().OpenAI)({ apiKey, timeout: timeoutMs, maxRetries: 0 });
 
 async function generate(
     request: AIRequest,

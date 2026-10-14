@@ -1,4 +1,4 @@
-import { SecretManagerServiceClient } from "@google-cloud/secret-manager";
+import type { SecretManagerServiceClient } from "@google-cloud/secret-manager";
 import { getFirestore } from "firebase-admin/firestore";
 
 /** Where BYOK API keys live. Firestore only ever stores the returned reference. */
@@ -20,7 +20,13 @@ function cached(ref: string): string | undefined {
 
 /** Google Cloud Secret Manager: one secret per BYOK key (`byok-…`), automatic replication. */
 class GcpSecretStore implements SecretStore {
-    private client = new SecretManagerServiceClient();
+    private client: SecretManagerServiceClient;
+
+    constructor() {
+        // Lazy: the client library is heavy (gRPC) and only needed for real BYOK key storage.
+        const { SecretManagerServiceClient: Client } = require("@google-cloud/secret-manager") as typeof import("@google-cloud/secret-manager");
+        this.client = new Client();
+    }
 
     private project(): string {
         const project = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT;

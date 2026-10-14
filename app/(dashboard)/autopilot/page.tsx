@@ -20,6 +20,7 @@ import { PersonaCard } from "@/components/features/autopilot/PersonaCard"
 import { KillSwitch } from "@/components/features/autopilot/KillSwitch"
 import { AutopilotNav } from "@/components/features/autopilot/AutopilotNav"
 import { TestGenerateDialog } from "@/components/features/autopilot/TestGenerateDialog"
+import { RunResearchDialog } from "@/components/features/autopilot/RunResearchDialog"
 import type { Persona } from "@/types/autopilot"
 
 export default function AutopilotPage() {
@@ -31,6 +32,7 @@ export default function AutopilotPage() {
     const setEnabled = useSetAutopilotEnabled(user?.uid)
     const [showArchived, setShowArchived] = useState(false)
     const [testing, setTesting] = useState<Persona | null>(null)
+    const [researching, setResearching] = useState<Persona | null>(null)
 
     const live = personas.filter((p) => p.status !== "archived")
     const archived = personas.filter((p) => p.status === "archived")
@@ -93,6 +95,7 @@ export default function AutopilotPage() {
                             key={persona.id}
                             persona={persona}
                             onTest={() => setTesting(persona)}
+                            onResearch={() => setResearching(persona)}
                             busy={busyId === persona.id}
                             onStatusChange={(status) => setStatus.mutate({ personaId: persona.id, status })}
                             onDelete={() => deletePersona.mutate(persona.id)}
@@ -120,6 +123,15 @@ export default function AutopilotPage() {
                         </div>
                     )}
                 </div>
+            )}
+
+            {researching && (
+                <RunResearchDialog
+                    persona={researching}
+                    userId={user?.uid}
+                    open={!!researching}
+                    onOpenChange={(open) => !open && setResearching(null)}
+                />
             )}
 
             {testing && (

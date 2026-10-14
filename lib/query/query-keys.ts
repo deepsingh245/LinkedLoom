@@ -29,5 +29,7 @@ export const queryKeys = {
     wallet: (userId: string) => ['autopilot', userId, 'wallet'] as const,
     ledger: (userId: string) => ['autopilot', userId, 'ledger'] as const,
     usage: (userId: string) => ['autopilot', userId, 'usage'] as const,
+    drafts: (userId: string) => ['autopilot', userId, 'drafts'] as const,
+    runs: (userId: string) => ['autopilot', userId, 'runs'] as const,
   },
 } as const;

@@ -68,6 +68,16 @@ export default function TermsPage() {
             </section>
 
             <section>
+                <h2>5a. AI research and sources</h2>
+                <p>
+                    The research feature reads public web pages and feeds that you configure (or that web search finds) on your behalf, and drafts posts that cite
+                    them. You are responsible for the feeds you add and for complying with the terms of the sites involved. Drafts may still contain errors and are
+                    never published automatically: review the sources, edit, and make sure you have the right to share any quoted material before you post it.
+                    If you use your own AI provider key, you are responsible for that provider&apos;s charges and terms.
+                </p>
+            </section>
+
+            <section>
                 <h2>6. Your content</h2>
                 <p>
                     You keep ownership of the content you create. You grant us a limited license to store, process and transmit it only to operate

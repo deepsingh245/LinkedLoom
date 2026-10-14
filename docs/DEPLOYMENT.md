@@ -84,6 +84,8 @@ AUTOPILOT_TRIAL_CREDITS=200     # credits every new workspace starts with
 EDITOR_TEXT_DAILY_CAP=100       # Create Post text generations per user per day (metered, free)
 EDITOR_IMAGE_DAILY_CAP=30       # Create Post images per user per day
 BYOK_DAILY_CALL_CAP=200         # AI calls per workspace per day on users' own keys
+AUTOPILOT_DAILY_RUNS=10         # research runs per workspace per day
+AUTOPILOT_RUN_MAX_AI_CALLS=12    # hard cap of AI calls inside one research run
 ```
 
 Users' own keys (BYOK) are **not** in `.env`: they go to Google Cloud Secret Manager at runtime (see §7.1). Managed keys still come from `.env`; moving them to `firebase functions:secrets:set` is a later hardening step (remove them from `.env` at the same time, or deploy fails on the name clash).
@@ -156,7 +158,7 @@ firebase deploy --only functions,firestore:rules,firestore:indexes,storage
 
 Functions in this repo: `generatePost`, `generateImage`, `enhanceImagePrompt` (ai.ts) · LinkedIn: `getLinkedInAuthUrl`, `exchangeLinkedInToken`, `publishToLinkedIn`, `getLinkedInAnalytics` · Reddit: `getRedditAuthUrl`, `exchangeRedditToken`, `publishToReddit`, `disconnectReddit`, `getRedditAnalytics` · `checkScheduledPosts` (every 10 min) · `generateResizedImages` (Storage trigger).
 
-AI Autopilot: personas `createPersona`, `updatePersona`, `setPersonaStatus`, `deletePersona`, `setAutopilotEnabled` · AI `addAIConnection`, `testAIConnection`, `revokeAIConnection`, `testPersonaGeneration` · credits `adminGrantCredits`, `sweepCreditReservations` (every 15 min).
+AI Autopilot: personas `createPersona`, `updatePersona`, `setPersonaStatus`, `deletePersona`, `setAutopilotEnabled` · AI `addAIConnection`, `testAIConnection`, `revokeAIConnection`, `testPersonaGeneration` · credits `adminGrantCredits`, `sweepCreditReservations` (every 15 min) · research `runResearch` (up to 9 min, 512 MiB), `updateContentItem`, `setContentStatus`, `exportContentToDraft`.
 
 Requirements: project on the **Blaze** plan; Node 22; Cloud Scheduler + Pub/Sub APIs are enabled automatically on first deploy of `checkScheduledPosts`.
 
@@ -174,7 +176,9 @@ Requirements: project on the **Blaze** plan; Node 22; Cloud Scheduler + Pub/Sub 
 4. Cost: Secret Manager bills per active secret version and per access; resolved keys are cached in memory for 5 minutes per instance.
 5. Index: deploy `firestore:indexes` – the sweeper needs the `creditReservations (status, expiresAt)` collection-group index.
 6. Admin grants: give your own account the admin claim once with the Admin SDK (`getAuth().setCustomUserClaims(uid, { admin: true })`), then call `adminGrantCredits`.
-7. ⚠️ Prices in `functions/src/ai-core/pricing.ts` and model ids in `registry.ts` are placeholders – verify against the official Gemini/OpenAI pages and bump `PRICE_VERSION` before charging anyone.
+7. Research (Phase 3): set a Firestore **TTL policy** on collection group `researchItems`, field `expireAt` (Console → Firestore → Time-to-live) so dedupe memory is deleted after 30 days. Without it nothing breaks, the collection just grows.
+8. ⚠️ Web search uses Gemini Google Search grounding, billed per query (`GROUNDING_COST_MICRO_USD_PER_QUERY` in `pricing.ts` is a placeholder) and its availability/pricing must be verified for the project. Research fetches third-party pages from Cloud Functions: `safe-fetch.ts` blocks private/metadata addresses; never loosen it, and `RESEARCH_ALLOW_LOCALHOST` must never be set outside the emulator test project.
+9. ⚠️ Prices in `functions/src/ai-core/pricing.ts` and model ids in `registry.ts` are placeholders – verify against the official Gemini/OpenAI pages and bump `PRICE_VERSION` before charging anyone.
 
 Logs:
 ```bash
