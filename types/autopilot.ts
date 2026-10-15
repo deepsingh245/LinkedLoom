@@ -29,6 +29,7 @@ export interface PersonaInput {
     freshnessHours: number;
     minSourceCount: number;
     webSearch?: boolean;
+    autoRun?: boolean;
   };
   publishing: {
     accountIds: AutopilotPlatform[];
@@ -54,6 +55,9 @@ export interface Persona extends PersonaInput {
   createdBy: string;
   createdAt?: Date;
   updatedAt?: Date;
+  nextRunAt?: Date;
+  lastRunAt?: Date;
+  lastRunStatus?: string;
 }
 
 export interface AutopilotSettings {

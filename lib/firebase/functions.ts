@@ -14,6 +14,8 @@ export enum FirebaseFunctions {
     REVOKE_AI_CONNECTION = "revokeAIConnection",
     TEST_PERSONA_GENERATION = "testPersonaGeneration",
     RUN_RESEARCH = "runResearch",
+    CANCEL_RUN = "cancelRun",
+    RETRY_RUN = "retryRun",
     UPDATE_CONTENT_ITEM = "updateContentItem",
     SET_CONTENT_STATUS = "setContentStatus",
     EXPORT_CONTENT_TO_DRAFT = "exportContentToDraft",

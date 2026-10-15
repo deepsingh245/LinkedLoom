@@ -21,6 +21,7 @@ const toRun = (id: string, data: DocumentData): WorkflowRun =>
     stats: data.stats ?? {},
     notes: data.notes ?? [],
     rejections: data.rejections ?? [],
+    createdAt: toDate(data.createdAt),
     startedAt: toDate(data.startedAt),
     finishedAt: toDate(data.finishedAt),
   }) as WorkflowRun;
@@ -41,30 +42,32 @@ export const getContentItems = async (uid: string, max = 100): Promise<ContentIt
   return snap.docs.map((d) => toContent(d.id, d.data()));
 };
 
-export const getRuns = async (uid: string, max = 30): Promise<WorkflowRun[]> => {
+export const getRuns = async (uid: string, max = 250): Promise<WorkflowRun[]> => {
   const snap = await getDocs(query(collection(db, Collections.WORKSPACES, uid, "workflowRuns"), orderBy("createdAt", "desc"), limit(max)));
   return snap.docs.map((d) => toRun(d.id, d.data()));
 };
 
 /** Live view of a single run (steps tick in as the pipeline progresses). */
-export const subscribeToRun = (uid: string, runId: string, onChange: (run: WorkflowRun) => void): Unsubscribe =>
+export const subscribeToRun = (uid: string, runId: string, onChange: (run: WorkflowRun) => void, onError?: (error: Error) => void): Unsubscribe =>
   onSnapshot(doc(db, Collections.WORKSPACES, uid, "workflowRuns", runId), (snap) => {
     if (snap.exists()) onChange(toRun(snap.id, snap.data()));
-  });
-
-/** Newest run for a persona that is still running (used to show progress for a run started elsewhere). */
-export const subscribeToLatestRun = (uid: string, onChange: (run: WorkflowRun | null) => void): Unsubscribe =>
-  onSnapshot(
-    query(collection(db, Collections.WORKSPACES, uid, "workflowRuns"), orderBy("createdAt", "desc"), limit(1)),
-    (snap) => onChange(snap.empty ? null : toRun(snap.docs[0].id, snap.docs[0].data()))
-  );
+  }, onError);
 
 // Writes go through callable Cloud Functions.
 
 export const runResearch = async (personaId: string) => {
-  // The pipeline can take several minutes; give the call a longer timeout than the default.
-  const call = httpsCallable<{ personaId: string }, RunResearchResult>(functions, FirebaseFunctions.RUN_RESEARCH, { timeout: 560_000 });
+  const call = httpsCallable<{ personaId: string }, RunResearchResult>(functions, FirebaseFunctions.RUN_RESEARCH);
   return (await call({ personaId })).data;
+};
+
+export const cancelRun = async (runId: string) => {
+  const call = httpsCallable<{ runId: string }, { runId: string; status: string }>(functions, FirebaseFunctions.CANCEL_RUN);
+  return (await call({ runId })).data;
+};
+
+export const retryRun = async (runId: string): Promise<RunResearchResult> => {
+  const call = httpsCallable<{ runId: string }, RunResearchResult>(functions, FirebaseFunctions.RETRY_RUN);
+  return (await call({ runId })).data;
 };
 
 export const updateContentItem = async (contentId: string, text: string) => {

@@ -8,7 +8,7 @@ import { errorMessage } from "../../ai-core/redact";
 import { personasRef, settingsRef, workspaceRef, writeAudit } from "../workspace";
 import { deleteArtifacts } from "./artifacts";
 import { CancelRun, classifyError, StopRun } from "./errors";
-import { extendLock, releaseLock } from "./lock";
+import { extendLock, runLockRef } from "./lock";
 import {
     buildStepCtx, stepDiscover, stepExtract, stepFetch, stepFilter, stepGenerate, stepStore, stepVerify,
     type StepCtx, type StepOutcome,
@@ -87,14 +87,16 @@ export async function finalizeRun(
     if (opts.steps) update.steps = opts.steps;
     // Only the first finalizer wins: a duplicate or late worker must never turn "cancelled" into "completed" (or the reverse).
     const runRef = runRefOf(workspaceId, runId);
+    const lockRef = runLockRef(workspaceId, opts.personaId);
     await getFirestore().runTransaction(async (tx) => {
-        const current = (await tx.get(runRef)).data()?.status as RunStatus | undefined;
+        const [runSnap, lockSnap] = await Promise.all([tx.get(runRef), tx.get(lockRef)]);
+        const current = runSnap.data()?.status as RunStatus | undefined;
         if (current && TERMINAL_STATUSES.includes(current)) return;
+        if (lockSnap.data()?.runId === runId) tx.delete(lockRef);
         tx.set(runRef, update, { merge: true });
     });
 
     await deleteArtifacts(workspaceId, runId).catch((e) => logger.warn("Artifact cleanup failed", { runId, error: errorMessage(e) }));
-    await releaseLock(workspaceId, opts.personaId, runId);
     // Best effort: persona may have been deleted.
     await personasRef(workspaceId).doc(opts.personaId).update({ lastRunAt: FieldValue.serverTimestamp(), lastRunStatus: status }).catch(() => undefined);
     if (opts.uid) await writeAudit(workspaceId, opts.uid, "research.run", opts.personaId, { runId, status }).catch(() => undefined);

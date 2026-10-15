@@ -1,6 +1,7 @@
 // Client-side shapes for research runs and drafts (mirrors functions/src/autopilot/research).
 
-export type RunStatus = "running" | "completed" | "partial" | "failed";
+export type RunStatus = "queued" | "running" | "completed" | "partial" | "failed" | "cancelled" | "skipped";
+export type RunTrigger = "manual" | "scheduled" | "retry";
 export type StepName = "discover" | "filter" | "fetch" | "extract" | "generate" | "verify" | "store";
 export type StepStatus = "running" | "done" | "skipped" | "failed";
 
@@ -39,7 +40,11 @@ export interface WorkflowRun {
   personaId: string;
   personaName?: string;
   personaVersion: number;
-  trigger: "manual";
+  trigger: RunTrigger;
+  retryOf?: string;
+  reason?: string;
+  currentStep?: StepName;
+  cancelRequested?: boolean;
   status: RunStatus;
   steps: RunStep[];
   stats: Partial<RunStats>;
@@ -47,6 +52,7 @@ export interface WorkflowRun {
   rejections: Rejection[];
   draftIds?: string[];
   credits?: number;
+  createdAt?: Date;
   startedAt?: Date;
   finishedAt?: Date;
 }
@@ -87,8 +93,5 @@ export interface ContentItem {
 
 export interface RunResearchResult {
   runId: string;
-  status: RunStatus;
-  drafts: number;
-  stats: RunStats;
-  notes: string[];
+  status: "queued";
 }

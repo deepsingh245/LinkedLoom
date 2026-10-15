@@ -177,7 +177,7 @@ Requirements: project on the **Blaze** plan; Node 22; Cloud Scheduler + Pub/Sub 
 4. Indexes: `firebase deploy --only firestore:indexes` adds collection-group overrides for `personas.research.autoRun` and `workflowRuns.status` (used by the reconcile job and the reaper). They take a few minutes to build.
 5. Automatic research is **opt-in per persona** and runs only for `active` personas with a feed or web search; the kill switch ("Stop all") stops everything. Check logs with `firebase functions:log --only dispatchResearch,researchStep`.
 6. Ops: with the admin claim you can call `adminDispatchResearch` (`{ reconcile: true }` rebuilds the schedule index) and `adminReapResearchRuns` by hand.
-7. Privacy: fetched article text is kept in server-only run artifacts for the duration of a run (deleted at the end, ≤24 h by TTL). `/privacy` must say so (see `docs/ai-autopilot/HANDOFF.md` §3).
+7. Privacy: `/privacy` and `/terms` explain opt-in automatic research, the Stop all switch, and temporary fetched article text (deleted when a run ends; unfinished-run artifacts marked to expire after 24 hours).
 
 ### 7.1 One-time setup for AI Autopilot (BYOK keys in Secret Manager)
 

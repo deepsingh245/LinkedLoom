@@ -19,6 +19,8 @@ const toPersona = (id: string, data: DocumentData): Persona => ({
   id,
   createdAt: toDate(data.createdAt),
   updatedAt: toDate(data.updatedAt),
+  nextRunAt: toDate(data.nextRunAt),
+  lastRunAt: toDate(data.lastRunAt),
 });
 
 export const getPersonas = async (uid: string): Promise<Persona[]> => {

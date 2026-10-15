@@ -21,12 +21,15 @@ import { KillSwitch } from "@/components/features/autopilot/KillSwitch"
 import { AutopilotNav } from "@/components/features/autopilot/AutopilotNav"
 import { TestGenerateDialog } from "@/components/features/autopilot/TestGenerateDialog"
 import { RunResearchDialog } from "@/components/features/autopilot/RunResearchDialog"
+import { countScheduledRunAlerts, useRuns } from "@/lib/query/hooks/use-research"
 import type { Persona } from "@/types/autopilot"
 
 export default function AutopilotPage() {
     const { user } = useAuth()
     const { data: personas = [], isLoading } = usePersonas(user?.uid)
     const { data: settings } = useAutopilotSettings(user?.uid)
+    const { data: runs = [] } = useRuns(user?.uid)
+    const runAlerts = countScheduledRunAlerts(runs)
     const setStatus = useSetPersonaStatus(user?.uid)
     const deletePersona = useDeletePersona(user?.uid)
     const setEnabled = useSetAutopilotEnabled(user?.uid)
@@ -70,6 +73,13 @@ export default function AutopilotPage() {
             </div>
 
             <AutopilotNav />
+
+            {runAlerts > 0 && (
+                <Card className="border-destructive/40 p-4 text-sm" role="status">
+                    <span className="font-medium">{runAlerts} scheduled research run{runAlerts === 1 ? "" : "s"} failed or were skipped in the last 7 days.</span>{" "}
+                    <Link href={Routes.AUTOPILOT_RUNS} className="underline underline-offset-2">Review runs</Link>
+                </Card>
+            )}
 
             <KillSwitch
                 enabled={settings?.autopilotEnabled ?? true}

@@ -37,7 +37,7 @@ export const emptyPersona = (): PersonaFormValues => ({
     name: "",
     description: "",
     identity: { role: "", targetAudience: "", tone: "professional", language: "English", customInstructions: "" },
-    research: { topics: [], keywords: [], excludedTopics: [], feedUrls: [], freshnessHours: 48, minSourceCount: 2, webSearch: false },
+    research: { topics: [], keywords: [], excludedTopics: [], feedUrls: [], freshnessHours: 48, minSourceCount: 2, webSearch: false, autoRun: false },
     publishing: {
         accountIds: ["linkedin"],
         postsPerDay: 1,
@@ -61,6 +61,7 @@ export const personaToFormValues = (p: Persona): PersonaFormValues => ({
         freshnessHours: p.research.freshnessHours,
         minSourceCount: p.research.minSourceCount,
         webSearch: p.research.webSearch ?? false,
+        autoRun: p.research.autoRun ?? false,
     },
     publishing: { ...p.publishing, approvalMode: "manual" },
     ai: { connectionId: p.ai.connectionId ?? MANAGED, modelProfile: p.ai.modelProfile, monthlyCreditLimit: p.ai.monthlyCreditLimit },
@@ -212,7 +213,7 @@ export function PersonaForm({ defaultValues, submitLabel, onSubmit, onCancel, di
                                 <FormItem>
                                     <FormLabel>RSS / Atom feeds <span className="text-muted-foreground/60">(optional)</span></FormLabel>
                                     <FormControl><TagInput value={field.value} onChange={field.onChange} max={PERSONA_LIMITS.feedUrlsMax} maxLength={2048} placeholder="https://example.com/feed.xml" /></FormControl>
-                                    <FormDescription>Feeds are used once research is switched on in a later release.</FormDescription>
+                                    <FormDescription>Research reads these feeds when you start a run or enable automatic research.</FormDescription>
                                     <FormMessage />
                                 </FormItem>
                             )} />
@@ -224,8 +225,15 @@ export function PersonaForm({ defaultValues, submitLabel, onSubmit, onCancel, di
                                         <FormMessage />
                                     </FormItem>
                                 )} />
+                                <FormField control={form.control} name="research.minSourceCount" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Minimum sources per post</FormLabel>
+                                        <FormControl><Input type="number" min={1} max={PERSONA_LIMITS.minSourceCountMax} value={field.value} onChange={numberField(field.onChange)} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
                                 <FormField control={form.control} name="research.webSearch" render={({ field }) => (
-                                    <FormItem className="md:col-span-2">
+                                    <FormItem>
                                         <FormLabel>Web search (Gemini)</FormLabel>
                                         <Select value={field.value ? "on" : "off"} onValueChange={(v) => field.onChange(v === "on")}>
                                             <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
@@ -238,10 +246,17 @@ export function PersonaForm({ defaultValues, submitLabel, onSubmit, onCancel, di
                                         <FormMessage />
                                     </FormItem>
                                 )} />
-                                <FormField control={form.control} name="research.minSourceCount" render={({ field }) => (
+                                <FormField control={form.control} name="research.autoRun" render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Minimum sources per post</FormLabel>
-                                        <FormControl><Input type="number" min={1} max={PERSONA_LIMITS.minSourceCountMax} value={field.value} onChange={numberField(field.onChange)} /></FormControl>
+                                        <FormLabel>Automatic research</FormLabel>
+                                        <Select value={field.value ? "on" : "off"} onValueChange={(v) => field.onChange(v === "on")}>
+                                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="off">Off – run research myself</SelectItem>
+                                                <SelectItem value="on">On – run before posting windows</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormDescription>Runs about 90 minutes before each posting window, pauses when 6 drafts await review, and uses LinkedLoom credits or your key. Add a feed or turn on web search first. Drafts still need your approval.</FormDescription>
                                         <FormMessage />
                                     </FormItem>
                                 )} />

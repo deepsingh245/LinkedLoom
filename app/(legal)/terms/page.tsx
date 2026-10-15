@@ -75,6 +75,11 @@ export default function TermsPage() {
                     never published automatically: review the sources, edit, and make sure you have the right to share any quoted material before you post it.
                     If you use your own AI provider key, you are responsible for that provider&apos;s charges and terms.
                 </p>
+                <p>
+                    Automatic research is optional for each persona. When enabled, it runs before posting windows and can use LinkedLoom credits or your own AI key.
+                    It pauses when 6 drafts await review. You can turn it off for the persona or use Stop all to stop Autopilot activity.
+                    Fetched article text is held temporarily in server-only run artifacts, deleted when the run ends, and marked to expire after 24 hours if the run does not finish.
+                </p>
             </section>
 
             <section>

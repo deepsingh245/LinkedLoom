@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation"
 import { Bot, Coins, FileText, History, KeyRound } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Routes } from "@/lib/routes"
+import { useAuth } from "@/components/providers/auth-provider"
+import { countScheduledRunAlerts, useRuns } from "@/lib/query/hooks/use-research"
 
 const items = [
     { href: Routes.AUTOPILOT, label: "Personas", icon: Bot },
@@ -16,6 +18,9 @@ const items = [
 
 export function AutopilotNav() {
     const pathname = usePathname()
+    const { user } = useAuth()
+    const { data: runs = [] } = useRuns(user?.uid)
+    const alerts = countScheduledRunAlerts(runs)
     return (
         <nav className="flex flex-wrap gap-2 border-b border-border pb-3">
             {items.map(({ href, label, icon: Icon }) => {
@@ -31,6 +36,11 @@ export function AutopilotNav() {
                     >
                         <Icon className={cn("h-4 w-4", active && "text-primary")} />
                         {label}
+                        {href === Routes.AUTOPILOT_RUNS && alerts > 0 && (
+                            <span className="rounded-full bg-destructive px-1.5 py-0.5 text-xs font-semibold text-destructive-foreground" aria-label={`${alerts} scheduled runs need attention`}>
+                                {alerts}
+                            </span>
+                        )}
                     </Link>
                 )
             })}

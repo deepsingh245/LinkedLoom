@@ -23,7 +23,7 @@ export default function PrivacyPage() {
                     <li><strong>Content you create:</strong> drafts, scheduled and published posts, tone and platform settings, and images you upload or generate.</li>
                     <li>
                         <strong>AI Autopilot (research):</strong> persona settings you create (topics, feed URLs, schedule), research runs, and the drafts they
-                        produce, including titles, links, dates and short quoted excerpts of the public web pages used as sources. We do not store full copies of articles.
+                        produce, including titles, links, dates and short quoted excerpts of the public web pages used as sources. During a run, fetched article text may also be held in server-only temporary run artifacts. These are deleted when the run ends and marked to expire after 24 hours if the run does not finish.
                     </li>
                     <li><strong>LinkedIn connection:</strong> when you connect LinkedIn, an access token and basic profile identifiers needed to publish on your behalf.</li>
                     <li>
@@ -45,10 +45,11 @@ export default function PrivacyPage() {
                     <li>To publish and schedule posts you create, only at your request and only to the accounts you connected.</li>
                     <li>To show you post history and analytics for your own posts.</li>
                     <li>
-                        When you run research for a persona, to fetch the RSS feeds and public web pages you configured (and, if you turn it on, pages found through
-                        Google Search via Gemini) and to have AI write and fact-check sourced drafts for you to review. Drafts are never published automatically.
+                        When you run research for a persona, or opt that persona into automatic research, to fetch the RSS feeds and public web pages you configured
+                        (and, if you turn it on, pages found through Google Search via Gemini) and to have AI write and fact-check sourced drafts for you to review.
+                        Automatic research runs before posting windows, uses LinkedLoom credits or your own AI key, and pauses when 6 drafts await review. You can turn it off for a persona or use Stop all to stop Autopilot activity. Drafts are never published automatically.
                     </li>
-                    <li>To generate drafts and images with AI when you ask for it. Only the text you enter or the draft you select is sent to the AI provider.</li>
+                    <li>To generate drafts and images with AI when you ask for it, or when you opt into automatic research. Relevant persona settings, source excerpts and draft text may be sent to the selected AI provider.</li>
                     <li>To secure the service, prevent abuse (for example, a daily limit on Reddit posts per user) and fix problems.</li>
                 </ul>
                 <p className="mt-3">
@@ -90,6 +91,7 @@ export default function PrivacyPage() {
                     </li>
                     <li>You can revoke LinkedLoom&apos;s access at any time at <a href="https://www.reddit.com/prefs/apps" target="_blank" rel="noreferrer">reddit.com/prefs/apps</a>.</li>
                     <li>You can delete drafts and posts inside the app.</li>
+                    <li>Temporary fetched article text in server-only research artifacts is deleted when its run ends; unfinished-run artifacts are marked to expire after 24 hours.</li>
                     <li>
                         To delete your whole account and all associated data, email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
                         We will process verified requests within 30 days.

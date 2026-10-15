@@ -113,6 +113,14 @@ export function PersonaCard({ persona, busy, onStatusChange, onDelete, onTest, o
             <div className="mt-auto grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                 <span>{persona.publishing.postsPerDay} post{persona.publishing.postsPerDay === 1 ? "" : "s"}/day · LinkedIn</span>
                 <span className="truncate text-right" title={persona.publishing.timezone}>{windows}</span>
+                <span className="col-span-2">
+                    {persona.research.autoRun
+                        ? persona.nextRunAt
+                            ? `Auto research: next run ${persona.nextRunAt.toLocaleString()}`
+                            : "Auto research on · no run scheduled"
+                        : "Auto research off"}
+                </span>
+                {persona.lastRunStatus && <span className="col-span-2">Last run: {persona.lastRunStatus}</span>}
                 <span>{persona.ai.connectionId ? "Your AI key" : "LinkedLoom credits"} · manual approval</span>
                 <span className="text-right">v{persona.version}</span>
             </div>
