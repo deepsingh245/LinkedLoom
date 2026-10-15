@@ -54,13 +54,13 @@ export function PostSettings({
                             {date ? format(set(date, { hours: parseInt(hour), minutes: parseInt(minute) }), "MMM d, yyyy 'at' p") : "Pick a date (Optional)"}
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="flex w-70 flex-col gap-3 border-[#e2e6ea] bg-white p-3 text-[#303a40]" align="start">
+                    <PopoverContent className="flex w-70 flex-col gap-3 border-border bg-popover p-3 text-popover-foreground" align="start">
                         <Calendar
                             mode="single"
                             selected={date}
                             onSelect={setDate}
                             initialFocus
-                            className="w-full bg-white text-[#303a40]"
+                            className="w-full text-popover-foreground"
                             disabled={(d) => {
                                 const today = new Date();
                                 today.setHours(0, 0, 0, 0);
@@ -70,10 +70,10 @@ export function PostSettings({
                         {date && (
                             <div className="flex items-center justify-center gap-2 mt-2 pt-2 border-t border-border">
                                 <Select value={hour} onValueChange={setHour}>
-                                    <SelectTrigger className="w-20 border-[#dfe5e7] bg-white">
+                                    <SelectTrigger className="w-20 border-border bg-background text-foreground">
                                         <SelectValue placeholder="HH" />
                                     </SelectTrigger>
-                                    <SelectContent className="max-h-50 border-[#e2e6ea] bg-white text-[#303a40]">
+                                    <SelectContent className="max-h-50 border-border bg-popover text-popover-foreground">
                                         {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0')).map((h) => (
                                             <SelectItem key={h} value={h}>{h}</SelectItem>
                                         ))}
@@ -81,10 +81,10 @@ export function PostSettings({
                                 </Select>
                                 <span className="text-xl font-bold text-foreground">:</span>
                                 <Select value={minute} onValueChange={setMinute}>
-                                    <SelectTrigger className="w-20 border-[#dfe5e7] bg-white">
+                                    <SelectTrigger className="w-20 border-border bg-background text-foreground">
                                         <SelectValue placeholder="MM" />
                                     </SelectTrigger>
-                                    <SelectContent className="max-h-50 border-[#e2e6ea] bg-white text-[#303a40]">
+                                    <SelectContent className="max-h-50 border-border bg-popover text-popover-foreground">
                                         {Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0')).map((m) => (
                                             <SelectItem key={m} value={m}>{m}</SelectItem>
                                         ))}

@@ -1,19 +1,15 @@
 "use client"
 import { useState, useEffect, useRef } from "react"
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { Check, Camera, Loader2, Linkedin, Globe, Pencil } from "lucide-react"
+import { Check, Camera, Loader2, Globe, Pencil } from "lucide-react"
 import { useAuth } from "@/components/providers/auth-provider"
 import { updateUserProfile } from "@/lib/firebase/user"
 import { dangerToast, successToast } from "@/lib/toast"
-import { api } from "@/lib/api"
-import { cn } from "@/lib/utils"
 import { uploadProfilePhoto } from "@/lib/firebase/storage"
-import { useDisconnectReddit } from "@/lib/query/hooks/use-integrations"
-import { XIcon, RedditIcon, MediumIcon } from "@/components/shared/Icons"
 import {
     Dialog,
     DialogContent,
@@ -24,7 +20,6 @@ import {
 export default function ProfileSettingsPage() {
     const { profile } = useAuth()
     const [loading, setLoading] = useState(false)
-    const [connectingId, setConnectingId] = useState<string | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const [uploading, setUploading] = useState(false)
     const [isEditing, setIsEditing] = useState(false)
@@ -43,47 +38,6 @@ export default function ProfileSettingsPage() {
         reddit: "",
         medium: "",
     })
-
-    const handleConnectLinkedIn = async () => {
-        try {
-            setConnectingId("linkedin");
-            const data = await api.firebaseService.getLinkedInAuthUrl();
-            if (data.url) {
-                window.location.href = data.url
-            } else {
-                dangerToast("Failed to initialize LinkedIn connection.")
-            }
-        } catch (error) {
-            console.error(error)
-            dangerToast("LinkedIn Connection failed")
-        } finally {
-            setConnectingId(null);
-        }
-    }
-
-    const handleConnectReddit = async () => {
-        try {
-            setConnectingId("reddit");
-            const data = await api.firebaseService.getRedditAuthUrl();
-            if (data.url) {
-                window.location.href = data.url;
-            } else {
-                dangerToast("Failed to initialize Reddit connection.");
-            }
-        } catch (error) {
-            console.error(error);
-            dangerToast("Reddit connection failed.");
-        } finally {
-            setConnectingId(null);
-        }
-    }
-
-    const disconnectMutation = useDisconnectReddit();
-
-    const handleDisconnectReddit = () => {
-        if (!profile?.uid) return;
-        disconnectMutation.mutate(profile.uid);
-    }
 
     useEffect(() => {
         if (profile) {
@@ -197,7 +151,7 @@ export default function ProfileSettingsPage() {
         <div className="space-y-6 text-foreground">
             <div>
                 <h1 className="text-[26px] font-semibold tracking-[-0.04em] text-[#20242b] mb-1 sm:text-[30px]">Profile</h1>
-                <p className="text-sm text-[#748087]">Manage your personal details and connected social accounts.</p>
+                <p className="text-sm text-[#748087]">Manage your personal details and public profile information.</p>
             </div>
 
             <Card className="bg-card border-border rounded-2xl shadow-sm">
@@ -366,142 +320,6 @@ export default function ProfileSettingsPage() {
                         </div>
                     </div>
                 </CardContent>
-            </Card>
-
-            <Card className="bg-card border-border rounded-2xl shadow-sm">
-                <CardHeader className="p-6 pb-2">
-                    <CardTitle className="text-base font-semibold text-foreground">Connected Accounts</CardTitle>
-                    <p className="text-xs text-muted-foreground">Link your social media accounts to enable direct cross-platform posting.</p>
-                </CardHeader>
-                <CardContent className="p-6 space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* LinkedIn */}
-                        <div className="flex items-center justify-between p-4 bg-background border border-border rounded-xl hover:border-primary/30 transition-colors">
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 flex items-center justify-center bg-[#0a66c2]/10 rounded-lg">
-                                    <Linkedin className="w-5 h-5 text-[#0a66c2]" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-foreground">LinkedIn</p>
-                                    <p className="text-[11px] text-muted-foreground">Professional Network</p>
-                                </div>
-                            </div>
-                            <Button 
-                                size="sm" 
-                                variant="outline"
-                                className={cn(
-                                    "transition-colors duration-200",
-                                    profile?.linkedin 
-                                        ? "bg-primary/10 border-primary/30 text-primary hover:bg-primary/20" 
-                                        : "bg-background border-border text-foreground hover:bg-primary hover:border-primary hover:text-primary-foreground font-semibold"
-                                )}
-                                onClick={handleConnectLinkedIn}
-                                disabled={connectingId === "linkedin"}
-                            >
-                                {connectingId === "linkedin" ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                ) : (
-                                    <Linkedin className="mr-2 h-4 w-4" />
-                                )}
-                                {profile?.linkedin ? "Connected" : "Connect"}
-                            </Button>
-                        </div>
-
-                        {/* X (Twitter) */}
-                        <div className="flex items-center justify-between p-4 bg-background border border-border rounded-xl opacity-60">
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 flex items-center justify-center bg-muted rounded-lg">
-                                    <XIcon className="w-4 h-4 text-foreground" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-foreground">X (Twitter)</p>
-                                    <p className="text-[11px] text-muted-foreground">Coming Soon</p>
-                                </div>
-                            </div>
-                            <Button 
-                                size="sm" 
-                                variant="outline"
-                                disabled
-                                className="h-8 border-border text-xs cursor-not-allowed text-muted-foreground"
-                            >
-                                Connect
-                            </Button>
-                        </div>
-
-                        {/* Reddit */}
-                        <div className="flex items-center justify-between p-4 bg-background border border-border rounded-xl hover:border-primary/30 transition-colors">
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 flex items-center justify-center bg-[#ff4500]/10 rounded-lg">
-                                    <RedditIcon className="w-5 h-5 text-[#ff4500]" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-foreground">Reddit</p>
-                                    <p className="text-[11px] text-muted-foreground">
-                                        {profile?.reddit ? `u/${profile.reddit}` : "Community Platform"}
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {profile?.reddit && (
-                                    <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-8 text-xs text-muted-foreground hover:text-destructive px-2"
-                                        onClick={handleDisconnectReddit}
-                                        disabled={connectingId === "reddit-disconnect"}
-                                    >
-                                        {connectingId === "reddit-disconnect" ? (
-                                            <Loader2 className="h-3 w-3 animate-spin" />
-                                        ) : (
-                                            "Disconnect"
-                                        )}
-                                    </Button>
-                                )}
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className={cn(
-                                        "transition-colors duration-200",
-                                        profile?.reddit
-                                            ? "bg-[#ff4500]/10 border-[#ff4500]/30 text-[#ff4500] hover:bg-[#ff4500]/20"
-                                            : "bg-background border-border text-foreground hover:bg-primary hover:border-primary hover:text-primary-foreground font-semibold"
-                                    )}
-                                    onClick={handleConnectReddit}
-                                    disabled={connectingId === "reddit" || connectingId === "reddit-disconnect"}
-                                >
-                                    {connectingId === "reddit" ? (
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <RedditIcon className="mr-2 h-4 w-4" />
-                                    )}
-                                    {profile?.reddit ? "Connected" : "Connect"}
-                                </Button>
-                            </div>
-                        </div>
-
-                        {/* Medium */}
-                        <div className="flex items-center justify-between p-4 bg-background border border-border rounded-xl opacity-60">
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 flex items-center justify-center bg-muted rounded-lg">
-                                    <MediumIcon className="w-5 h-5 text-foreground" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-foreground">Medium</p>
-                                    <p className="text-[11px] text-muted-foreground">Coming Soon</p>
-                                </div>
-                            </div>
-                            <Button 
-                                size="sm" 
-                                variant="outline"
-                                disabled
-                                className="h-8 border-border text-xs cursor-not-allowed text-muted-foreground"
-                            >
-                                Connect
-                            </Button>
-                        </div>
-                    </div>
-                </CardContent>
-
             </Card>
 
             <Card className="bg-destructive/5 border-destructive/20 rounded-2xl shadow-sm">

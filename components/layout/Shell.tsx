@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "./Sidebar";
-import { UserNav } from "@/components/layout/UserNav";
+import { LogoutButton } from "@/components/layout/LogoutButton";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { Routes } from "@/lib/routes";
@@ -44,12 +44,40 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const currentPage = routeNames.find(([route]) => pathname === route || (route !== Routes.DASHBOARD && pathname.startsWith(`${route}/`)))?.[1] ?? "Workspace";
 
     useEffect(() => setOpen(false), [pathname]);
+    useEffect(() => {
+        const savedTheme = profile?.preferences?.theme;
+        if (savedTheme) setTheme(savedTheme);
+    }, [profile?.preferences?.theme, setTheme]);
 
     const toggleTheme = () => {
         const nextTheme = resolvedTheme === "dark" ? "light" : "dark";
         setTheme(nextTheme);
         if (profile?.uid) {
-            const preferences = { ...(profile.preferences ?? {}), theme: nextTheme } as UserPreferences;
+            const saved = profile.preferences;
+            const preferences: UserPreferences = {
+                theme: nextTheme,
+                density: saved?.density ?? "comfortable",
+                animationsEnabled: saved?.animationsEnabled ?? true,
+                notifications: {
+                    postPublished: saved?.notifications?.postPublished ?? true,
+                    weeklyDigest: saved?.notifications?.weeklyDigest ?? true,
+                    aiSuggestions: saved?.notifications?.aiSuggestions ?? false,
+                    commentAlerts: saved?.notifications?.commentAlerts ?? true,
+                    milestoneAlerts: saved?.notifications?.milestoneAlerts ?? true,
+                    productUpdates: saved?.notifications?.productUpdates ?? false,
+                },
+                ai: {
+                    defaultTone: saved?.ai?.defaultTone ?? "professional",
+                    language: saved?.ai?.language ?? "english",
+                    autoHashtags: saved?.ai?.autoHashtags ?? true,
+                    smartSuggestions: saved?.ai?.smartSuggestions ?? true,
+                },
+                privacy: {
+                    publicProfile: saved?.privacy?.publicProfile ?? true,
+                    analyticsSharing: saved?.privacy?.analyticsSharing ?? false,
+                    twoFactorAuth: saved?.privacy?.twoFactorAuth ?? false,
+                },
+            };
             void updateUserProfile(profile.uid, { preferences }).catch((error) => {
                 console.error("Failed to save theme preference:", error);
             });
@@ -57,40 +85,40 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     };
 
     return (
-        <div className="dashboard-theme flex h-dvh overflow-hidden bg-[#f7f8fa] font-sans antialiased text-[#20242b]">
+        <div className="dashboard-theme flex h-dvh overflow-hidden bg-background font-sans antialiased text-foreground">
             <Sidebar className="hidden lg:flex" />
             <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-                <header className="z-20 flex h-[58px] shrink-0 items-center justify-between border-b border-[#e2e6ea] bg-white/95 px-3 backdrop-blur md:px-6">
+                <header className="z-20 flex h-[58px] shrink-0 items-center justify-between border-b border-border bg-card/95 px-3 backdrop-blur md:px-6">
                     <div className="flex min-w-0 items-center gap-3">
                         <Sheet open={open} onOpenChange={setOpen}>
                             <SheetTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-[#65717a] hover:bg-[#f1f4f4] lg:hidden" aria-label="Open navigation">
+                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-muted-foreground hover:bg-accent lg:hidden" aria-label="Open navigation">
                                     <Menu className="h-[18px] w-[18px]" />
                                 </Button>
                             </SheetTrigger>
-                            <SheetContent side="left" className="w-[260px] border-[#e2e6ea] bg-white p-0">
+                            <SheetContent side="left" className="w-[260px] border-border bg-card p-0">
                                 <Sidebar className="w-full border-r-0" />
                             </SheetContent>
                         </Sheet>
 
                         <Link href={Routes.DASHBOARD} aria-label="LinkedLoom overview" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#357d72] text-sm font-bold text-white sm:hidden">L</Link>
                         <div className="flex min-w-0 items-center gap-2 text-xs">
-                            <span className="hidden text-[#98a1a8] sm:inline">Workspace</span>
-                            <span className="hidden text-[#c2c8cc] sm:inline">/</span>
-                            <span className="truncate font-semibold text-[#333b42]">{currentPage}</span>
+                            <span className="hidden text-muted-foreground sm:inline">Workspace</span>
+                            <span className="hidden text-muted-foreground/50 sm:inline">/</span>
+                            <span className="truncate font-semibold text-foreground">{currentPage}</span>
                         </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2.5">
                         {AUTOPILOT_ENABLED && !isSettings && (
-                            <Link href={Routes.AUTOPILOT} className="hidden items-center gap-2 rounded-lg border border-[#dce9e5] bg-[#f2f8f6] px-3 py-2 text-[11px] font-semibold text-[#357d72] transition hover:bg-[#e8f3f0] sm:flex">
+                            <Link href={Routes.AUTOPILOT} className="hidden items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2 text-[11px] font-semibold text-primary transition hover:bg-accent sm:flex">
                                 Autopilot controls
                             </Link>
                         )}
                         <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} theme`} title={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} theme`} className="h-9 w-9 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground">
                             {resolvedTheme === "dark" ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
                         </Button>
-                        <span className="hidden h-6 w-px bg-[#e8ebed] sm:block" />
-                        <UserNav />
+                        <span className="hidden h-6 w-px bg-border sm:block" />
+                        <LogoutButton />
                     </div>
                 </header>
 
@@ -115,11 +143,11 @@ function MobileNavigation() {
     ];
 
     return (
-        <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-30 grid border-t border-[#e2e6ea] bg-white/95 px-1 pb-[max(env(safe-area-inset-bottom),0.35rem)] pt-1.5 backdrop-blur lg:hidden" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
+        <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-30 grid border-t border-border bg-card/95 px-1 pb-[max(env(safe-area-inset-bottom),0.35rem)] pt-1.5 backdrop-blur lg:hidden" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
             {items.map(({ label, href, icon: Icon }) => {
                 const active = pathname === href || (href !== Routes.DASHBOARD && pathname.startsWith(`${href}/`));
                 return (
-                    <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg text-[9px] font-medium transition-colors", active ? "text-[#357d72]" : "text-[#858f96] hover:text-[#357d72]")}>
+                    <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg text-[9px] font-medium transition-colors", active ? "text-primary" : "text-muted-foreground hover:text-primary")}>
                         <Icon className="h-[18px] w-[18px]" />
                         <span>{label}</span>
                     </Link>

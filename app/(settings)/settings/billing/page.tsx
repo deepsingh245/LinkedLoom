@@ -109,9 +109,9 @@ export default function BillingSettingsPage() {
                     <p className="mt-1 text-xs text-[#7b858c]">Update your workspace experience and connected accounts.</p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
-                    <SettingsShortcut href={Routes.SETTINGS_PROFILE} icon={<UserRound className="h-[18px] w-[18px]" />} title="Profile" description="Personal details and social accounts" />
+                    <SettingsShortcut href={Routes.SETTINGS_PROFILE} icon={<UserRound className="h-[18px] w-[18px]" />} title="Profile" description="Personal details and public profile" />
                     <SettingsShortcut href={Routes.SETTINGS_PREFERENCES} icon={<Fingerprint className="h-[18px] w-[18px]" />} title="Preferences" description="Appearance and AI preferences" />
-                    <SettingsShortcut href={Routes.CONNECTIONS} icon={<ShieldCheck className="h-[18px] w-[18px]" />} title="Connections" description="Publishing accounts and integrations" />
+                    <SettingsShortcut href={Routes.SETTINGS_CONNECTIONS} icon={<ShieldCheck className="h-[18px] w-[18px]" />} title="Connections" description="Publishing accounts and integrations" />
                 </div>
             </section>
         </div>

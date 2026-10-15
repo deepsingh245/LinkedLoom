@@ -110,7 +110,7 @@ export default function SettingsPage() {
   }
 
   const prefs: UserPreferences = profile?.preferences || {
-    theme: "dark",
+    theme: "system",
     density: "comfortable",
     animationsEnabled: true,
     notifications: {
@@ -157,7 +157,7 @@ export default function SettingsPage() {
             <div className="space-y-2">
               <Label className="text-[13px] text-muted-foreground">Theme</Label>
               <Select
-                value={prefs.theme || "dark"}
+                value={prefs.theme || "system"}
                 onValueChange={(val) => handleUpdate("theme", val as UserPreferences["theme"])}
               >
                 <SelectTrigger className="w-full bg-background border-border text-foreground focus:ring-primary shadow-none h-10 rounded-lg">

@@ -87,7 +87,7 @@ export default function DraftsPage() {
                     <div className="flex flex-wrap items-center gap-2">
                         <Select value={personaFilter} onValueChange={setPersonaFilter}>
                             <SelectTrigger className="h-9 w-[210px] rounded-lg border-[#dfe5e7] bg-white text-[11px] text-[#46515a]"><SelectValue placeholder="All personas" /></SelectTrigger>
-                            <SelectContent className="border-[#e2e6ea] bg-white text-[#303a40]">
+                            <SelectContent className="border-border bg-popover text-popover-foreground">
                                 <SelectItem value="all">All personas</SelectItem>
                                 {personas.map((persona) => <SelectItem key={persona.id} value={persona.id}>{persona.name}</SelectItem>)}
                             </SelectContent>

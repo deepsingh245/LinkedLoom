@@ -58,7 +58,7 @@ export default function ConnectionsPage() {
                 <div className="flex items-end justify-between gap-4">
                     <div>
                         <h2 id="social-accounts-title" className="text-base font-semibold text-[#242a30]">Social accounts</h2>
-                        <p className="mt-1 text-xs text-[#7b858c]">Manage the publishing accounts linked to your profile.</p>
+                        <p className="mt-1 text-xs text-[#7b858c]">Manage the accounts LinkedLoom can publish to.</p>
                     </div>
                     <span className="rounded-full bg-[#e8f3f0] px-2.5 py-1 text-[10px] font-semibold text-[#357d72]">
                         {connected ? "1 connected" : "No accounts connected"}

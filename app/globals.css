@@ -63,77 +63,77 @@
 }
 
 :root {
-  /* Premium Light Theme */
-  --background: oklch(0.98 0.005 270); /* #f9f9fb */
-  --foreground: oklch(0.20 0.02 270); /* #1e1e2c */
-  --card: oklch(1.0 0 0); /* #ffffff */
-  --card-foreground: oklch(0.20 0.02 270);
-  --popover: oklch(1.0 0 0);
-  --popover-foreground: oklch(0.20 0.02 270);
-  --primary: oklch(0.65 0.17 150); /* #10b981 */
-  --primary-foreground: oklch(0.98 0.005 270);
-  --secondary: oklch(0.94 0.01 270); /* #f1f1f5 */
-  --secondary-foreground: oklch(0.25 0.02 270);
-  --muted: oklch(0.95 0.01 270);
-  --muted-foreground: oklch(0.50 0.02 270); /* #71717a */
-  --accent: oklch(0.94 0.01 270);
-  --accent-foreground: oklch(0.20 0.02 270);
-  --destructive: oklch(0.55 0.18 20); /* #ef4444 */
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.90 0.01 270); /* #e4e4e7 */
-  --input: oklch(0.90 0.01 270);
-  --ring: oklch(0.65 0.17 150);
-  --chart-1: oklch(0.65 0.17 150);
-  --chart-2: oklch(0.60 0.12 250);
-  --chart-3: oklch(0.65 0.15 310);
-  --chart-4: oklch(0.72 0.14 70);
-  --chart-5: oklch(0.55 0.18 20);
+  /* Keep portal-based menus and dialogs aligned with the LinkedLoom workspace. */
+  --background: #f7f8fa;
+  --foreground: #20242b;
+  --card: #ffffff;
+  --card-foreground: #20242b;
+  --popover: #ffffff;
+  --popover-foreground: #20242b;
+  --primary: #357d72;
+  --primary-foreground: #ffffff;
+  --secondary: #eff3f2;
+  --secondary-foreground: #303a3f;
+  --muted: #f1f4f4;
+  --muted-foreground: #758087;
+  --accent: #edf3f1;
+  --accent-foreground: #283139;
+  --destructive: #bd5353;
+  --destructive-foreground: #ffffff;
+  --border: #e2e6ea;
+  --input: #dce2e5;
+  --ring: #357d72;
+  --chart-1: #357d72;
+  --chart-2: #6685ad;
+  --chart-3: #8c76a8;
+  --chart-4: #bd9149;
+  --chart-5: #bd5353;
   --radius: 0.625rem;
-  --sidebar: oklch(0.98 0.005 270);
-  --sidebar-foreground: oklch(0.20 0.02 270);
-  --sidebar-primary: oklch(0.65 0.17 150);
-  --sidebar-primary-foreground: oklch(0.98 0.005 270);
-  --sidebar-accent: oklch(0.94 0.01 270);
-  --sidebar-accent-foreground: oklch(0.20 0.02 270);
-  --sidebar-border: oklch(0.90 0.01 270);
-  --sidebar-ring: oklch(0.65 0.17 150);
+  --sidebar: #ffffff;
+  --sidebar-foreground: #20242b;
+  --sidebar-primary: #357d72;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #edf3f1;
+  --sidebar-accent-foreground: #283139;
+  --sidebar-border: #e2e6ea;
+  --sidebar-ring: #357d72;
   --figma-lime: #b8ff52;
 }
 
 .dark {
-  /* Restore the original premium dark-purple theme */
-  --background: oklch(0.18 0.02 270); /* #0c0c12 */
-  --foreground: oklch(0.95 0.01 270); /* #e0e0f0 */
-  --card: oklch(0.20 0.02 270); /* #13131a */
-  --card-foreground: oklch(0.95 0.01 270);
-  --popover: oklch(0.20 0.02 270);
-  --popover-foreground: oklch(0.95 0.01 270);
-  --primary: oklch(0.78 0.17 150); /* #63d496 */
-  --primary-foreground: oklch(0.15 0.02 150);
-  --secondary: oklch(0.25 0.02 270); /* #1e1e2c */
-  --secondary-foreground: oklch(0.85 0.02 270); /* #c0c0d8 */
-  --muted: oklch(0.25 0.02 270);
-  --muted-foreground: oklch(0.70 0.02 270); /* #8888a0 */
-  --accent: oklch(0.30 0.02 270); /* #2a2a3a */
-  --accent-foreground: oklch(0.95 0.01 270); /* #f0f0f8 */
-  --destructive: oklch(0.60 0.18 20); /* #f06464 */
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.25 0.02 270); /* #1a1a24 */
-  --input: oklch(0.25 0.02 270); /* #2a2a3a */
-  --ring: oklch(0.78 0.17 150); /* #63d496 focus */
-  --chart-1: oklch(0.78 0.17 150);
-  --chart-2: oklch(0.75 0.12 250);
-  --chart-3: oklch(0.75 0.15 310);
-  --chart-4: oklch(0.82 0.14 70);
-  --chart-5: oklch(0.60 0.18 20);
-  --sidebar: oklch(0.18 0.02 270);
-  --sidebar-foreground: oklch(0.95 0.01 270);
-  --sidebar-primary: oklch(0.78 0.17 150);
-  --sidebar-primary-foreground: oklch(0.15 0.02 150);
-  --sidebar-accent: oklch(0.25 0.02 270);
-  --sidebar-accent-foreground: oklch(0.95 0.01 270);
-  --sidebar-border: oklch(0.25 0.02 270);
-  --sidebar-ring: oklch(0.78 0.17 150);
+  /* Keep portalled overlays on the same charcoal and teal palette as the workspace. */
+  --background: #101615;
+  --foreground: #e8efed;
+  --card: #171f1d;
+  --card-foreground: #e8efed;
+  --popover: #19211f;
+  --popover-foreground: #e8efed;
+  --primary: #68ad9e;
+  --primary-foreground: #07110f;
+  --secondary: #202b28;
+  --secondary-foreground: #d7e2df;
+  --muted: #202826;
+  --muted-foreground: #9aa9a5;
+  --accent: #26332f;
+  --accent-foreground: #e1ece9;
+  --destructive: #d9535d;
+  --destructive-foreground: #ffffff;
+  --border: #2a3733;
+  --input: #34423e;
+  --ring: #68ad9e;
+  --chart-1: #68ad9e;
+  --chart-2: #7995bd;
+  --chart-3: #a28bb8;
+  --chart-4: #c3a36c;
+  --chart-5: #d9535d;
+  --sidebar: #101615;
+  --sidebar-foreground: #e8efed;
+  --sidebar-primary: #68ad9e;
+  --sidebar-primary-foreground: #07110f;
+  --sidebar-accent: #202b28;
+  --sidebar-accent-foreground: #e8efed;
+  --sidebar-border: #2a3733;
+  --sidebar-ring: #68ad9e;
   --figma-lime: #b8ff52;
 }
 
@@ -170,7 +170,7 @@
   }
 }
 
-/* The current LinkedLoom workspace UI uses a light canvas regardless of OS theme. */
+/* LinkedLoom workspace design tokens. */
 .dashboard-theme {
   color-scheme: light;
   --background: #f7f8fa;
@@ -230,6 +230,208 @@
 
 .dashboard-theme *::-webkit-scrollbar-track { background: #f7f8fa; }
 .dashboard-theme *::-webkit-scrollbar-thumb { background: #cbd4d2; }
+
+.dark .dashboard-theme {
+  color-scheme: dark;
+  --background: #101615;
+  --foreground: #e8efed;
+  --card: #171f1d;
+  --card-foreground: #e8efed;
+  --popover: #19211f;
+  --popover-foreground: #e8efed;
+  --primary: #68ad9e;
+  --primary-foreground: #07110f;
+  --secondary: #202b28;
+  --secondary-foreground: #d7e2df;
+  --muted: #202826;
+  --muted-foreground: #9aa9a5;
+  --accent: #26332f;
+  --accent-foreground: #e1ece9;
+  --destructive: #d9535d;
+  --destructive-foreground: #ffffff;
+  --border: #2a3733;
+  --input: #34423e;
+  --ring: #68ad9e;
+  --color-background: #101615;
+  --color-foreground: #e8efed;
+  --color-card: #171f1d;
+  --color-card-foreground: #e8efed;
+  --color-popover: #19211f;
+  --color-popover-foreground: #e8efed;
+  --color-primary: #68ad9e;
+  --color-primary-foreground: #07110f;
+  --color-secondary: #202b28;
+  --color-secondary-foreground: #d7e2df;
+  --color-muted: #202826;
+  --color-muted-foreground: #9aa9a5;
+  --color-accent: #26332f;
+  --color-accent-foreground: #e1ece9;
+  --color-destructive: #d9535d;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #2a3733;
+  --color-input: #34423e;
+  --color-ring: #68ad9e;
+  --color-surface-container: #202826;
+  --color-surface-container-low: #171f1d;
+  --color-surface-container-high: #26312e;
+  --color-outline: #82918d;
+  --color-outline-variant: #34423e;
+}
+
+/* Existing screens still contain a few literal light palette utilities. Keep those surfaces legible in dark mode. */
+.dark .dashboard-theme [class~="bg-white"],
+.dark .dashboard-theme [class~="bg-white/95"],
+.dark .dashboard-theme [class~="bg-white/70"] { background-color: #171f1d !important; }
+.dark .dashboard-theme [class~="bg-[#f7f8fa]"],
+.dark .dashboard-theme [class~="bg-[#fafbfb]"],
+.dark .dashboard-theme [class~="bg-[#fbfcfc]"],
+.dark .dashboard-theme [class~="bg-[#f7f9f8]"],
+.dark .dashboard-theme [class~="bg-[#f8fbfa]"],
+.dark .dashboard-theme [class~="bg-[#fafcfb]"],
+.dark .dashboard-theme [class~="bg-[#fbfdfc]"] { background-color: #101615 !important; }
+/* The application frame carries both the theme scope and its base utility on one element. */
+.dark .dashboard-theme[class~="bg-[#f7f8fa]"] { background-color: #101615 !important; }
+.dark .dashboard-theme[class~="text-[#20242b]"] { color: #e8efed !important; }
+.dark .dashboard-theme [class~="bg-[#f1f4f4]"],
+.dark .dashboard-theme [class~="bg-[#f2f4f5]"],
+.dark .dashboard-theme [class~="bg-[#eff3f2]"],
+.dark .dashboard-theme [class~="bg-[#eef5f2]"],
+.dark .dashboard-theme [class~="bg-[#eef6f3]"],
+.dark .dashboard-theme [class~="bg-[#f0f4f3]"],
+.dark .dashboard-theme [class~="bg-[#f3f6f5]"],
+.dark .dashboard-theme [class~="bg-[#f4f7f6]"],
+.dark .dashboard-theme [class~="bg-[#f7f9f9]"],
+.dark .dashboard-theme [class~="bg-[#f2f6f5]"],
+.dark .dashboard-theme [class~="bg-[#f3f7f5]"],
+.dark .dashboard-theme [class~="bg-[#f5f7f7]"],
+.dark .dashboard-theme [class~="bg-[#f5f8f7]"],
+.dark .dashboard-theme [class~="bg-[#f6f8f7]"],
+.dark .dashboard-theme [class~="bg-[#f1f3f4]"],
+.dark .dashboard-theme [class~="bg-[#e8ebed]"],
+.dark .dashboard-theme [class~="bg-[#edf0f2]"],
+.dark .dashboard-theme [class~="bg-[#e9edef]"] { background-color: #202b28 !important; }
+.dark .dashboard-theme [class~="bg-[#e8f3f0]"] { background-color: #203a34 !important; }
+.dark .dashboard-theme [class~="bg-[#f2f8f6]"],
+.dark .dashboard-theme [class~="bg-[#f3f6f5]"],
+.dark .dashboard-theme [class~="bg-[#f5f8f7]"] { background-color: #203a34 !important; }
+.dark .dashboard-theme [class~="bg-[#fff3f3]"],
+.dark .dashboard-theme [class~="bg-[#fff8f8]"],
+.dark .dashboard-theme [class~="bg-[#fff9f9]"] { background-color: #3a2525 !important; }
+.dark .dashboard-theme [class~="text-[#20242b]"],
+.dark .dashboard-theme [class~="text-[#242a30]"],
+.dark .dashboard-theme [class~="text-[#283139]"],
+.dark .dashboard-theme [class~="text-[#30383e]"],
+.dark .dashboard-theme [class~="text-[#303a3f]"],
+.dark .dashboard-theme [class~="text-[#303a40]"],
+.dark .dashboard-theme [class~="text-[#333b42]"],
+.dark .dashboard-theme [class~="text-[#38434a]"],
+.dark .dashboard-theme [class~="text-[#39434a]"],
+.dark .dashboard-theme [class~="text-[#39444b]"],
+.dark .dashboard-theme [class~="text-[#44524e]"],
+.dark .dashboard-theme [class~="text-[#46515a]"],
+.dark .dashboard-theme [class~="text-[#46525a]"],
+.dark .dashboard-theme [class~="text-[#48545b]"],
+.dark .dashboard-theme [class~="text-[#4c585f]"],
+.dark .dashboard-theme [class~="text-[#4d5960]"],
+.dark .dashboard-theme [class~="text-[#4e5a60]"],
+.dark .dashboard-theme [class~="text-[#505b62]"],
+.dark .dashboard-theme [class~="text-[#59666d]"] { color: #e1ece9 !important; }
+.dark .dashboard-theme [class~="text-[#626d76]"],
+.dark .dashboard-theme [class~="text-[#65717a]"],
+.dark .dashboard-theme [class~="text-[#65736f]"],
+.dark .dashboard-theme [class~="text-[#66727a]"],
+.dark .dashboard-theme [class~="text-[#667482]"],
+.dark .dashboard-theme [class~="text-[#667770]"],
+.dark .dashboard-theme [class~="text-[#668078]"],
+.dark .dashboard-theme [class~="text-[#6c777f]"],
+.dark .dashboard-theme [class~="text-[#6d817c]"],
+.dark .dashboard-theme [class~="text-[#6e7b81]"],
+.dark .dashboard-theme [class~="text-[#6e7e79]"],
+.dark .dashboard-theme [class~="text-[#71837e]"],
+.dark .dashboard-theme [class~="text-[#738078]"],
+.dark .dashboard-theme [class~="text-[#77828a]"],
+.dark .dashboard-theme [class~="text-[#77838a]"],
+.dark .dashboard-theme [class~="text-[#78848b]"],
+.dark .dashboard-theme [class~="text-[#7a858c]"],
+.dark .dashboard-theme [class~="text-[#7c898f]"],
+.dark .dashboard-theme [class~="text-[#7d898f]"],
+.dark .dashboard-theme [class~="text-[#7f8a91]"],
+.dark .dashboard-theme [class~="text-[#68737b]"],
+.dark .dashboard-theme [class~="text-[#748087]"],
+.dark .dashboard-theme [class~="text-[#758087]"],
+.dark .dashboard-theme [class~="text-[#77818a]"],
+.dark .dashboard-theme [class~="text-[#7b858c]"],
+.dark .dashboard-theme [class~="text-[#7c878e]"],
+.dark .dashboard-theme [class~="text-[#879198]"],
+.dark .dashboard-theme [class~="text-[#89949a]"],
+.dark .dashboard-theme [class~="text-[#8b959b]"],
+.dark .dashboard-theme [class~="text-[#8b959c]"],
+.dark .dashboard-theme [class~="text-[#849097]"],
+.dark .dashboard-theme [class~="text-[#869198]"],
+.dark .dashboard-theme [class~="text-[#8a949a]"],
+.dark .dashboard-theme [class~="text-[#8b969c]"],
+.dark .dashboard-theme [class~="text-[#929ba2]"],
+.dark .dashboard-theme [class~="text-[#98a1a8]"],
+.dark .dashboard-theme [class~="text-[#9aa3a8]"],
+.dark .dashboard-theme [class~="text-[#9ba5aa]"],
+.dark .dashboard-theme [class~="text-[#9ca5ab]"],
+.dark .dashboard-theme [class~="text-[#a3adb2]"],
+.dark .dashboard-theme [class~="text-[#c2c8cc]"],
+.dark .dashboard-theme [class~="text-[#858f96]"],
+.dark .dashboard-theme [class~="text-[#89939a]"] { color: #9aa9a5 !important; }
+.dark .dashboard-theme [class~="text-[#357d72]"],
+.dark .dashboard-theme [class~="text-[#286c63]"] { color: #79bdad !important; }
+.dark .dashboard-theme [class~="text-[#2c4b43]"],
+.dark .dashboard-theme [class~="text-[#526f67]"],
+.dark .dashboard-theme [class~="text-[#55736d]"],
+.dark .dashboard-theme [class~="text-[#5f746c]"],
+.dark .dashboard-theme [class~="text-[#62766f]"] { color: #79bdad !important; }
+.dark .dashboard-theme [class~="text-[#634646]"],
+.dark .dashboard-theme [class~="text-[#9c5d5d]"],
+.dark .dashboard-theme [class~="text-[#9d4b4b]"],
+.dark .dashboard-theme [class~="text-[#b95656]"] { color: #e99a94 !important; }
+.dark .dashboard-theme [class~="border-[#e2e6ea]"],
+.dark .dashboard-theme [class~="border-[#dfe4e7]"],
+.dark .dashboard-theme [class~="border-[#e7eaed]"],
+.dark .dashboard-theme [class~="border-[#e7ebed]"],
+.dark .dashboard-theme [class~="border-[#e7ecea]"],
+.dark .dashboard-theme [class~="border-[#e8ecee]"],
+.dark .dashboard-theme [class~="border-[#e1e8e5]"],
+.dark .dashboard-theme [class~="border-[#e4ebe8]"],
+.dark .dashboard-theme [class~="border-[#dce8e4]"],
+.dark .dashboard-theme [class~="border-[#dce9e5]"],
+.dark .dashboard-theme [class~="border-[#d5e0dc]"],
+.dark .dashboard-theme [class~="border-[#d5e3de]"],
+.dark .dashboard-theme [class~="border-[#cbdcd6]"],
+.dark .dashboard-theme [class~="border-[#b9d1ca]"],
+.dark .dashboard-theme [class~="border-[#bdd5ce]"],
+.dark .dashboard-theme [class~="border-[#dfe5e7]"],
+.dark .dashboard-theme [class~="border-[#e5e9eb]"],
+.dark .dashboard-theme [class~="border-[#e6e9eb]"],
+.dark .dashboard-theme [class~="border-[#e7eaec]"],
+.dark .dashboard-theme [class~="border-[#e9edef]"],
+.dark .dashboard-theme [class~="border-[#edf0f2]"],
+.dark .dashboard-theme [class~="border-[#efd9d9]"],
+.dark .dashboard-theme [class~="border-[#f0d8d8]"] { border-color: #2a3733 !important; }
+.dark .dashboard-theme *::-webkit-scrollbar-track { background: #101615; }
+.dark .dashboard-theme *::-webkit-scrollbar-thumb { background: #34423e; }
+
+/* Tailwind emits hover utilities as their own class tokens, so theme them explicitly. */
+.dark .dashboard-theme [class~="hover:bg-[#f4f7f6]"]:hover,
+.dark .dashboard-theme [class~="hover:bg-[#f1f4f4]"]:hover,
+.dark .dashboard-theme [class~="hover:bg-[#f7f9f9]"]:hover,
+.dark .dashboard-theme [class~="hover:bg-[#f5f7f7]"]:hover,
+.dark .dashboard-theme [class~="hover:bg-[#f6f8f7]"]:hover,
+.dark .dashboard-theme [class~="hover:bg-[#f3f7f5]"]:hover,
+.dark .dashboard-theme [class~="hover:bg-[#eef5f2]"]:hover { background-color: #26332f !important; }
+.dark .dashboard-theme [class~="hover:text-[#20242b]"]:hover,
+.dark .dashboard-theme [class~="hover:text-[#333b42]"]:hover,
+.dark .dashboard-theme [class~="hover:text-[#38434a]"]:hover,
+.dark .dashboard-theme [class~="hover:text-[#286c63]"]:hover { color: #f1f7f5 !important; }
+.dark .dashboard-theme [class~="hover:text-[#357d72]"]:hover,
+.dark .dashboard-theme .group:hover [class~="group-hover:text-[#357d72]"] { color: #8dcebf !important; }
+.dark .dashboard-theme [class~="hover:border-[#b9d1ca]"]:hover,
+.dark .dashboard-theme [class~="hover:border-[#a8c8be]"]:hover { border-color: #68ad9e !important; }
 
 @layer utilities {
   /* Scrollbar Styles */
