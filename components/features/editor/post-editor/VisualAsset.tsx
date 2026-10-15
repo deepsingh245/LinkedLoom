@@ -39,9 +39,9 @@ export function VisualAsset({
     handleGenerateImage,
 }: VisualAssetProps) {
     return (
-        <Card className="animate-in fade-in slide-in-from-top-2 duration-300 p-5 rounded-2xl border border-border bg-card shadow-sm transition-all hover:border-border/80">
-            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-[0.8px] mb-4 flex items-center gap-2">
-                <Sparkles className="h-3.5 w-3.5 text-primary" />
+        <Card className="animate-in fade-in slide-in-from-top-2 duration-300 rounded-xl border border-[#e2e6ea] bg-white p-4 shadow-none md:p-5">
+            <h3 className="mb-4 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-[#7c878e]">
+                <Sparkles className="h-3.5 w-3.5 text-[#357d72]" />
                 Visual Asset
             </h3>
             
@@ -52,14 +52,14 @@ export function VisualAsset({
                         value={imagePrompt}
                         onChange={(e) => setImagePrompt(e.target.value)}
                         placeholder="Describe the image you want..."
-                        className="flex-1 min-h-20 bg-background border border-border text-foreground text-[13.5px] rounded-[10px] px-3.5 py-2.5 transition-all focus:border-primary focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground/50 resize-none"
+                        className="min-h-20 flex-1 resize-none rounded-lg border border-[#dfe5e7] bg-white px-3 py-2.5 text-xs text-[#303a40] outline-none transition placeholder:text-[#a3adb2] focus:border-[#79a99e] focus:ring-1 focus:ring-[#357d72]"
                     />
                     <div className="flex gap-2">
                         <Button
                             onClick={handleEnhancePrompt}
                             disabled={enhancingPrompt || generatingImage || (!imagePrompt.trim() && !content.trim() && !topic.trim())}
                             variant="outline"
-                            className="h-9.5 px-3 bg-background border-border hover:border-primary/40 hover:bg-accent text-muted-foreground hover:text-primary rounded-[10px] transition-all disabled:opacity-50 flex gap-2 text-[12px] font-medium"
+                            className="h-9 rounded-lg border-[#dfe5e7] bg-white px-3 text-[10px] font-medium text-[#68747c] hover:border-[#b9d1ca] hover:bg-[#f3f7f5] hover:text-[#357d72]"
                         >
                             {enhancingPrompt ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
                             <span>Enhance</span>
@@ -68,7 +68,7 @@ export function VisualAsset({
                             onClick={handleGenerateImageWithContext}
                             disabled={generatingImage || enhancingPrompt || !content.trim()}
                             variant="outline"
-                            className="h-9.5 px-3 bg-background border-border hover:border-primary/40 hover:bg-accent text-muted-foreground hover:text-primary rounded-[10px] transition-all disabled:opacity-50 flex gap-2 text-[12px] font-medium whitespace-nowrap"
+                            className="h-9 rounded-lg border-[#dfe5e7] bg-white px-3 text-[10px] font-medium text-[#68747c] hover:border-[#b9d1ca] hover:bg-[#f3f7f5] hover:text-[#357d72]"
                             title="Get context from post and generate image"
                         >
                             {generatingImage ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
@@ -100,7 +100,7 @@ export function VisualAsset({
                         onClick={onReferenceUploadClick}
                         disabled={generatingImage}
                         variant="outline"
-                        className="h-10 text-[12.5px] px-4 bg-background border-border hover:border-primary/40 text-muted-foreground rounded-[10px]"
+                        className="h-9 rounded-lg border-[#dfe5e7] bg-white px-3 text-[10px] text-[#68747c] hover:border-[#b9d1ca]"
                     >
                         <Upload className="mr-2 h-3.5 w-3.5" />
                         Upload AI Context Image
@@ -138,9 +138,9 @@ export function VisualAsset({
                         variant="outline"
                         onClick={handleGenerateImage} 
                         disabled={generatingImage || (!topic.trim() && !content.trim() && !imagePrompt.trim())}
-                        className="flex-1 flex items-center justify-center bg-accent border border-border text-foreground hover:bg-accent/80 hover:border-primary/40 transition-all font-sans font-medium h-11 px-5 rounded-[10px] disabled:opacity-50"
+                        className="h-10 flex-1 rounded-lg border border-[#dfe5e7] bg-[#f6f8f7] px-4 text-xs font-medium text-[#46515a] hover:border-[#b9d1ca] hover:bg-[#eef5f2] disabled:opacity-50"
                     >
-                        {generatingImage ? <RefreshCw className="mr-2 h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="mr-2 h-3.5 w-3.5 text-primary" />}
+                        {generatingImage ? <RefreshCw className="mr-2 h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="mr-2 h-3.5 w-3.5 text-[#357d72]" />}
                         {generatingImage ? "Generating..." : "Generate AI Image"}
                     </Button>
                 </div>

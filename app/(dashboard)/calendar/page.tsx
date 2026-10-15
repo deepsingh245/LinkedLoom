@@ -1,147 +1,134 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { format } from "date-fns";
+import { ArrowRight, CalendarDays, Clock3, FileText, Plus } from "lucide-react";
 import { Post } from "@/types";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { format } from "date-fns";
-import { Badge } from "@/components/ui/badge";
 import { EditPostDialog } from "@/components/features/dashboard/EditPostDialog";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useScheduledPosts } from "@/lib/query/hooks/use-posts";
-import { Calendar as CalendarIcon, Clock } from "lucide-react";
+import { Routes } from "@/lib/routes";
 
 export default function CalendarPage() {
     const { user } = useAuth();
-    const { data: scheduledPosts, isLoading: loading } = useScheduledPosts(user?.uid);
+    const { data: scheduledPosts = [], isLoading } = useScheduledPosts(user?.uid);
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [selectedPost, setSelectedPost] = useState<Post | null>(null);
     const [showEdit, setShowEdit] = useState(false);
 
-    const posts = scheduledPosts || [];
+    const selectedPosts = useMemo(() => scheduledPosts
+        .filter((post) => post.scheduledFor && new Date(post.scheduledFor).toDateString() === date?.toDateString())
+        .sort((a, b) => new Date(a.scheduledFor!).getTime() - new Date(b.scheduledFor!).getTime()), [scheduledPosts, date]);
 
-    const selectedPosts = posts.filter(post =>
-        post.scheduledFor &&
-        new Date(post.scheduledFor).toDateString() === date?.toDateString()
-    );
-
-    if (loading) {
+    if (isLoading) {
         return (
-            <div className="p-8 space-y-8 animate-fade-in max-w-400 mx-auto">
-                <div className="flex justify-between items-center">
-                    <Skeleton className="h-10 w-48 bg-muted" />
-                </div>
-                <div className="grid md:grid-cols-[350px_1fr] gap-8">
-                    <Skeleton className="h-100 rounded-2xl bg-muted" />
-                    <Skeleton className="h-150 rounded-2xl bg-muted" />
-                </div>
+            <div className="mx-auto w-full max-w-[1440px] space-y-6">
+                <Skeleton className="h-16 w-2/3 rounded-xl" />
+                <div className="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]"><Skeleton className="h-[470px] rounded-xl" /><Skeleton className="h-[470px] rounded-xl" /></div>
             </div>
-        )
+        );
     }
 
-    return (
-        <div className="p-8 space-y-8 animate-fade-in max-w-400 mx-auto">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
-                    <h1 className="text-3xl font-display font-bold text-foreground tracking-tight">Calendar</h1>
-                    <p className="text-muted-foreground mt-1 font-medium">Visual timeline of your scheduled content</p>
-                </div>
-            </div>
+    const bookedDates = scheduledPosts.map((post) => post.scheduledFor ? new Date(post.scheduledFor) : null).filter((value): value is Date => !!value);
+    const nextPost = scheduledPosts.filter((post) => post.scheduledFor).sort((a, b) => new Date(a.scheduledFor!).getTime() - new Date(b.scheduledFor!).getTime())[0];
 
-            <div className="grid md:grid-cols-[350px_1fr] gap-8 h-full">
-                <Card className="h-fit bg-card border-border rounded-2xl overflow-hidden shadow-md">
-                    <CardHeader className="bg-muted/15 border-b border-border p-5">
-                        <CardTitle className="text-lg font-bold text-foreground">Select Date</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 bg-transparent">
+    return (
+        <div className="mx-auto w-full max-w-[1440px] space-y-6 pb-5 text-[#20242b] md:space-y-7">
+            <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#7d898f]">Publishing / Calendar &amp; Queue</div>
+                    <h1 className="text-[26px] font-semibold tracking-[-0.035em] text-[#20242b] md:text-[30px]">Calendar &amp; Queue</h1>
+                    <p className="mt-1 text-sm text-[#748087]">Plan your LinkedIn publishing schedule and manage upcoming posts.</p>
+                </div>
+                <Button asChild className="h-9 self-start rounded-lg bg-[#357d72] px-3 text-xs font-semibold text-white hover:bg-[#286c63] sm:self-auto">
+                    <Link href={Routes.CREATE_POST}><Plus className="mr-2 h-4 w-4" />Create post</Link>
+                </Button>
+            </section>
+
+            <section aria-label="Schedule summary" className="grid gap-3 sm:grid-cols-2">
+                <Card className="flex items-center gap-3 rounded-xl border border-[#e2e6ea] bg-white p-4 shadow-none">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#e8f3f0] text-[#357d72]"><CalendarDays className="h-4 w-4" /></span>
+                    <div><p className="text-[10px] font-medium text-[#7c878e]">Scheduled posts</p><p className="mt-0.5 text-lg font-semibold leading-none text-[#283139]">{scheduledPosts.length}</p></div>
+                </Card>
+                <Card className="flex items-center gap-3 rounded-xl border border-[#e2e6ea] bg-white p-4 shadow-none">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#edf2fa] text-[#5578a8]"><Clock3 className="h-4 w-4" /></span>
+                    <div className="min-w-0"><p className="text-[10px] font-medium text-[#7c878e]">Next in queue</p><p className="mt-0.5 truncate text-xs font-semibold text-[#38434a]">{nextPost?.scheduledFor ? format(new Date(nextPost.scheduledFor), "EEE, MMM d 'at' h:mm a") : "Nothing scheduled yet"}</p></div>
+                </Card>
+            </section>
+
+            <section className="grid items-start gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
+                <Card className="overflow-hidden rounded-xl border border-[#e2e6ea] bg-white shadow-none">
+                    <div className="border-b border-[#edf0f2] px-4 py-3.5">
+                        <h2 className="text-xs font-semibold text-[#38434a]">Select a date</h2>
+                        <p className="mt-1 text-[10px] text-[#89939a]">Days with scheduled posts are highlighted.</p>
+                    </div>
+                    <CardContent className="p-3 md:p-4">
                         <Calendar
                             mode="single"
                             selected={date}
                             onSelect={setDate}
-                            className="bg-transparent border-0 w-full"
-                            modifiers={{
-                                booked: posts.map(p => p.scheduledFor ? new Date(p.scheduledFor) : null).filter((d): d is Date => !!d)
-                            }}
-                            modifiersStyles={{
-                                booked: { fontWeight: 'bold', color: 'var(--primary)', background: 'color-mix(in srgb, var(--primary) 15%, transparent)', borderRadius: '8px' }
-                            }}
+                            className="w-full border-0 bg-white text-[#303a40]"
+                            modifiers={{ booked: bookedDates }}
+                            modifiersStyles={{ booked: { fontWeight: 700, color: "#286c63", background: "#e8f3f0", borderRadius: "8px" } }}
                         />
+                        <div className="mt-2 flex items-center gap-2 border-t border-[#edf0f2] px-1 pt-3 text-[10px] text-[#89939a]">
+                            <span className="h-2 w-2 rounded-full bg-[#357d72]" />Scheduled content
+                        </div>
                     </CardContent>
                 </Card>
 
-                <Card className="flex-1 flex flex-col bg-card border-border rounded-2xl overflow-hidden shadow-md">
-                    <CardHeader className="bg-muted/15 border-b border-border p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <CardTitle className="text-xl font-bold text-foreground">
-                                    {date ? format(date, "EEEE, MMMM do") : "Select a date"}
-                                </CardTitle>
-                                <CardDescription className="text-muted-foreground mt-1">
-                                    {selectedPosts.length} post{selectedPosts.length !== 1 && 's'} scheduled
-                                </CardDescription>
-                            </div>
-                            <Badge className="bg-primary/10 text-primary border-primary/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg">
-                                Timeline
-                            </Badge>
+                <Card className="overflow-hidden rounded-xl border border-[#e2e6ea] bg-white shadow-none">
+                    <div className="flex flex-col gap-3 border-b border-[#edf0f2] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between md:px-5">
+                        <div>
+                            <h2 className="text-sm font-semibold text-[#303a40]">{date ? format(date, "EEEE, MMMM do") : "Select a date"}</h2>
+                            <p className="mt-1 text-[10px] text-[#89939a]">{selectedPosts.length} post{selectedPosts.length === 1 ? "" : "s"} scheduled for this day</p>
                         </div>
-                    </CardHeader>
-                    <CardContent className="flex-1 overflow-auto p-6 space-y-4 min-h-100">
+                        <Badge variant="outline" className="w-fit rounded-md border-[#e4ebe8] bg-[#f8fbfa] text-[9px] font-medium text-[#5f746c]">Daily queue</Badge>
+                    </div>
+                    <CardContent className="min-h-[320px] p-4 md:p-5">
                         {selectedPosts.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-                                <div className="p-4 bg-muted border border-border rounded-2xl">
-                                    <Clock className="w-8 h-8 text-muted-foreground/60" />
-                                </div>
-                                <div>
-                                    <p className="text-foreground font-bold text-lg">No posts scheduled</p>
-                                    <p className="text-muted-foreground max-w-60 mt-1">Plan your content for this day to see it appear here.</p>
-                                </div>
+                            <div className="flex min-h-[280px] flex-col items-center justify-center rounded-lg border border-dashed border-[#dfe5e7] bg-[#fbfcfc] px-5 text-center">
+                                <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#f2f6f5] text-[#71837e]"><Clock3 className="h-5 w-5" /></span>
+                                <p className="text-sm font-semibold text-[#38434a]">Nothing scheduled for this day</p>
+                                <p className="mt-1 max-w-sm text-xs leading-relaxed text-[#7c878e]">Choose a highlighted date to review its queue, or create a post and schedule it for this day.</p>
+                                <Button asChild variant="outline" size="sm" className="mt-3 h-8 rounded-lg border-[#dfe4e7] bg-white text-[10px] text-[#46515a]">
+                                    <Link href={Routes.CREATE_POST}><Plus className="mr-1.5 h-3.5 w-3.5" />Create a post</Link>
+                                </Button>
                             </div>
                         ) : (
-                            <div className="grid gap-4">
-                                {selectedPosts.map(post => (
-                                    <div
-                                        key={post.id}
-                                        className="group relative flex items-center justify-between p-5 bg-card border border-border rounded-2xl hover:border-primary/30 transition-all cursor-pointer overflow-hidden"
-                                        onClick={() => { setSelectedPost(post); setShowEdit(true); }}
-                                    >
-                                        <div className="absolute inset-0 bg-linear-to-r from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                        <div className="relative flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center border border-border text-muted-foreground group-hover:text-primary transition-colors">
-                                                <CalendarIcon className="w-5 h-5" />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <p className="font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">{post.content}</p>
-                                                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                                    <span className="flex items-center gap-1">
-                                                        <Clock className="w-3 h-3" />
-                                                        {post.scheduledFor && format(new Date(post.scheduledFor), "h:mm a")}
-                                                    </span>
-                                                    {post.topic && (
-                                                        <>
-                                                            <span>•</span>
-                                                            <span className="capitalize">{post.topic}</span>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <Badge variant="scheduled" className="relative font-bold text-[10px] px-3 py-1 rounded-full">{post.status}</Badge>
-                                    </div>
+                            <ol className="space-y-2">
+                                {selectedPosts.map((post) => (
+                                    <li key={post.id}>
+                                        <button type="button" className="group flex w-full items-start gap-3 rounded-lg border border-[#e7ebed] bg-white p-3 text-left transition hover:border-[#bdd5ce] hover:bg-[#fbfdfc] md:p-4" onClick={() => { setSelectedPost(post); setShowEdit(true); }}>
+                                            <span className="flex h-10 min-w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-[#f2f6f5] text-[#526f67]">
+                                                <Clock3 className="mb-0.5 h-3.5 w-3.5" />
+                                                <span className="text-[9px] font-semibold">{post.scheduledFor ? format(new Date(post.scheduledFor), "h:mm a") : "—"}</span>
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="line-clamp-3 block text-xs leading-relaxed text-[#39444b] transition group-hover:text-[#286c63]">{post.content || "No post content"}</span>
+                                                <span className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-[#89939a]">
+                                                    <span className="inline-flex items-center gap-1"><FileText className="h-3 w-3" />Scheduled post</span>
+                                                    {post.topic && <><span aria-hidden="true">·</span><span className="truncate">{post.topic}</span></>}
+                                                </span>
+                                            </span>
+                                            <Badge variant="scheduled" className="shrink-0 text-[9px]">Scheduled</Badge>
+                                        </button>
+                                    </li>
                                 ))}
-                            </div>
+                            </ol>
                         )}
                     </CardContent>
+                    {selectedPosts.length > 0 && <div className="flex items-center justify-between border-t border-[#edf0f2] px-4 py-3 text-[10px] text-[#89939a] md:px-5"><span>Click a post to edit its content</span><Link href={Routes.SCHEDULE} className="inline-flex items-center gap-1 font-semibold text-[#357d72] hover:text-[#286c63]">Content library<ArrowRight className="h-3 w-3" /></Link></div>}
                 </Card>
-            </div>
+            </section>
 
-            {selectedPost && (
-                <EditPostDialog
-                    post={selectedPost}
-                    open={showEdit}
-                    onOpenChange={setShowEdit}
-                />
-            )}
+            {selectedPost && <EditPostDialog post={selectedPost} open={showEdit} onOpenChange={setShowEdit} />}
         </div>
     );
 }

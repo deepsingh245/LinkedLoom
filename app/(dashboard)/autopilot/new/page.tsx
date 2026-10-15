@@ -14,10 +14,11 @@ export default function NewPersonaPage() {
     const createPersona = useCreatePersona(user?.uid)
 
     return (
-        <div className="mx-auto max-w-4xl space-y-6">
+        <div className="mx-auto w-full max-w-[1120px] space-y-6 pb-6 text-[#20242b]">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">New persona</h1>
-                <p className="text-muted-foreground">Define the voice, topics and schedule. You approve every draft.</p>
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#7d898f]">Persona Studio / New profile</p>
+                <h1 className="text-[26px] font-semibold tracking-[-0.035em] text-[#20242b] md:text-[30px]">Create a persona</h1>
+                <p className="mt-1 text-sm leading-6 text-[#748087]">Define its voice, research topics, and posting schedule. You approve every draft.</p>
             </div>
             <PersonaForm
                 defaultValues={emptyPersona()}

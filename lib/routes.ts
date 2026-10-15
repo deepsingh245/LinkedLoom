@@ -7,7 +7,9 @@ export const Routes = {
     SCHEDULE: "/schedule",
     CALENDAR: "/calendar",
     ANALYTICS: "/analytics",
+    CONNECTIONS: "/settings/connections",
     AUTOPILOT: "/autopilot",
+    AUTOPILOT_STUDIO: "/autopilot/studio",
     AUTOPILOT_NEW: "/autopilot/new",
     AUTOPILOT_AI: "/autopilot/ai",
     AUTOPILOT_DRAFTS: "/autopilot/drafts",
@@ -15,5 +17,7 @@ export const Routes = {
     AUTOPILOT_CREDITS: "/autopilot/credits",
     SETTINGS_PROFILE: "/settings/profile",
     SETTINGS_PREFERENCES: "/settings/preferences",
+    SETTINGS_CONNECTIONS: "/settings/connections",
+    SETTINGS_BILLING: "/settings/billing",
     SETTINGS: "/settings/profile",
 } as const;

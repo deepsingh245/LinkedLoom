@@ -30,15 +30,15 @@ export function KillSwitch({ enabled, pending, onChange }: KillSwitchProps) {
     return (
         <div
             className={cn(
-                "flex items-center justify-between gap-4 rounded-2xl border p-4",
-                enabled ? "border-border bg-card" : "border-destructive/30 bg-destructive/5"
+                "flex items-center justify-between gap-4 rounded-lg border p-3 md:p-4",
+                enabled ? "border-[#e4ebe8] bg-[#f8fbfa]" : "border-[#efd9d9] bg-[#fff8f8]"
             )}
         >
             <div className="flex items-center gap-3">
-                <Power className={cn("h-5 w-5", enabled ? "text-primary" : "text-destructive")} />
+                <Power className={cn("h-5 w-5", enabled ? "text-[#357d72]" : "text-[#b95656]")} />
                 <div>
-                    <p className="text-sm font-medium text-foreground">Autopilot is {enabled ? "on" : "stopped"}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm font-semibold text-[#283139]">Autopilot is {enabled ? "on" : "stopped"}</p>
+                    <p className="mt-0.5 text-xs text-[#738078]">
                         {enabled
                             ? "Active personas can run. Stop it to halt every persona at once."
                             : "No persona will research, draft or publish until you turn it back on."}
@@ -48,6 +48,7 @@ export function KillSwitch({ enabled, pending, onChange }: KillSwitchProps) {
             <Button
                 variant={enabled ? "outline" : "default"}
                 size="sm"
+                className={cn("shrink-0 rounded-lg text-xs", enabled ? "border-[#d5e0dc] bg-white text-[#44524e] hover:bg-[#eef5f2]" : "bg-[#357d72] text-white hover:bg-[#286c63]")}
                 disabled={pending}
                 onClick={() => (enabled ? setConfirmOff(true) : onChange(true))}
             >

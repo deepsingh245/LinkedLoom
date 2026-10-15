@@ -137,10 +137,10 @@ export default function SettingsPage() {
   return (
     <div className="space-y-8 pb-20">
       <div>
-        <h1 className="text-3xl font-display font-semibold tracking-tight text-foreground mb-1">
-          Settings
+        <h1 className="text-[26px] font-semibold tracking-[-0.04em] text-[#20242b] mb-1 sm:text-[30px]">
+          Preferences
         </h1>
-        <p className="text-[15px] text-muted-foreground">
+        <p className="text-sm text-[#748087]">
           Customize your experience and preferences.
         </p>
       </div>

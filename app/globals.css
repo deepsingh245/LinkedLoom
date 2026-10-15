@@ -170,6 +170,67 @@
   }
 }
 
+/* The current LinkedLoom workspace UI uses a light canvas regardless of OS theme. */
+.dashboard-theme {
+  color-scheme: light;
+  --background: #f7f8fa;
+  --foreground: #20242b;
+  --card: #ffffff;
+  --card-foreground: #20242b;
+  --popover: #ffffff;
+  --popover-foreground: #20242b;
+  --primary: #357d72;
+  --primary-foreground: #ffffff;
+  --secondary: #eff3f2;
+  --secondary-foreground: #303a3f;
+  --muted: #f1f4f4;
+  --muted-foreground: #758087;
+  --accent: #edf3f1;
+  --accent-foreground: #283139;
+  --destructive: #bd5353;
+  --destructive-foreground: #ffffff;
+  --border: #e2e6ea;
+  --input: #dce2e5;
+  --ring: #357d72;
+  --chart-1: #357d72;
+  --chart-2: #6685ad;
+  --chart-3: #8c76a8;
+  --chart-4: #bd9149;
+  --chart-5: #bd5353;
+  --color-background: #f7f8fa;
+  --color-foreground: #20242b;
+  --color-card: #ffffff;
+  --color-card-foreground: #20242b;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #20242b;
+  --color-primary: #357d72;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #eff3f2;
+  --color-secondary-foreground: #303a3f;
+  --color-muted: #f1f4f4;
+  --color-muted-foreground: #758087;
+  --color-accent: #edf3f1;
+  --color-accent-foreground: #283139;
+  --color-destructive: #bd5353;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #e2e6ea;
+  --color-input: #dce2e5;
+  --color-ring: #357d72;
+  --color-chart-1: #357d72;
+  --color-chart-2: #6685ad;
+  --color-chart-3: #8c76a8;
+  --color-chart-4: #bd9149;
+  --color-chart-5: #bd5353;
+  --color-surface-container: #f1f4f4;
+  --color-surface-container-low: #f7f8fa;
+  --color-surface-container-high: #e9eeed;
+  --color-outline: #879198;
+  --color-outline-variant: #dfe5e7;
+}
+
+.dashboard-theme *::-webkit-scrollbar-track { background: #f7f8fa; }
+.dashboard-theme *::-webkit-scrollbar-thumb { background: #cbd4d2; }
+
 @layer utilities {
   /* Scrollbar Styles */
   ::-webkit-scrollbar { width: 4px; height: 4px; }

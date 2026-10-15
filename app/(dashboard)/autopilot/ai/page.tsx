@@ -159,16 +159,20 @@ export default function AIKeysPage() {
     const [open, setOpen] = useState(false)
 
     return (
-        <div className="space-y-6">
+        <div className="mx-auto w-full max-w-[1120px] space-y-6 pb-6 text-[#20242b]">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">Autopilot</h1>
-                <p className="text-muted-foreground">Use your own Gemini or OpenAI key so personas bill your provider account instead of LinkedLoom credits.</p>
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#7d898f]">Autopilot / AI connections</p>
+                <h1 className="text-[26px] font-semibold tracking-[-0.035em] text-[#20242b] md:text-[30px]">AI keys</h1>
+                <p className="mt-1 max-w-[650px] text-sm leading-6 text-[#748087]">Use your own Gemini or OpenAI key so personas bill your provider account instead of LinkedLoom credits.</p>
             </div>
             <AutopilotNav />
 
-            <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-foreground">AI keys</h2>
-                <Button onClick={() => setOpen(true)} disabled={connections.length >= 5}>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e2e6ea] bg-white p-4">
+                <div>
+                    <h2 className="text-sm font-semibold text-[#283139]">Your provider keys</h2>
+                    <p className="mt-1 text-[11px] text-[#89939a]">Keys are encrypted and shown only as a masked hint.</p>
+                </div>
+                <Button onClick={() => setOpen(true)} disabled={connections.length >= 5} className="h-9 rounded-lg bg-[#357d72] px-3 text-xs text-white hover:bg-[#286c63]">
                     <Plus className="mr-2 h-4 w-4" /> Add key
                 </Button>
             </div>

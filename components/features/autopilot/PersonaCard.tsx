@@ -48,7 +48,7 @@ export function PersonaCard({ persona, busy, onStatusChange, onDelete, onTest, o
     const windows = persona.publishing.postingWindows.map((w) => `${w.start}–${w.end}`).join(", ")
 
     return (
-        <Card className={`p-5 flex flex-col gap-4 ${archived ? "opacity-70" : ""}`}>
+        <Card className={`flex flex-col gap-4 rounded-xl border border-[#e2e6ea] bg-white p-4 shadow-none md:p-5 ${archived ? "opacity-65" : ""}`}>
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                     <div className="flex items-center gap-2">
@@ -101,7 +101,7 @@ export function PersonaCard({ persona, busy, onStatusChange, onDelete, onTest, o
 
             <div className="flex flex-wrap gap-1.5">
                 {persona.research.topics.slice(0, 6).map((topic) => (
-                    <span key={topic} className="rounded-full border border-border bg-accent px-2.5 py-0.5 text-xs text-muted-foreground">
+                    <span key={topic} className="rounded-md border border-[#e7ecea] bg-[#f5f8f7] px-2 py-1 text-[10px] text-[#65736f]">
                         {topic}
                     </span>
                 ))}
@@ -111,8 +111,8 @@ export function PersonaCard({ persona, busy, onStatusChange, onDelete, onTest, o
             </div>
 
             <div className="mt-auto grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                <span>{persona.publishing.postsPerDay} post{persona.publishing.postsPerDay === 1 ? "" : "s"}/day · LinkedIn</span>
-                <span className="truncate text-right" title={persona.publishing.timezone}>{windows}</span>
+                    <span>{persona.publishing.postsPerDay} post{persona.publishing.postsPerDay === 1 ? "" : "s"}/day · LinkedIn</span>
+                <span className="truncate text-right" title={persona.publishing.timezone}>{windows || "No posting window"}</span>
                 <span className="col-span-2">
                     {persona.research.autoRun
                         ? persona.nextRunAt

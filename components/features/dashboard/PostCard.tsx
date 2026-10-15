@@ -55,8 +55,8 @@ export function PostCard({ post }: PostCardProps) {
 
     return (
         <>
-            <div className="card hover-effect flex flex-col h-full bg-card border-border border rounded-xl overflow-hidden group">
-                <div className="flex flex-row items-center justify-between p-4 pb-2 border-b border-border/50">
+            <div className="group flex h-full flex-col overflow-hidden rounded-xl border border-[#e2e6ea] bg-white transition hover:border-[#cbdcd6] hover:shadow-[0_5px_18px_rgba(32,36,43,0.06)]">
+                <div className="flex flex-row items-center justify-between border-b border-[#edf0f2] p-4 pb-2">
                     <div className="flex gap-2">
                         <Badge variant={getBadgeVariant(post.status)}>
                             {post.status}
@@ -97,7 +97,7 @@ export function PostCard({ post }: PostCardProps) {
                 </div>
                 {post.imageUrl && (
                     <div className="px-4 pt-3">
-                        <div className="rounded-lg overflow-hidden border border-border aspect-video">
+                        <div className="aspect-video overflow-hidden rounded-lg border border-[#e2e6ea]">
                             <SmartImage src={post.imageUrl} alt="Post image" className="w-full h-full object-cover" />
                         </div>
                     </div>
@@ -107,7 +107,7 @@ export function PostCard({ post }: PostCardProps) {
                         {post.content || "No content..."}
                     </p>
                 </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground p-4 border-t border-border/50 bg-muted/30 mt-auto">
+                <div className="mt-auto flex items-center justify-between border-t border-[#edf0f2] bg-[#fafbfb] p-4 text-xs text-[#758087]">
                     {post.status.toLowerCase() === 'scheduled' ? (
                         <div className="flex items-center text-primary">
                             <Calendar className="mr-1.5 h-3.5 w-3.5" />

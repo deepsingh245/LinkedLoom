@@ -13,12 +13,12 @@ export function PlatformTabs({
     setActivePlatform,
 }: PlatformTabsProps) {
     return (
-        <div className="flex items-center justify-between mb-4">
-            <TabsList className="bg-muted border border-border p-1 h-10.5 rounded-full w-fit flex items-center gap-1 shadow-inner">
+        <div className="mb-3 flex items-center justify-between">
+            <TabsList className="h-9 w-fit gap-1 rounded-lg border border-[#e2e6ea] bg-white p-1 shadow-none">
                 {connectedPlatforms.includes("linkedin") && (
                     <TabsTrigger 
                         value="linkedin" 
-                        className="h-full rounded-full px-5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground font-semibold text-[13px] transition-all duration-300"
+                        className="h-full rounded-md px-4 text-[11px] font-semibold text-[#7b858c] transition data-[state=active]:bg-[#e8f3f0] data-[state=active]:text-[#286c63]"
                     >
                         LinkedIn
                     </TabsTrigger>
@@ -26,7 +26,7 @@ export function PlatformTabs({
                 {connectedPlatforms.includes("x") && (
                     <TabsTrigger 
                         value="x" 
-                        className="h-full rounded-full px-5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground font-semibold text-[13px] transition-all duration-300"
+                        className="h-full rounded-md px-4 text-[11px] font-semibold text-[#7b858c] transition data-[state=active]:bg-[#e8f3f0] data-[state=active]:text-[#286c63]"
                     >
                         X
                     </TabsTrigger>
@@ -34,7 +34,7 @@ export function PlatformTabs({
                 {connectedPlatforms.includes("reddit") && (
                     <TabsTrigger 
                         value="reddit" 
-                        className="h-full rounded-full px-5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground font-semibold text-[13px] transition-all duration-300"
+                        className="h-full rounded-md px-4 text-[11px] font-semibold text-[#7b858c] transition data-[state=active]:bg-[#e8f3f0] data-[state=active]:text-[#286c63]"
                     >
                         Reddit
                     </TabsTrigger>

@@ -31,10 +31,10 @@ function ledgerLabel(e: LedgerEntry): string {
 
 function Stat({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
     return (
-        <Card className="p-5">
-            <p className="text-sm text-muted-foreground">{label}</p>
+        <Card className="rounded-xl border border-[#e2e6ea] bg-white p-5 shadow-none">
+            <p className="text-xs font-medium text-[#6c777f]">{label}</p>
             <p className="mt-1 text-3xl font-bold text-foreground">{value}</p>
-            {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+            {hint && <p className="mt-1 text-xs text-[#89939a]">{hint}</p>}
         </Card>
     )
 }
@@ -70,10 +70,11 @@ export default function CreditsPage() {
     const personaName = (id?: string) => personas.find((p) => p.id === id)?.name
 
     return (
-        <div className="space-y-6">
+        <div className="mx-auto w-full max-w-[1120px] space-y-6 pb-6 text-[#20242b]">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">Autopilot</h1>
-                <p className="text-muted-foreground">Credits pay for AI that runs on LinkedLoom&apos;s keys. Your own keys and Create Post don&apos;t use credits.</p>
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#7d898f]">Autopilot / Account</p>
+                <h1 className="text-[26px] font-semibold tracking-[-0.035em] text-[#20242b] md:text-[30px]">Credits &amp; usage</h1>
+                <p className="mt-1 max-w-[650px] text-sm leading-6 text-[#748087]">Credits pay for AI that runs on LinkedLoom&apos;s keys. Your own keys and Create Post don&apos;t use credits.</p>
             </div>
             <AutopilotNav />
 
@@ -87,9 +88,9 @@ export default function CreditsPage() {
                 </div>
             )}
 
-            <div className="grid gap-6 lg:grid-cols-2">
-                <Card className="p-5">
-                    <h2 className="mb-4 font-semibold text-foreground">Usage this month</h2>
+            <div className="grid gap-4 lg:grid-cols-2">
+                <Card className="rounded-xl border border-[#e2e6ea] bg-white p-5 shadow-none">
+                    <h2 className="mb-4 text-sm font-semibold text-[#283139]">Usage this month</h2>
                     {month.byFeature.length === 0 ? (
                         <p className="text-sm text-muted-foreground">No AI usage yet this month.</p>
                     ) : (
@@ -106,8 +107,8 @@ export default function CreditsPage() {
                     )}
                 </Card>
 
-                <Card className="p-5">
-                    <h2 className="mb-4 font-semibold text-foreground">Credit history</h2>
+                <Card className="rounded-xl border border-[#e2e6ea] bg-white p-5 shadow-none">
+                    <h2 className="mb-4 text-sm font-semibold text-[#283139]">Credit history</h2>
                     {ledger.length === 0 ? (
                         <p className="text-sm text-muted-foreground">No credit activity yet.</p>
                     ) : (
@@ -128,8 +129,8 @@ export default function CreditsPage() {
                 </Card>
             </div>
 
-            <Card className="p-5">
-                <h2 className="mb-4 font-semibold text-foreground">Recent AI requests</h2>
+            <Card className="rounded-xl border border-[#e2e6ea] bg-white p-5 shadow-none">
+                <h2 className="mb-4 text-sm font-semibold text-[#283139]">Recent AI requests</h2>
                 {usage.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Nothing yet.</p>
                 ) : (

@@ -22,7 +22,7 @@ export default function EditPersonaPage({ params }: { params: Promise<{ personaI
 
     if (isLoading) {
         return (
-            <div className="mx-auto max-w-4xl space-y-6">
+            <div className="mx-auto w-full max-w-[1120px] space-y-6 pb-6 text-[#20242b]">
                 <Skeleton className="h-10 w-64" />
                 {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-64 rounded-2xl" />)}
             </div>
@@ -44,10 +44,11 @@ export default function EditPersonaPage({ params }: { params: Promise<{ personaI
     }
 
     return (
-        <div className="mx-auto max-w-4xl space-y-6">
+        <div className="mx-auto w-full max-w-[1120px] space-y-6 pb-6 text-[#20242b]">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">{persona.name}</h1>
-                <p className="text-muted-foreground">Version {persona.version} · {persona.status === "paused" ? "Paused" : "Active"}</p>
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#7d898f]">Persona Studio / Edit profile</p>
+                <h1 className="text-[26px] font-semibold tracking-[-0.035em] text-[#20242b] md:text-[30px]">{persona.name}</h1>
+                <p className="mt-1 text-sm text-[#748087]">Version {persona.version} · {persona.status === "paused" ? "Paused" : "Active"}</p>
             </div>
             <PersonaForm
                 key={persona.version}

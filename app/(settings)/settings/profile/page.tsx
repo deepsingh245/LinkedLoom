@@ -196,8 +196,8 @@ export default function ProfileSettingsPage() {
     return (
         <div className="space-y-6 text-foreground">
             <div>
-                <h1 className="text-3xl font-display font-semibold tracking-tight text-foreground mb-1">Account Settings</h1>
-                <p className="text-muted-foreground">Manage your profile, subscription, and preferences.</p>
+                <h1 className="text-[26px] font-semibold tracking-[-0.04em] text-[#20242b] mb-1 sm:text-[30px]">Profile</h1>
+                <p className="text-sm text-[#748087]">Manage your personal details and connected social accounts.</p>
             </div>
 
             <Card className="bg-card border-border rounded-2xl shadow-sm">
