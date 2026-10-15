@@ -21,6 +21,8 @@
 12. [Key Patterns & Conventions](#12-key-patterns--conventions)
 13. [Known Issues & Tech Debt](#13-known-issues--tech-debt)
 14. [Build & Development Commands](#14-build--development-commands)
+15. [Server State Management (TanStack Query v5)](#15-server-state-management-tanstack-query-v5)
+16. [AI Autopilot](#16-ai-autopilot-added-oct-2026)
 
 ---
 
@@ -1015,6 +1017,28 @@ The `AuthProvider` uses a Firestore `onSnapshot` (real-time push listener) for t
 
 ---
 
-*This file was generated from a full codebase audit on 2026-05-23. Last updated 2026-05-27 (TanStack Query v5 migration).*
+## 16. AI Autopilot (added Oct 2026)
+
+> **Resuming this feature? Read `docs/ai-autopilot/HANDOFF.md` first** (local, gitignored planning docs: status, immediate TODO, commands, gotchas). This section is only the code map.
+
+**What it is:** personas (role/audience/tone/topics/feeds/schedule/budget) research the web, write sourced, fact-checked LinkedIn drafts and queue them for review. Manual approval only; LinkedIn-only; Reddit is on hold. Feature-flagged by `NEXT_PUBLIC_AUTOPILOT_ENABLED=true` (nav item + `/autopilot/*` pages return 404 otherwise).
+
+**Data model** – all under `workspaces/{uid}` (`workspaceId == uid`); the client only **reads** (owner), every write goes through callable Cloud Functions: `personas`, `settings/config` (kill switch), `members`, `auditLogs`, `aiConnections`, `creditWallets/main`, `creditLedger`, `creditReservations`, `usageRecords`, `personaUsage`, `workflowRuns` (+ server-only `artifacts`), `contentItems`, `researchItems`. Server-only: `aiConnectionSecrets`, `runLocks`, `usageCounters`, top-level `researchSchedule`. Drafts leave Autopilot only via `exportContentToDraft` → normal `posts` doc (`status: "DRAFT"`).
+
+**Backend** (`functions/src/`):
+- `autopilot/` – `personas.ts` (CRUD callables), `schema.ts` (zod, `PersonaInput`), `limits.ts`, `workspace.ts` (`ensureWorkspace` creates workspace + trial credits), `test-generate.ts`.
+- `autopilot/research/` – durable research pipeline: `pipeline.ts` (7 steps), `steps.ts` (`processStep`, `researchStep` Cloud Tasks worker, `finalizeRun`), `start.ts`, `run.ts` (callables `runResearch`/`retryRun`/`cancelRun`/content actions), `reaper.ts`, `lock.ts`, `artifacts.ts`, `errors.ts`, `safe-fetch.ts` (SSRF-hardened fetch – never loosen), `feeds.ts`, `extract.ts`, `dedupe.ts`, `relevance.ts`, `prompts.ts`, `verify.ts`, `types.ts`.
+- `autopilot/scheduling/` – `next-run.ts` (DST-safe), `schedule-index.ts`, `dispatcher.ts` (`dispatchResearch` every 10 min).
+- `ai-core/` – provider abstraction (`providers/{gemini,openai,mock}.ts`), `execute.ts` (`runAI`, `runAIStructured`, `runAIGrounded`: key resolution, credit reserve/settle, metering), `registry.ts`, `pricing.ts` (**placeholder prices**), `secret-store.ts` (Secret Manager / emulator), `connections*.ts` (BYOK callables).
+- `billing/` – `credits.ts` (append-only ledger, reservations), `grants.ts`, `sweeper.ts`. Shared helpers: `shared/callable.ts` (`requireUid`, `parse`).
+- Heavy SDKs are **lazy-loaded** with `require()` (function discovery has a 10 s limit) – keep them lazy.
+
+**Frontend**: pages `app/(dashboard)/autopilot/{page,new,[personaId],drafts,runs,ai,credits}`; components `components/features/autopilot/*`; data `lib/firebase/{autopilot,ai,research,errors}.ts`, hooks `lib/query/hooks/{use-autopilot,use-ai-billing,use-research}.ts` (keys under `queryKeys.autopilot.*`), form schema `lib/schemas/persona.ts` (mirrors the backend limits), types `types/{autopilot,ai,research}.ts`.
+
+**Status (2026-10-15):** phases A1–A3 done; A4 backend done (Cloud Tasks steps, dispatcher, reaper), **A4 frontend pending**; A5 (publishing) and A6 (payments/hardening) not started. Tests (`functions/`): `npm test` (135 unit), `npm run test:rules` (10), `npm run test:e2e` (75, mocked AI on project `demo-linkedloom-test`).
+
+---
+
+*This file was generated from a full codebase audit on 2026-05-23. Last updated 2026-10-15 (AI Autopilot section added; earlier: 2026-05-27 TanStack Query v5 migration).*
 *Update this file whenever you add new routes, components, environment variables, or Cloud Functions.*
 

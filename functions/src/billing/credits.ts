@@ -70,7 +70,9 @@ export interface ReserveInput {
 
 /**
  * Atomically hold credits for an upcoming AI call. Fails with resource-exhausted when the
- * workspace (or the persona's monthly limit) can't cover the estimate. Idempotent.
+ * workspace (or the persona's monthly limit) can't cover the estimate. Idempotent: a held or settled
+ * reservation with the same key is returned as is. A *released* one (the earlier attempt failed) is held
+ * again, so a retry of the same operation is charged normally when it succeeds.
  */
 export async function reserveCredits(workspaceId: string, input: ReserveInput): Promise<string> {
     const reservationId = `res_${input.idempotencyKey}`;
@@ -81,7 +83,8 @@ export async function reserveCredits(workspaceId: string, input: ReserveInput): 
         const usageRef = input.personaId ? personaUsageRef(workspaceId, input.personaId, monthKey()) : undefined;
         const usage = usageRef ? await tx.get(usageRef) : undefined;
         const wallet = await readWallet(tx, workspaceId);
-        if (existing.exists) return;
+        const prior = existing.exists ? existing.data()! : null;
+        if (prior && prior.status !== "released") return;
 
         if (wallet.balance - wallet.reserved < amount) {
             throw new HttpsError(
@@ -99,16 +102,22 @@ export async function reserveCredits(workspaceId: string, input: ReserveInput): 
             }
         }
 
-        tx.create(resRef, {
+        const attempt = prior ? ((prior.attempt as number | undefined) ?? 1) + 1 : 1;
+        const fields = {
             amount,
             status: "held",
+            attempt,
             feature: input.feature,
             ...(input.personaId ? { personaId: input.personaId } : {}),
             expiresAt: Timestamp.fromMillis(Date.now() + RESERVATION_TTL_MS),
-            createdAt: FieldValue.serverTimestamp(),
-        });
+        };
+        if (prior) {
+            tx.update(resRef, { ...fields, releaseReason: FieldValue.delete(), releasedAt: FieldValue.delete() });
+        } else {
+            tx.create(resRef, { ...fields, createdAt: FieldValue.serverTimestamp() });
+        }
         tx.set(walletRef(workspaceId), { balance: wallet.balance, reserved: wallet.reserved + amount, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-        writeLedger(tx, workspaceId, `${reservationId}_hold`, {
+        writeLedger(tx, workspaceId, attempt === 1 ? `${reservationId}_hold` : `${reservationId}_hold_${attempt}`, {
             type: "reservation",
             amount: 0,
             balanceAfter: wallet.balance,
@@ -160,9 +169,10 @@ export async function releaseReservation(workspaceId: string, reservationId: str
         const wallet = await readWallet(tx, workspaceId);
         if (!res.exists || res.data()!.status !== "held") return;
         const held = res.data()!.amount as number;
+        const attempt = (res.data()!.attempt as number | undefined) ?? 1;
         tx.update(resRef, { status: "released", releaseReason: reason, releasedAt: FieldValue.serverTimestamp() });
         tx.set(walletRef(workspaceId), { balance: wallet.balance, reserved: Math.max(0, wallet.reserved - held), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-        writeLedger(tx, workspaceId, `${reservationId}_release`, {
+        writeLedger(tx, workspaceId, attempt === 1 ? `${reservationId}_release` : `${reservationId}_release_${attempt}`, {
             type: "release",
             amount: 0,
             balanceAfter: wallet.balance,

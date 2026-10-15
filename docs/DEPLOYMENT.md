@@ -86,6 +86,13 @@ EDITOR_IMAGE_DAILY_CAP=30       # Create Post images per user per day
 BYOK_DAILY_CALL_CAP=200         # AI calls per workspace per day on users' own keys
 AUTOPILOT_DAILY_RUNS=10         # research runs per workspace per day
 AUTOPILOT_RUN_MAX_AI_CALLS=12    # hard cap of AI calls inside one research run
+# Scheduled + durable runs (Phase 4)
+AUTOPILOT_MAX_PENDING_DRAFTS=6              # scheduled research pauses while this many drafts wait for review
+AUTOPILOT_MIN_CREDITS_TO_RUN=20             # scheduled runs are skipped below this many available credits (managed billing only)
+AUTOPILOT_RESEARCH_LEAD_MINUTES=90          # research starts this long before each posting window
+AUTOPILOT_MAX_SCHEDULE_LATENESS_MINUTES=240 # a scheduled run overdue by more than this is skipped (window passed)
+AUTOPILOT_STUCK_AFTER_MINUTES=20            # a run with no progress this long is re-queued/failed by the reaper
+RESEARCH_RETRY_MIN_BACKOFF=15               # seconds before Cloud Tasks retries a failed step (Firebase param; 1 in the test env)
 ```
 
 Users' own keys (BYOK) are **not** in `.env`: they go to Google Cloud Secret Manager at runtime (see §7.1). Managed keys still come from `.env`; moving them to `firebase functions:secrets:set` is a later hardening step (remove them from `.env` at the same time, or deploy fails on the name clash).
@@ -158,9 +165,19 @@ firebase deploy --only functions,firestore:rules,firestore:indexes,storage
 
 Functions in this repo: `generatePost`, `generateImage`, `enhanceImagePrompt` (ai.ts) · LinkedIn: `getLinkedInAuthUrl`, `exchangeLinkedInToken`, `publishToLinkedIn`, `getLinkedInAnalytics` · Reddit: `getRedditAuthUrl`, `exchangeRedditToken`, `publishToReddit`, `disconnectReddit`, `getRedditAnalytics` · `checkScheduledPosts` (every 10 min) · `generateResizedImages` (Storage trigger).
 
-AI Autopilot: personas `createPersona`, `updatePersona`, `setPersonaStatus`, `deletePersona`, `setAutopilotEnabled` · AI `addAIConnection`, `testAIConnection`, `revokeAIConnection`, `testPersonaGeneration` · credits `adminGrantCredits`, `sweepCreditReservations` (every 15 min) · research `runResearch` (up to 9 min, 512 MiB), `updateContentItem`, `setContentStatus`, `exportContentToDraft`.
+AI Autopilot: personas `createPersona`, `updatePersona`, `setPersonaStatus`, `deletePersona`, `setAutopilotEnabled` · AI `addAIConnection`, `testAIConnection`, `revokeAIConnection`, `testPersonaGeneration` · credits `adminGrantCredits`, `sweepCreditReservations` (every 15 min) · research `runResearch` (queues a run and returns its id), `retryRun`, `cancelRun`, `updateContentItem`, `setContentStatus`, `exportContentToDraft`, task worker `researchStep` (Cloud Tasks, one step per task), schedulers `dispatchResearch` (every 10 min), `reapResearchRuns` (every 15 min), `reconcileResearchSchedule` (daily), admin hooks `adminDispatchResearch` and `adminReapResearchRuns` (need the `admin: true` claim).
 
 Requirements: project on the **Blaze** plan; Node 22; Cloud Scheduler + Pub/Sub APIs are enabled automatically on first deploy of `checkScheduledPosts`.
+
+### 7.2 One-time setup for scheduled/durable research (Phase 4)
+
+1. Enable **Cloud Tasks**: `gcloud services enable cloudtasks.googleapis.com --project linkedloom`. The first deploy of `researchStep` creates its queue automatically.
+2. The functions runtime service account must be allowed to queue tasks: grant it `roles/cloudtasks.enqueuer` and `roles/iam.serviceAccountUser` on itself (without these `runResearch` fails with a permission error).
+3. Firestore **TTL policies** (Console → Firestore → Time-to-live): collection group `artifacts`, field `expireAt` (temporary fetched article text; the app also deletes it when a run ends), and `researchItems.expireAt`.
+4. Indexes: `firebase deploy --only firestore:indexes` adds collection-group overrides for `personas.research.autoRun` and `workflowRuns.status` (used by the reconcile job and the reaper). They take a few minutes to build.
+5. Automatic research is **opt-in per persona** and runs only for `active` personas with a feed or web search; the kill switch ("Stop all") stops everything. Check logs with `firebase functions:log --only dispatchResearch,researchStep`.
+6. Ops: with the admin claim you can call `adminDispatchResearch` (`{ reconcile: true }` rebuilds the schedule index) and `adminReapResearchRuns` by hand.
+7. Privacy: fetched article text is kept in server-only run artifacts for the duration of a run (deleted at the end, ≤24 h by TTL). `/privacy` must say so (see `docs/ai-autopilot/HANDOFF.md` §3).
 
 ### 7.1 One-time setup for AI Autopilot (BYOK keys in Secret Manager)
 
@@ -213,9 +230,9 @@ Point `NEXT_PUBLIC_API_URL` at `http://127.0.0.1:5001/linkedloom/us-central1` wh
 ### Tests (functions folder)
 
 ```bash
-npm test             # unit tests (persona validation, pricing, redaction, structured output), no emulator needed
+npm test             # 135 unit tests (persona validation, pricing, redaction, SSRF guard, research, schedule math, workflow logic), no emulator needed
 npm run test:rules   # Firestore rules tests in the emulator (needs Java)
-npm run test:e2e     # builds, then runs callables + credits ledger in auth+firestore+functions emulators
+npm run test:e2e     # builds, then 75 tests in auth+firestore+functions (+Cloud Tasks) emulators: callables, credits ledger, research, scheduling, durability
 ```
 `test:e2e` runs on the offline project `demo-linkedloom-test`; `functions/.env.demo-linkedloom-test` switches AI providers to a deterministic mock (no real AI calls, no keys needed) and lowers the editor daily cap to 3 so the cap can be tested.
 Windows gotcha: after `emulators:exec` finishes, the Firestore emulator (a `java` process on port 8080) sometimes keeps running, and the next run fails with "port taken". Find it with `Get-NetTCPConnection -LocalPort 8080 -State Listen` and stop that `java` process.

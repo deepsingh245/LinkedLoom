@@ -11,6 +11,7 @@ import {
 import { ensureWorkspace, personasRef, settingsRef, writeAudit } from "./workspace";
 import { parse, requireUid } from "../shared/callable";
 import { assertConnectionUsable } from "../ai-core/connections-store";
+import { syncScheduleFor } from "./scheduling/schedule-index";
 
 /**
  * Create a persona in the caller's personal workspace (workspaces/{uid}).
@@ -47,6 +48,7 @@ export const createPersona = onCall(async (request) => {
     });
 
     await writeAudit(workspaceId, uid, "persona.create", ref.id, { name: input.name });
+    await syncScheduleFor(workspaceId, ref.id);
     return { id: ref.id, version: 1 };
 });
 
@@ -83,6 +85,7 @@ export const updatePersona = onCall(async (request) => {
     });
 
     await writeAudit(workspaceId, uid, "persona.update", personaId, { version });
+    await syncScheduleFor(workspaceId, personaId);
     return { id: personaId, version };
 });
 
@@ -116,6 +119,7 @@ export const setPersonaStatus = onCall(async (request) => {
     });
 
     await writeAudit(workspaceId, uid, "persona.status", personaId, { status });
+    await syncScheduleFor(workspaceId, personaId);
     return { id: personaId, status };
 });
 
@@ -138,6 +142,7 @@ export const deletePersona = onCall(async (request) => {
     });
 
     await writeAudit(workspaceId, uid, "persona.delete", personaId);
+    await syncScheduleFor(workspaceId, personaId); // persona is gone → removes its schedule entry
     return { id: personaId, deleted: true };
 });
 

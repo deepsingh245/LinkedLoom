@@ -13,10 +13,30 @@ export function isMockEnabled(): boolean {
     return process.env.AI_PROVIDER_MOCK === "true" && process.env.FUNCTIONS_EMULATOR === "true";
 }
 
-function failIfAsked(prompt: string) {
-    if (prompt.includes("[mock:rate_limit]")) throw new ProviderError("rate_limit", "Mock rate limit.", 429);
-    if (prompt.includes("[mock:ambiguous]")) throw new ProviderError("ambiguous", "Mock timeout.");
-    if (prompt.includes("[mock:bad_request]")) throw new ProviderError("bad_request", "Mock bad request.", 400);
+/**
+ * [mock:fail-once] fails the first call for a given prompt with a transient error and lets later calls through.
+ * The "seen" flag lives in Firestore (emulator only) so it survives separate function instances/retries.
+ */
+async function failOnce(text: string) {
+    const { createHash } = await import("crypto");
+    const { getFirestore } = await import("firebase-admin/firestore");
+    const id = createHash("sha1").update(text).digest("hex");
+    try {
+        await getFirestore().collection("_mockFlags").doc(id).create({ at: Date.now() });
+    } catch {
+        return; // already failed once before → proceed normally
+    }
+    throw new ProviderError("ambiguous", "Mock transient failure (first attempt).");
+}
+
+async function failIfAsked(request: AIRequest) {
+    const text = `${request.system ?? ""}\n${request.prompt}`;
+    if (text.includes("[mock:rate_limit]")) throw new ProviderError("rate_limit", "Mock rate limit.", 429);
+    if (text.includes("[mock:ambiguous]")) throw new ProviderError("ambiguous", "Mock timeout.");
+    if (text.includes("[mock:bad_request]")) throw new ProviderError("bad_request", "Mock bad request.", 400);
+    if (text.includes("[mock:fail-once]")) await failOnce(text);
+    // [mock:slow] makes the call take a while so tests can act on a run that is still in progress.
+    if (text.includes("[mock:slow]")) await new Promise((resolve) => setTimeout(resolve, 7000));
 }
 
 function usageFor(request: AIRequest, output: string) {
@@ -100,19 +120,19 @@ export function mockProvider(id: ProviderId): AIProvider {
     return {
         id,
         async generateText(request): Promise<AIResult> {
-            failIfAsked(request.prompt);
+            await failIfAsked(request);
             const text = `Mock ${id} response for: ${request.prompt.slice(0, 80)}`;
             return { text, usage: usageFor(request, text), model: request.model, provider: id };
         },
         async generateStructured<T>(request: AIRequest, spec: StructuredSpec<T>): Promise<StructuredAIResult<T>> {
-            failIfAsked(request.prompt);
+            await failIfAsked(request);
             const text = JSON.stringify(researchResponse(spec.name, request) ?? sampleFor(spec.schema));
             return { text, usage: usageFor(request, text), model: request.model, provider: id, data: parseStructured(text, spec) };
         },
         ...(id === "gemini" ?
             {
                 async search(request: AIRequest): Promise<GroundedResult> {
-                    failIfAsked(request.prompt);
+                    await failIfAsked(request);
                     const urls = Array.from(request.prompt.matchAll(/\[mock:url=(\S+?)\]/g)).map((m) => m[1]);
                     const text = `Mock grounded answer about: ${request.prompt.slice(0, 60)}`;
                     return {

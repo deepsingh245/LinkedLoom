@@ -49,7 +49,10 @@ export type AuditAction =
     | "research.run"
     | "content.update"
     | "content.status"
-    | "content.export";
+    | "content.export"
+    | "run.cancel"
+    | "run.retry"
+    | "schedule.sync";
 
 export type AuditLog = {
     action: AuditAction;

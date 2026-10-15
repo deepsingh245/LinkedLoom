@@ -75,14 +75,15 @@ function toHttpsError(error: ProviderError, billingMode: BillingMode): HttpsErro
         return billingMode === "byok" ?
             new HttpsError("failed-precondition", "Your AI provider rejected the API key. Test or replace the connection.") :
             new HttpsError("internal", "AI service configuration error.");
+    // `details.kind` lets workflow code tell a transient provider problem (retry) from our own limits (stop).
     case "rate_limit":
-        return new HttpsError("resource-exhausted", "The AI provider is busy or out of quota. Please try again shortly.");
+        return new HttpsError("resource-exhausted", "The AI provider is busy or out of quota. Please try again shortly.", { kind: "provider_rate_limit" });
     case "ambiguous":
-        return new HttpsError("deadline-exceeded", "The AI request timed out. Please try again.");
+        return new HttpsError("deadline-exceeded", "The AI request timed out. Please try again.", { kind: "provider_timeout" });
     case "bad_output":
-        return new HttpsError("internal", "The AI returned an unexpected response. Please try again.");
+        return new HttpsError("internal", "The AI returned an unexpected response. Please try again.", { kind: "bad_output" });
     default:
-        return new HttpsError("internal", "The AI request failed. Please try again.");
+        return new HttpsError("internal", "The AI request failed. Please try again.", { kind: "provider_unavailable" });
     }
 }
 
@@ -151,7 +152,8 @@ async function run<R extends AIResult>(
         // Never charge on failure. Ambiguous outcomes are absorbed by us and flagged for reconciliation.
         if (reservationId) await releaseReservation(ctx.workspaceId, reservationId, providerError.kind);
         const status: UsageStatus = providerError.kind === "ambiguous" ? "ambiguous" : "failed";
-        await recordUsage(ctx.workspaceId, idempotencyKey, {
+        // Failures get their own record id: a retry of the same operation can then record its success under the key.
+        await recordUsage(ctx.workspaceId, `${idempotencyKey}~${status}-${Date.now()}`, {
             ...base,
             usage: { inputTokens: 0, outputTokens: 0 },
             costMicroUsd: 0,

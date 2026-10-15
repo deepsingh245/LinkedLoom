@@ -104,6 +104,8 @@ describe("AI + billing collections", () => {
             for (const path of readable) await setDoc(doc(db, `workspaces/alice/${path}`), { x: 1 });
             await setDoc(doc(db, "workspaces/alice/aiConnectionSecrets/c1"), { secretRef: "projects/p/secrets/byok-alice-c1" });
             await setDoc(doc(db, "workspaces/alice/runLocks/p1"), { runId: "r1" });
+            await setDoc(doc(db, "researchSchedule/alice__p1"), { workspaceId: "alice", personaId: "p1" });
+            await setDoc(doc(db, "workspaces/alice/workflowRuns/run1/artifacts/docs"), { json: "[]" });
             await setDoc(doc(db, "_emulatorSecrets/byok-alice-c1"), { value: "sk-secret" });
         });
     });
@@ -123,6 +125,11 @@ describe("AI + billing collections", () => {
         await assertFails(getDoc(doc(asAlice(), "workspaces/alice/aiConnectionSecrets/c1")));
         await assertFails(getDocs(collection(asAlice(), "workspaces/alice/aiConnectionSecrets")));
         await assertFails(getDoc(doc(asAlice(), "workspaces/alice/runLocks/p1"))); // research run locks are server-only
+        await assertFails(getDoc(doc(asAlice(), "researchSchedule/alice__p1"))); // the dispatcher's schedule index is server-only
+        await assertFails(getDocs(collection(asAlice(), "researchSchedule")));
+        await assertFails(getDoc(doc(asAlice(), "workspaces/alice/workflowRuns/run1/artifacts/docs"))); // temporary article text is server-only
+        await assertFails(getDocs(collection(asAlice(), "workspaces/alice/workflowRuns/run1/artifacts")));
+        await assertFails(setDoc(doc(asAlice(), "researchSchedule/alice__p9"), { nextRunAt: new Date(0) }));
         await assertFails(getDoc(doc(asAlice(), "_emulatorSecrets/byok-alice-c1")));
         await assertFails(getDoc(doc(asAnon(), "_emulatorSecrets/byok-alice-c1")));
     });

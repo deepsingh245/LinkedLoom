@@ -107,6 +107,28 @@ const code = async (p: Promise<unknown>) => {
     }
 };
 
+
+const TERMINAL = ["completed", "partial", "failed", "cancelled", "skipped"];
+
+/** Wait for a run (executed in the background by Cloud Tasks) to reach a final status; returns the old callable-style summary. */
+async function waitForRun(c: Client, runId: string, timeoutMs = 120_000) {
+    const ref = doc(c.db, "workspaces", c.uid, "workflowRuns", runId);
+    const deadline = Date.now() + timeoutMs;
+    for (;;) {
+        const run = (await getDoc(ref)).data();
+        if (run && TERMINAL.includes(run.status)) {
+            return { runId, status: run.status as string, drafts: (run.draftIds?.length ?? 0) as number, stats: run.stats, notes: (run.notes ?? []) as string[], reason: run.reason as string | undefined };
+        }
+        if (Date.now() > deadline) throw new Error(`Run ${runId} did not finish: ${JSON.stringify(run?.status)} step=${run?.currentStep}`);
+        await new Promise((r) => setTimeout(r, 400));
+    }
+}
+
+/** Start a run and wait for it to finish. */
+async function runAndWait(c: Client, personaId: string) {
+    const { runId } = await c.call<{ runId: string }>("runResearch", { personaId });
+    return waitForRun(c, runId);
+}
 const adminDb = () => getAdminFirestore();
 
 interface PersonaOpts {
@@ -173,7 +195,7 @@ describe("research run: happy path, dedupe, review actions", () => {
     it("finds, verifies and stores sourced drafts", async () => {
         ({ c: alice, personaId } = await setup("alice"));
         const startBalance = (await wallet(alice)).balance;
-        firstRun = await alice.call("runResearch", { personaId });
+        firstRun = await runAndWait(alice, personaId);
 
         expect(firstRun.status).toBe("completed");
         expect(firstRun.drafts).toBe(2);
@@ -222,7 +244,7 @@ describe("research run: happy path, dedupe, review actions", () => {
 
     it("a second run finds nothing new and spends no credits", async () => {
         const before = (await wallet(alice)).balance;
-        const second = await alice.call<any>("runResearch", { personaId });
+        const second = await runAndWait(alice, personaId);
         expect(second.status).toBe("completed");
         expect(second.drafts).toBe(0);
         expect(second.stats.aiCalls).toBe(0);
@@ -280,7 +302,7 @@ describe("research run: happy path, dedupe, review actions", () => {
 describe("verification rejects untrustworthy drafts", () => {
     it("rejects a draft whose claim the fact-check can't support", async () => {
         const { c, personaId } = await setup("unsupported", { customInstructions: "[mock:unsupported]" });
-        const res = await c.call<any>("runResearch", { personaId });
+        const res = await runAndWait(c, personaId);
         expect(res.drafts).toBe(0);
         expect(res.stats.draftsRejected).toBeGreaterThan(0);
         expect(await contentItems(c)).toHaveLength(0);
@@ -290,7 +312,7 @@ describe("verification rejects untrustworthy drafts", () => {
 
     it("rejects a draft with a statistic that isn't in the sources, before spending on the AI check", async () => {
         const { c, personaId } = await setup("invent", { customInstructions: "[mock:invent-number]" });
-        const res = await c.call<any>("runResearch", { personaId });
+        const res = await runAndWait(c, personaId);
         expect(res.drafts).toBe(0);
         const run = (await getDoc(doc(c.db, "workspaces", c.uid, "workflowRuns", res.runId))).data()!;
         expect(run.rejections.map((r: any) => r.reasons.join(" ")).join(" ")).toMatch(/73%/);
@@ -299,7 +321,7 @@ describe("verification rejects untrustworthy drafts", () => {
 
     it("rejects a draft that leaks prompt markers", async () => {
         const { c, personaId } = await setup("leak", { customInstructions: "[mock:leak]" });
-        const res = await c.call<any>("runResearch", { personaId });
+        const res = await runAndWait(c, personaId);
         expect(res.drafts).toBe(0);
         const run = (await getDoc(doc(c.db, "workspaces", c.uid, "workflowRuns", res.runId))).data()!;
         expect(run.rejections.map((r: any) => r.reasons.join(" ")).join(" ")).toMatch(/prompt markers/i);
@@ -307,7 +329,7 @@ describe("verification rejects untrustworthy drafts", () => {
 
     it("writes nothing when there aren't enough distinct source sites", async () => {
         const { c, personaId } = await setup("fewsources", { minSourceCount: 5 });
-        const res = await c.call<any>("runResearch", { personaId });
+        const res = await runAndWait(c, personaId);
         expect(res.drafts).toBe(0);
         expect(res.stats.aiCalls).toBe(0);
         expect(res.notes.join(" ")).toMatch(/distinct source/i);
@@ -322,7 +344,7 @@ describe("web search (Gemini grounding)", () => {
             topics: [`AI agents [mock:url=${at(HOSTS[0], "/a1")}] [mock:url=${at(HOSTS[1], "/a2")}]`],
         });
         const start = (await wallet(c)).balance;
-        const res = await c.call<any>("runResearch", { personaId });
+        const res = await runAndWait(c, personaId);
         expect(res.status).toBe("completed");
         expect(res.drafts).toBe(1);
 
@@ -340,7 +362,7 @@ describe("web search (Gemini grounding)", () => {
         const conn = await c.call<{ id: string }>("addAIConnection", { provider: "openai", label: "mine", apiKey: "test-valid-key-1234567" });
         const personaId = await seedPersona(c.uid, { webSearch: true, connectionId: conn.id });
         const start = (await wallet(c)).balance;
-        const res = await c.call<any>("runResearch", { personaId });
+        const res = await runAndWait(c, personaId);
         expect(res.status).toBe("completed");
         expect(res.notes.join(" ")).toMatch(/needs Gemini/i);
         expect(res.drafts).toBe(2);
@@ -355,7 +377,7 @@ describe("guards", () => {
     it("stops cleanly when the workspace is out of credits", async () => {
         const { c, personaId } = await setup("broke");
         await adminDb().doc(`workspaces/${c.uid}/creditWallets/main`).update({ balance: 0 });
-        const res = await c.call<any>("runResearch", { personaId });
+        const res = await runAndWait(c, personaId);
         expect(res.status).toBe("partial");
         expect(res.drafts).toBe(0);
         expect(res.notes.join(" ")).toMatch(/not enough ai credits/i);
@@ -383,7 +405,7 @@ describe("guards", () => {
 
         // A crashed run's lease expires, so it can't block the persona forever.
         await lockRef.set({ runId: "crashed", leaseExpiresAt: Timestamp.fromMillis(Date.now() - 60_000) });
-        const res = await c.call<any>("runResearch", { personaId });
+        const res = await runAndWait(c, personaId);
         expect(res.status).toBe("completed");
         expect((await lockRef.get()).exists).toBe(false); // released at the end of the run
     });
@@ -412,7 +434,7 @@ describe("guards", () => {
         const { c, personaId } = await setup("badfeed", {
             feedUrls: [at(HOSTS[0], "/missing.xml"), "https://169.254.169.254/latest/meta-data/", at(HOSTS[0], "/feed.xml")],
         });
-        const res = await c.call<any>("runResearch", { personaId });
+        const res = await runAndWait(c, personaId);
         expect(res.status).toBe("completed");
         expect(res.stats).toMatchObject({ feedsFetched: 1, feedsFailed: 2 }); // 404 and the blocked metadata URL fail, the good feed works
         expect(res.notes.join(" ")).toMatch(/Feed skipped/);
@@ -421,7 +443,7 @@ describe("guards", () => {
 
     it("enforces the daily research-run cap", async () => {
         const { c, personaId } = await setup("capped", { feedUrls: [at(HOSTS[0], "/missing.xml")] });
-        for (let i = 0; i < 4; i++) await c.call("runResearch", { personaId });
+        for (let i = 0; i < 6; i++) await runAndWait(c, personaId);
         expect(await code(c.call("runResearch", { personaId }))).toBe("resource-exhausted");
     });
 });

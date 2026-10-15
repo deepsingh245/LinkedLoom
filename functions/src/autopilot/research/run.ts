@@ -1,19 +1,20 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { FieldValue, getFirestore, Timestamp } from "firebase-admin/firestore";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { z } from "zod";
 import { consumeDailyQuota } from "../../ai-core/usage";
 import { parse, requireUid } from "../../shared/callable";
 import { personaIdSchema } from "../schema";
 import { ensureWorkspace, personasRef, settingsRef, workspaceRef, writeAudit } from "../workspace";
-import { executePipeline } from "./pipeline";
-import { DAILY_RUNS, RESEARCH_LIMITS } from "./types";
+import { startRun } from "./start";
+import { finalizeRun, runRefOf } from "./steps";
+import { DAILY_RUNS, TERMINAL_STATUSES } from "./types";
 
-const runLockRef = (workspaceId: string, personaId: string) => workspaceRef(workspaceId).collection("runLocks").doc(personaId);
 const contentRef = (workspaceId: string) => workspaceRef(workspaceId).collection("contentItems");
 
 const idSchema = z.string().trim().min(1).max(128).regex(/^[A-Za-z0-9_-]+$/);
 
 const runSchema = z.object({ personaId: personaIdSchema }).strict();
+const runIdSchema = z.object({ runId: idSchema }).strict();
 const updateSchema = z.object({
     contentId: idSchema,
     text: z.string().trim().min(40, { message: "Post is too short." }).max(3000, { message: "Post is too long." }),
@@ -21,45 +22,8 @@ const updateSchema = z.object({
 const statusSchema = z.object({ contentId: idSchema, status: z.enum(["pending", "rejected"]) }).strict();
 const exportSchema = z.object({ contentId: idSchema }).strict();
 
-/** One research run per persona at a time. The lease expires so a crashed run can't block forever. */
-async function acquireLock(workspaceId: string, personaId: string, runId: string) {
-    const ref = runLockRef(workspaceId, personaId);
-    await getFirestore().runTransaction(async (tx) => {
-        const snap = await tx.get(ref);
-        const lease = snap.data()?.leaseExpiresAt as Timestamp | undefined;
-        if (snap.exists && lease && lease.toMillis() > Date.now()) {
-            throw new HttpsError("failed-precondition", "A research run is already in progress for this persona.");
-        }
-        tx.set(ref, { runId, leaseExpiresAt: Timestamp.fromMillis(Date.now() + RESEARCH_LIMITS.runLeaseMs), startedAt: FieldValue.serverTimestamp() });
-    });
-}
-
-async function extendLock(workspaceId: string, personaId: string, runId: string) {
-    const ref = runLockRef(workspaceId, personaId);
-    await getFirestore().runTransaction(async (tx) => {
-        const snap = await tx.get(ref);
-        if (snap.data()?.runId !== runId) throw new HttpsError("aborted", "This run was superseded.");
-        tx.update(ref, { leaseExpiresAt: Timestamp.fromMillis(Date.now() + RESEARCH_LIMITS.runLeaseMs) });
-    });
-}
-
-async function releaseLock(workspaceId: string, personaId: string, runId: string) {
-    const ref = runLockRef(workspaceId, personaId);
-    await getFirestore().runTransaction(async (tx) => {
-        const snap = await tx.get(ref);
-        if (snap.data()?.runId === runId) tx.delete(ref);
-    }).catch(() => undefined);
-}
-
-/**
- * Run research for one persona now: discover → filter → fetch → extract → generate → verify → store.
- * Runs inside this call (≤ 9 minutes); the run document updates live so the UI can show progress.
- */
-export const runResearch = onCall({ timeoutSeconds: 540, memory: "512MiB" }, async (request) => {
-    const uid = requireUid(request);
-    const { personaId } = parse(runSchema, request.data);
-    const workspaceId = await ensureWorkspace(uid);
-
+/** Checks shared by a manual run and a retry. Throws readable errors. */
+async function assertCanRun(workspaceId: string, personaId: string) {
     const settings = (await settingsRef(workspaceId).get()).data();
     if (settings?.autopilotEnabled === false) throw new HttpsError("failed-precondition", "Autopilot is stopped. Turn it on to run research.");
 
@@ -71,64 +35,64 @@ export const runResearch = onCall({ timeoutSeconds: 540, memory: "512MiB" }, asy
     if (!persona.research.feedUrls?.length && !persona.research.webSearch) {
         throw new HttpsError("failed-precondition", "Add at least one RSS feed or turn on web search for this persona.");
     }
-
     await consumeDailyQuota(workspaceId, "autopilot.run", DAILY_RUNS, `You've reached today's limit of ${DAILY_RUNS} research runs. Try again tomorrow.`);
+    return persona;
+}
 
-    const runRef = workspaceRef(workspaceId).collection("workflowRuns").doc();
-    await acquireLock(workspaceId, personaId, runRef.id);
-    try {
-        await runRef.set({
-            id: runRef.id,
-            personaId,
-            personaName: persona.name,
-            personaVersion: persona.version,
-            trigger: "manual",
-            status: "running",
-            steps: [],
-            stats: {},
-            notes: [],
-            rejections: [],
-            createdBy: uid,
-            startedAt: FieldValue.serverTimestamp(),
-            createdAt: FieldValue.serverTimestamp(),
-            updatedAt: FieldValue.serverTimestamp(),
-        });
+/**
+ * Start a research run now. The run is queued and executed step by step in the background
+ * (Cloud Tasks); this returns immediately and the run document updates live.
+ */
+export const runResearch = onCall(async (request) => {
+    const uid = requireUid(request);
+    const { personaId } = parse(runSchema, request.data);
+    const workspaceId = await ensureWorkspace(uid);
+    const persona = await assertCanRun(workspaceId, personaId);
 
-        const result = await executePipeline({
-            workspaceId,
-            uid,
-            runId: runRef.id,
-            runRef,
-            personaId,
-            persona,
-            heartbeat: async () => {
-                await extendLock(workspaceId, personaId, runRef.id);
-                // Stop promptly if the user hits the kill switch or pauses the persona mid-run.
-                const [s, p] = await Promise.all([settingsRef(workspaceId).get(), personasRef(workspaceId).doc(personaId).get()]);
-                if (s.data()?.autopilotEnabled === false) throw new HttpsError("aborted", "Autopilot was stopped.");
-                if (p.data()?.status !== "active") throw new HttpsError("aborted", "The persona was paused or archived.");
-            },
-        });
+    const runId = await startRun({ workspaceId, uid, personaId, persona, trigger: "manual" });
+    return { runId, status: "queued" as const };
+});
 
-        await runRef.update({
-            status: result.status,
-            stats: result.stats,
-            notes: result.notes,
-            rejections: result.rejections,
-            draftIds: result.draftIds,
-            credits: result.stats.credits,
-            finishedAt: FieldValue.serverTimestamp(),
-            updatedAt: FieldValue.serverTimestamp(),
-        });
-        await writeAudit(workspaceId, uid, "research.run", personaId, { runId: runRef.id, status: result.status, drafts: result.draftIds.length });
-        return { runId: runRef.id, status: result.status, drafts: result.draftIds.length, stats: result.stats, notes: result.notes };
-    } catch (error) {
-        const message = error instanceof Error ? error.message : "Run failed.";
-        await runRef.set({ status: "failed", notes: FieldValue.arrayUnion(message), finishedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true }).catch(() => undefined);
-        throw error;
-    } finally {
-        await releaseLock(workspaceId, personaId, runRef.id);
+/** Run again after a failed, partial, skipped or cancelled run. */
+export const retryRun = onCall(async (request) => {
+    const uid = requireUid(request);
+    const { runId } = parse(runIdSchema, request.data);
+    const workspaceId = await ensureWorkspace(uid);
+
+    const prior = await runRefOf(workspaceId, runId).get();
+    if (!prior.exists) throw new HttpsError("not-found", "Run not found.");
+    const priorData = prior.data()!;
+    if (!TERMINAL_STATUSES.includes(priorData.status) || priorData.status === "completed") {
+        throw new HttpsError("failed-precondition", "Only failed, stopped, skipped or cancelled runs can be run again.");
     }
+
+    const persona = await assertCanRun(workspaceId, priorData.personaId);
+    const newRunId = await startRun({ workspaceId, uid, personaId: priorData.personaId, persona, trigger: "retry", retryOf: runId });
+    await writeAudit(workspaceId, uid, "run.retry", priorData.personaId, { runId: newRunId, retryOf: runId });
+    return { runId: newRunId, status: "queued" as const };
+});
+
+/** Stop a queued or running research run. The worker stops at its next step; a queued run stops immediately. */
+export const cancelRun = onCall(async (request) => {
+    const uid = requireUid(request);
+    const { runId } = parse(runIdSchema, request.data);
+    const workspaceId = await ensureWorkspace(uid);
+    const ref = runRefOf(workspaceId, runId);
+
+    const snap = await ref.get();
+    if (!snap.exists) throw new HttpsError("not-found", "Run not found.");
+    const run = snap.data()!;
+    if (TERMINAL_STATUSES.includes(run.status)) return { runId, status: run.status as string };
+
+    await ref.update({ cancelRequested: true, updatedAt: FieldValue.serverTimestamp() });
+    await writeAudit(workspaceId, uid, "run.cancel", run.personaId, { runId });
+
+    // Nothing has started yet: no worker will notice, so end it here.
+    if (run.status === "queued" && !(run.steps as unknown[] | undefined)?.length) {
+        await finalizeRun(workspaceId, runId, "cancelled", { personaId: run.personaId, reason: "Cancelled by you.", note: "Cancelled by you.", uid });
+        return { runId, status: "cancelled" };
+    }
+    return { runId, status: "cancelling" };
 });
 
 /** Edit the LinkedIn text of a draft. */

@@ -56,6 +56,8 @@ export const personaInputSchema = z
             minSourceCount: z.number().int().min(L.minSourceCountMin).max(L.minSourceCountMax),
             // Let the research run use Gemini Google Search (metered). Older personas without it default to off.
             webSearch: z.boolean().default(false),
+            // Run research automatically before each posting window. Off by default: it spends credits/AI without a click.
+            autoRun: z.boolean().default(false),
         }),
         publishing: z.object({
             accountIds: z.array(z.enum(PLATFORMS)).min(1, { message: "Pick at least one platform." }).max(PLATFORMS.length),
@@ -79,7 +81,11 @@ export const personaInputSchema = z
             monthlyCreditLimit: z.number().int().min(0).max(L.monthlyCreditLimitMax),
         }),
     })
-    .strict();
+    .strict()
+    .refine((p) => !p.research.autoRun || p.research.feedUrls.length > 0 || p.research.webSearch, {
+        message: "Add an RSS feed or turn on web search before enabling automatic research.",
+        path: ["research", "autoRun"],
+    });
 
 export type PersonaInput = z.infer<typeof personaInputSchema>;
 
