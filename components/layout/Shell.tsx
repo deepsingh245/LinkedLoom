@@ -85,7 +85,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     };
 
     return (
-        <div className="dashboard-theme flex h-dvh overflow-hidden bg-background font-sans antialiased text-foreground">
+        <div className="dashboard-theme fixed inset-0 flex h-dvh overflow-hidden bg-background font-sans antialiased text-foreground">
             <Sidebar className="hidden lg:flex" />
             <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
                 <header className="z-20 flex h-[58px] shrink-0 items-center justify-between border-b border-border bg-card/95 px-3 backdrop-blur md:px-6">

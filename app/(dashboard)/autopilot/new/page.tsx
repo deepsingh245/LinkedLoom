@@ -18,7 +18,7 @@ export default function NewPersonaPage() {
             <div>
                 <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#7d898f]">Persona Studio / New profile</p>
                 <h1 className="text-[26px] font-semibold tracking-[-0.035em] text-[#20242b] md:text-[30px]">Create a persona</h1>
-                <p className="mt-1 text-sm leading-6 text-[#748087]">Define its voice, research topics, and posting schedule. You approve every draft.</p>
+                <p className="mt-1 text-sm leading-6 text-[#748087]">Tell us who it is and what it talks about. The technical setup is already filled in, and you approve every draft.</p>
             </div>
             <PersonaForm
                 defaultValues={emptyPersona()}

@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useFieldArray, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Lock, Plus, Trash2 } from "lucide-react"
+import { ChevronDown, Lock, Plus, Trash2, SlidersHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -113,11 +113,11 @@ export function PersonaForm({ defaultValues, submitLabel, onSubmit, onCancel, di
         <Form {...form}>
             <form onSubmit={form.handleSubmit(submit)} className="space-y-6">
                 <fieldset disabled={disabled || isSubmitting} className="space-y-6">
-                    {/* Identity */}
+                    {/* Essential persona details */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Identity</CardTitle>
-                            <CardDescription>Who this persona is and who it writes for.</CardDescription>
+                            <CardTitle>Persona basics</CardTitle>
+                            <CardDescription>Start with the few details that shape this persona&apos;s voice.</CardDescription>
                         </CardHeader>
                         <CardContent className="grid gap-4 md:grid-cols-2">
                             <FormField control={form.control} name="name" render={({ field }) => (
@@ -155,13 +155,6 @@ export function PersonaForm({ defaultValues, submitLabel, onSubmit, onCancel, di
                                     <FormMessage />
                                 </FormItem>
                             )} />
-                            <FormField control={form.control} name="identity.language" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Language</FormLabel>
-                                    <FormControl><Input placeholder="English" {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
                             <FormField control={form.control} name="description" render={({ field }) => (
                                 <FormItem className="md:col-span-2">
                                     <FormLabel>Description <span className="text-muted-foreground/60">(optional)</span></FormLabel>
@@ -169,23 +162,14 @@ export function PersonaForm({ defaultValues, submitLabel, onSubmit, onCancel, di
                                     <FormMessage />
                                 </FormItem>
                             )} />
-                            <FormField control={form.control} name="identity.customInstructions" render={({ field }) => (
-                                <FormItem className="md:col-span-2">
-                                    <FormLabel>Custom instructions <span className="text-muted-foreground/60">(optional)</span></FormLabel>
-                                    <FormControl>
-                                        <Textarea rows={4} maxLength={PERSONA_LIMITS.customInstructionsMax} placeholder="Always end with a question. Avoid hype words." {...field} value={field.value ?? ""} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
                         </CardContent>
                     </Card>
 
-                    {/* Research */}
+                    {/* Main creation input */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Research</CardTitle>
-                            <CardDescription>What to follow. Press Enter or comma to add an item.</CardDescription>
+                            <CardTitle>What should this persona talk about?</CardTitle>
+                            <CardDescription>Add a few topics. Press Enter or comma after each one.</CardDescription>
                         </CardHeader>
                         <CardContent className="grid gap-4">
                             <FormField control={form.control} name="research.topics" render={({ field }) => (
@@ -195,80 +179,14 @@ export function PersonaForm({ defaultValues, submitLabel, onSubmit, onCancel, di
                                     <FormMessage />
                                 </FormItem>
                             )} />
-                            <FormField control={form.control} name="research.keywords" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Keywords <span className="text-muted-foreground/60">(optional)</span></FormLabel>
-                                    <FormControl><TagInput value={field.value} onChange={field.onChange} max={PERSONA_LIMITS.keywordsMax} placeholder="LLM, agents, TypeScript" /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                            <FormField control={form.control} name="research.excludedTopics" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Excluded topics <span className="text-muted-foreground/60">(optional)</span></FormLabel>
-                                    <FormControl><TagInput value={field.value} onChange={field.onChange} max={PERSONA_LIMITS.excludedTopicsMax} placeholder="Politics, crypto" /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                            <FormField control={form.control} name="research.feedUrls" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>RSS / Atom feeds <span className="text-muted-foreground/60">(optional)</span></FormLabel>
-                                    <FormControl><TagInput value={field.value} onChange={field.onChange} max={PERSONA_LIMITS.feedUrlsMax} maxLength={2048} placeholder="https://example.com/feed.xml" /></FormControl>
-                                    <FormDescription>Research reads these feeds when you start a run or enable automatic research.</FormDescription>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <FormField control={form.control} name="research.freshnessHours" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Freshness window (hours)</FormLabel>
-                                        <FormControl><Input type="number" min={1} max={PERSONA_LIMITS.freshnessHoursMax} value={field.value} onChange={numberField(field.onChange)} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                                <FormField control={form.control} name="research.minSourceCount" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Minimum sources per post</FormLabel>
-                                        <FormControl><Input type="number" min={1} max={PERSONA_LIMITS.minSourceCountMax} value={field.value} onChange={numberField(field.onChange)} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                                <FormField control={form.control} name="research.webSearch" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Web search (Gemini)</FormLabel>
-                                        <Select value={field.value ? "on" : "off"} onValueChange={(v) => field.onChange(v === "on")}>
-                                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="off">Off – only my RSS feeds</SelectItem>
-                                                <SelectItem value="on">On – also search Google for fresh articles</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormDescription>Extra cost per run (search is billed per query). Needs Gemini billing: LinkedLoom credits or your own Gemini key.</FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                                <FormField control={form.control} name="research.autoRun" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Automatic research</FormLabel>
-                                        <Select value={field.value ? "on" : "off"} onValueChange={(v) => field.onChange(v === "on")}>
-                                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="off">Off – run research myself</SelectItem>
-                                                <SelectItem value="on">On – run before posting windows</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormDescription>Runs about 90 minutes before each posting window, pauses when 6 drafts await review, and uses LinkedLoom credits or your key. Add a feed or turn on web search first. Drafts still need your approval.</FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                            </div>
                         </CardContent>
                     </Card>
 
-                    {/* Publishing */}
+                    {/* Publishing settings are part of the main setup. */}
                     <Card>
                         <CardHeader>
                             <CardTitle>Publishing</CardTitle>
-                            <CardDescription>Where and when drafts are scheduled.</CardDescription>
+                            <CardDescription>Choose when this persona should prepare drafts. Every draft still needs your approval.</CardDescription>
                         </CardHeader>
                         <CardContent className="grid gap-4">
                             <div className="grid gap-4 md:grid-cols-3">
@@ -344,6 +262,120 @@ export function PersonaForm({ defaultValues, submitLabel, onSubmit, onCancel, di
                         </CardContent>
                     </Card>
 
+                    <details className="group rounded-xl border border-border bg-card shadow-sm">
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-xl px-5 py-4 outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                            <span className="flex items-center gap-3">
+                                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-muted-foreground"><SlidersHorizontal className="h-4 w-4" /></span>
+                                <span>
+                                    <span className="block text-sm font-semibold text-foreground">Advanced settings</span>
+                                    <span className="mt-0.5 block text-xs text-muted-foreground">Optional controls. We&apos;ve filled in sensible defaults for you.</span>
+                                </span>
+                            </span>
+                            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+                        </summary>
+                        <div className="grid gap-6 border-t border-border p-5">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Voice details</CardTitle>
+                                    <CardDescription>Optional guidance for the writing assistant.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="grid gap-4 md:grid-cols-2">
+                                    <FormField control={form.control} name="identity.language" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Writing language</FormLabel>
+                                            <FormControl><Input placeholder="English" {...field} /></FormControl>
+                                            <FormDescription>Defaults to English.</FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                    <FormField control={form.control} name="identity.customInstructions" render={({ field }) => (
+                                        <FormItem className="md:col-span-2">
+                                            <FormLabel>Custom instructions <span className="text-muted-foreground/60">(optional)</span></FormLabel>
+                                            <FormControl>
+                                                <Textarea rows={4} maxLength={PERSONA_LIMITS.customInstructionsMax} placeholder="Always end with a question. Avoid hype words." {...field} value={field.value ?? ""} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                </CardContent>
+                            </Card>
+
+                            {/* Research */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Research sources and filters</CardTitle>
+                                    <CardDescription>Fine-tune how the persona finds relevant material.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="grid gap-4">
+                            <FormField control={form.control} name="research.keywords" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Keywords <span className="text-muted-foreground/60">(optional)</span></FormLabel>
+                                    <FormControl><TagInput value={field.value} onChange={field.onChange} max={PERSONA_LIMITS.keywordsMax} placeholder="LLM, agents, TypeScript" /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                            <FormField control={form.control} name="research.excludedTopics" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Excluded topics <span className="text-muted-foreground/60">(optional)</span></FormLabel>
+                                    <FormControl><TagInput value={field.value} onChange={field.onChange} max={PERSONA_LIMITS.excludedTopicsMax} placeholder="Politics, crypto" /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                            <FormField control={form.control} name="research.feedUrls" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>RSS / Atom feeds <span className="text-muted-foreground/60">(optional)</span></FormLabel>
+                                    <FormControl><TagInput value={field.value} onChange={field.onChange} max={PERSONA_LIMITS.feedUrlsMax} maxLength={2048} placeholder="https://example.com/feed.xml" /></FormControl>
+                                    <FormDescription>Research reads these feeds when you start a run or enable automatic research.</FormDescription>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <FormField control={form.control} name="research.freshnessHours" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Freshness window (hours)</FormLabel>
+                                        <FormControl><Input type="number" min={1} max={PERSONA_LIMITS.freshnessHoursMax} value={field.value} onChange={numberField(field.onChange)} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                                <FormField control={form.control} name="research.minSourceCount" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Minimum sources per post</FormLabel>
+                                        <FormControl><Input type="number" min={1} max={PERSONA_LIMITS.minSourceCountMax} value={field.value} onChange={numberField(field.onChange)} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                                <FormField control={form.control} name="research.webSearch" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Web search (Gemini)</FormLabel>
+                                        <Select value={field.value ? "on" : "off"} onValueChange={(v) => field.onChange(v === "on")}>
+                                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="off">Off – only my RSS feeds</SelectItem>
+                                                <SelectItem value="on">On – also search Google for fresh articles</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormDescription>Extra cost per run (search is billed per query). Needs Gemini billing: LinkedLoom credits or your own Gemini key.</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                                <FormField control={form.control} name="research.autoRun" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Automatic research</FormLabel>
+                                        <Select value={field.value ? "on" : "off"} onValueChange={(v) => field.onChange(v === "on")}>
+                                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="off">Off – run research myself</SelectItem>
+                                                <SelectItem value="on">On – run before posting windows</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormDescription>Runs about 90 minutes before each posting window, pauses when 6 drafts await review, and uses LinkedLoom credits or your key. Add a feed or turn on web search first. Drafts still need your approval.</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                            </div>
+                        </CardContent>
+                            </Card>
+
                     {/* AI */}
                     <Card>
                         <CardHeader>
@@ -394,6 +426,8 @@ export function PersonaForm({ defaultValues, submitLabel, onSubmit, onCancel, di
                             )} />
                         </CardContent>
                     </Card>
+                        </div>
+                    </details>
                 </fieldset>
 
                 <div className="flex justify-end gap-3">
