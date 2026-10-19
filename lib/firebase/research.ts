@@ -3,7 +3,7 @@ import { httpsCallable } from "firebase/functions";
 import { db, functions } from "../firebase";
 import { Collections } from "./collections";
 import { FirebaseFunctions } from "./functions";
-import type { ContentItem, RunResearchResult, WorkflowRun } from "@/types/research";
+import type { ContentItem, PersonaDemoResult, RunResearchResult, WorkflowRun } from "@/types/research";
 
 // Everything lives in the personal workspace (workspaces/{uid}); clients only read.
 
@@ -83,4 +83,10 @@ export const setContentStatus = async (contentId: string, status: "pending" | "r
 export const exportContentToDraft = async (contentId: string) => {
   const call = httpsCallable<{ contentId: string }, { id: string; postId: string }>(functions, FirebaseFunctions.EXPORT_CONTENT_TO_DRAFT);
   return (await call({ contentId })).data;
+};
+
+/** "Try a demo": writes sample drafts in the persona's voice straight into the approval queue (one AI call). */
+export const runPersonaDemo = async (personaId: string) => {
+  const call = httpsCallable<{ personaId: string }, PersonaDemoResult>(functions, FirebaseFunctions.RUN_PERSONA_DEMO, { timeout: 130_000 });
+  return (await call({ personaId })).data;
 };

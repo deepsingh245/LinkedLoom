@@ -13,13 +13,14 @@ import { AutopilotNav } from "@/components/features/autopilot/AutopilotNav";
 import { DraftCard } from "@/components/features/autopilot/DraftCard";
 import { usePersonas } from "@/lib/query/hooks/use-autopilot";
 import { useContentItems, useExportContentToDraft, useSetContentStatus, useUpdateContentItem } from "@/lib/query/hooks/use-research";
+import { QueryError } from "@/components/features/autopilot/QueryError";
 import { Routes } from "@/lib/routes";
 
 type Filter = "pending" | "rejected" | "all";
 
 export default function DraftsPage() {
     const { user } = useAuth();
-    const { data: items = [], isLoading } = useContentItems(user?.uid);
+    const { data: items = [], isLoading, error, refetch } = useContentItems(user?.uid);
     const { data: personas = [] } = usePersonas(user?.uid);
     const update = useUpdateContentItem(user?.uid);
     const setStatus = useSetContentStatus(user?.uid);
@@ -98,6 +99,8 @@ export default function DraftsPage() {
 
                 {isLoading ? (
                     <div className="space-y-3">{Array.from({ length: 2 }).map((_, index) => <Skeleton key={index} className="h-72 rounded-xl" />)}</div>
+                ) : error ? (
+                    <QueryError what="your drafts" error={error} onRetry={() => refetch()} />
                 ) : visible.length === 0 ? (
                     <Card className="flex min-h-[250px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[#dfe5e7] bg-white p-8 text-center shadow-none">
                         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f2f6f5] text-[#71837e]">{items.length === 0 ? <FileText className="h-5 w-5" /> : <CheckCheck className="h-5 w-5" />}</span>

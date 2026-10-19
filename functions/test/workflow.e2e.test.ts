@@ -408,3 +408,65 @@ describe("who can do what", () => {
         await waitForRun(c, runId);
     });
 });
+
+// ---------------------------------------------------------------- "Try a demo" after creating a persona
+describe("persona demo", () => {
+    const contentItems = async (c: Client) => (await getDocs(collection(c.db, "workspaces", c.uid, "contentItems"))).docs.map((d) => ({ id: d.id, ...d.data() }) as any);
+
+    it("instantly puts labelled sample drafts in the approval queue, charges one AI call, and replaces itself on rerun", async () => {
+        const { c, personaId } = await setup("demo");
+        const start = (await wallet(c)).balance;
+
+        const res = await c.call<any>("runPersonaDemo", { personaId });
+        expect(res.draftIds).toEqual([`demo_${personaId}_0`, `demo_${personaId}_1`]);
+        expect(res.drafts).toHaveLength(2);
+        expect(res.credits).toBeGreaterThanOrEqual(1);
+
+        let items = await contentItems(c);
+        expect(items).toHaveLength(2);
+        for (const item of items) {
+            expect(item).toMatchObject({ personaId, demo: true, runId: "demo", approvalStatus: "pending", state: "PENDING_APPROVAL", sources: [] });
+            expect(item.variants.linkedin.text).toBe(item.masterDraft);
+        }
+        const demoUsage = (await usage(c)).filter((u) => u.feature === "autopilot.demo");
+        expect(demoUsage).toHaveLength(1);
+        expect((await wallet(c)).balance).toBe(start - res.credits);
+
+        // Running it again replaces the demo drafts instead of piling them up.
+        await c.call("runPersonaDemo", { personaId });
+        items = await contentItems(c);
+        expect(items).toHaveLength(2);
+
+        // The normal review actions work on demo drafts (it's a practice run of the real flow).
+        const exported = await c.call<{ postId: string }>("exportContentToDraft", { contentId: items[0].id });
+        expect(exported.postId).toBe(`autopilot_${items[0].id}`);
+        await c.call("setContentStatus", { contentId: items[1].id, status: "rejected" });
+    });
+
+    it("demo drafts don't pause automatic research", async () => {
+        const { c, personaId } = await setup("demoguard", { autoRun: true });
+        await c.call("runPersonaDemo", { personaId }); // 2 pending demo drafts
+        for (let i = 0; i < 4; i++) {
+            await adminDb().doc(`workspaces/${c.uid}/contentItems/real${i}`).set({ personaId, approvalStatus: "pending", state: "PENDING_APPROVAL", createdAt: Timestamp.now() });
+        }
+        // 6 pending in total, but only 4 real ones (limit is 6) → the scheduled run starts.
+        await makeDue(c.uid, personaId);
+        expect(outcomeFor(await dispatch(), personaId).outcome).toBe("started");
+        const [run] = await runs(c);
+        await waitForRun(c, run.id);
+    });
+
+    it("respects the kill switch, archived personas and ownership", async () => {
+        const { c, personaId } = await setup("demoguards");
+        const other = await client("demointruder");
+        expect(await code(other.call("runPersonaDemo", { personaId }))).toBe("not-found");
+
+        await c.call("setAutopilotEnabled", { enabled: false });
+        expect(await code(c.call("runPersonaDemo", { personaId }))).toBe("failed-precondition");
+        await c.call("setAutopilotEnabled", { enabled: true });
+
+        await adminDb().doc(`workspaces/${c.uid}/personas/${personaId}`).update({ status: "archived" });
+        expect(await code(c.call("runPersonaDemo", { personaId }))).toBe("failed-precondition");
+        expect(await code(c.call("runPersonaDemo", { personaId: "../x" }))).toBe("invalid-argument");
+    });
+});

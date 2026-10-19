@@ -9,8 +9,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AutopilotNav } from "@/components/features/autopilot/AutopilotNav";
 import { KillSwitch } from "@/components/features/autopilot/KillSwitch";
 import { PersonaCard } from "@/components/features/autopilot/PersonaCard";
+import { QueryError } from "@/components/features/autopilot/QueryError";
 import { RunResearchDialog } from "@/components/features/autopilot/RunResearchDialog";
 import { TestGenerateDialog } from "@/components/features/autopilot/TestGenerateDialog";
+import { PersonaDemoDialog } from "@/components/features/autopilot/PersonaDemoDialog";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useAutopilotSettings, useDeletePersona, usePersonas, useSetAutopilotEnabled, useSetPersonaStatus } from "@/lib/query/hooks/use-autopilot";
 import { countScheduledRunAlerts, useContentItems, useRuns } from "@/lib/query/hooks/use-research";
@@ -20,7 +22,7 @@ import type { Persona } from "@/types/autopilot";
 
 export default function AutopilotPage() {
     const { user } = useAuth();
-    const { data: personas = [], isLoading: personasLoading } = usePersonas(user?.uid);
+    const { data: personas = [], isLoading: personasLoading, error: personasError, refetch: refetchPersonas } = usePersonas(user?.uid);
     const { data: settings } = useAutopilotSettings(user?.uid);
     const { data: runs = [] } = useRuns(user?.uid);
     const { data: drafts = [], isLoading: draftsLoading } = useContentItems(user?.uid);
@@ -29,6 +31,7 @@ export default function AutopilotPage() {
     const setEnabled = useSetAutopilotEnabled(user?.uid);
     const [showArchived, setShowArchived] = useState(false);
     const [testing, setTesting] = useState<Persona | null>(null);
+    const [demoing, setDemoing] = useState<Persona | null>(null);
     const [researching, setResearching] = useState<Persona | null>(null);
 
     const live = personas.filter((persona) => persona.status !== "archived");
@@ -113,7 +116,9 @@ export default function AutopilotPage() {
                     {live.length > 0 && <span className="text-[11px] text-[#89939a]">{active} active · {live.length - active} paused</span>}
                 </div>
 
-                {live.length === 0 ? (
+                {personasError ? (
+                    <QueryError what="your personas" error={personasError} onRetry={() => refetchPersonas()} />
+                ) : live.length === 0 ? (
                     <Card className="flex min-h-[245px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[#dfe5e7] bg-white p-8 text-center shadow-none">
                         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e8f3f0] text-[#357d72]"><Sparkles className="h-5 w-5" /></span>
                         <div>
@@ -131,6 +136,7 @@ export default function AutopilotPage() {
                                 key={persona.id}
                                 persona={persona}
                                 onTest={() => setTesting(persona)}
+                                onDemo={() => setDemoing(persona)}
                                 onResearch={() => setResearching(persona)}
                                 busy={busyId === persona.id}
                                 onStatusChange={(status) => setStatus.mutate({ personaId: persona.id, status })}
@@ -153,6 +159,7 @@ export default function AutopilotPage() {
             )}
 
             {researching && <RunResearchDialog persona={researching} userId={user?.uid} open={!!researching} onOpenChange={(open) => !open && setResearching(null)} />}
+            {demoing && <PersonaDemoDialog persona={demoing} userId={user?.uid} open={!!demoing} onOpenChange={(open) => !open && setDemoing(null)} />}
             {testing && <TestGenerateDialog persona={testing} userId={user?.uid} open={!!testing} onOpenChange={(open) => !open && setTesting(null)} />}
         </div>
     );

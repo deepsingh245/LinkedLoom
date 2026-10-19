@@ -81,7 +81,10 @@ export interface ContentItem {
   variants: { linkedin: { text: string; status: string } };
   sources: ContentSource[];
   claims: ContentClaim[];
-  qualityScore: number;
+  /** null for demo drafts (not researched or fact-checked). */
+  qualityScore: number | null;
+  /** Sample draft from "Try a demo": shows the review flow, not based on research. */
+  demo?: boolean;
   approvalStatus: "pending" | "rejected";
   state: string;
   edited?: boolean;
@@ -94,4 +97,13 @@ export interface ContentItem {
 export interface RunResearchResult {
   runId: string;
   status: "queued";
+}
+
+export interface PersonaDemoResult {
+  draftIds: string[];
+  drafts: Array<{ angle: string; post: string; hashtags: string[] }>;
+  provider: "gemini" | "openai";
+  model: string;
+  billingMode: "managed" | "byok";
+  credits: number;
 }

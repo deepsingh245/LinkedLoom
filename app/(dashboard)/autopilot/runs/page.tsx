@@ -11,6 +11,7 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { AutopilotNav } from "@/components/features/autopilot/AutopilotNav";
 import { RunSteps, statsSummary } from "@/components/features/autopilot/RunSteps";
 import { useCancelRun, useRetryRun, useRuns } from "@/lib/query/hooks/use-research";
+import { QueryError } from "@/components/features/autopilot/QueryError";
 import { Routes } from "@/lib/routes";
 import type { RunStatus, WorkflowRun } from "@/types/research";
 
@@ -87,7 +88,7 @@ function RunRow({ run, onCancel, onRetry, cancelling, retrying }: {
 
 export default function RunsPage() {
     const { user } = useAuth();
-    const { data: runs = [], isLoading } = useRuns(user?.uid);
+    const { data: runs = [], isLoading, error, refetch } = useRuns(user?.uid);
     const cancel = useCancelRun(user?.uid);
     const retry = useRetryRun(user?.uid);
 
@@ -143,6 +144,8 @@ export default function RunsPage() {
 
                 {isLoading ? (
                     <div className="space-y-2">{Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-[66px] rounded-xl" />)}</div>
+                ) : error ? (
+                    <QueryError what="your runs" error={error} onRetry={() => refetch()} />
                 ) : runs.length === 0 ? (
                     <Card className="flex min-h-[250px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#dfe5e7] bg-white p-8 text-center shadow-none">
                         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#edf2fa] text-[#5578a8]"><History className="h-5 w-5" /></span>

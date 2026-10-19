@@ -21,7 +21,7 @@ Short version: phases A1–A3 and the **backend of A4** (scheduled + durable res
 ```bash
 npm run build && npm test          # 135 unit tests
 npm run test:rules                 # 10 rules tests (needs Java)
-npm run test:e2e                   # 75 emulator tests, mocked AI (~6 min)
+npm run test:e2e                   # 78 emulator tests, mocked AI (~10 min)
 # repo root:
 npx tsc --noEmit
 ```

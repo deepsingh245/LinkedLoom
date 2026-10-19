@@ -1,17 +1,21 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/components/providers/auth-provider"
 import { Routes } from "@/lib/routes"
 import { useCreatePersona } from "@/lib/query/hooks/use-autopilot"
 import { useAIConnections } from "@/lib/query/hooks/use-ai-billing"
 import { PersonaForm, emptyPersona } from "@/components/features/autopilot/PersonaForm"
+import { PersonaDemoDialog, type DemoPersona } from "@/components/features/autopilot/PersonaDemoDialog"
 
 export default function NewPersonaPage() {
     const router = useRouter()
     const { user } = useAuth()
     const { data: connections = [] } = useAIConnections(user?.uid)
     const createPersona = useCreatePersona(user?.uid)
+    // Right after creating, offer the demo before leaving the page.
+    const [created, setCreated] = useState<DemoPersona | null>(null)
 
     return (
         <div className="mx-auto w-full max-w-[1120px] space-y-6 pb-6 text-[#20242b]">
@@ -26,10 +30,21 @@ export default function NewPersonaPage() {
                 submitLabel="Create persona"
                 onCancel={() => router.push(Routes.AUTOPILOT)}
                 onSubmit={async (input) => {
-                    await createPersona.mutateAsync(input)
-                    router.push(Routes.AUTOPILOT)
+                    const { id } = await createPersona.mutateAsync(input)
+                    setCreated({ id, name: input.name, ai: { connectionId: input.ai.connectionId } })
                 }}
             />
+            {created && (
+                <PersonaDemoDialog
+                    persona={created}
+                    userId={user?.uid}
+                    open
+                    justCreated
+                    onOpenChange={(open) => {
+                        if (!open) router.push(Routes.AUTOPILOT)
+                    }}
+                />
+            )}
         </div>
     )
 }

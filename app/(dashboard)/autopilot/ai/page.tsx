@@ -23,6 +23,7 @@ import {
 import { useAuth } from "@/components/providers/auth-provider"
 import { AutopilotNav } from "@/components/features/autopilot/AutopilotNav"
 import { useAddAIConnection, useAIConnections, useRevokeAIConnection, useTestAIConnection } from "@/lib/query/hooks/use-ai-billing"
+import { QueryError } from "@/components/features/autopilot/QueryError"
 import type { AIConnection, AIProviderId } from "@/types/ai"
 
 const providerName = (p: AIProviderId) => (p === "openai" ? "OpenAI" : "Google Gemini")
@@ -155,7 +156,7 @@ function ConnectionRow({ connection, userId }: { connection: AIConnection; userI
 
 export default function AIKeysPage() {
     const { user } = useAuth()
-    const { data: connections = [], isLoading } = useAIConnections(user?.uid)
+    const { data: connections = [], isLoading, error, refetch } = useAIConnections(user?.uid)
     const [open, setOpen] = useState(false)
 
     return (
@@ -179,6 +180,8 @@ export default function AIKeysPage() {
 
             {isLoading ? (
                 <div className="space-y-3">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-2xl" />)}</div>
+            ) : error ? (
+                <QueryError what="your AI keys" error={error} onRetry={() => refetch()} />
             ) : connections.length === 0 ? (
                 <Card className="p-10 text-center space-y-2">
                     <KeyRound className="mx-auto h-8 w-8 text-primary" />

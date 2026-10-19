@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Archive, ArchiveRestore, MoreVertical, Pause, Pencil, Play, Search, Sparkles, Trash2 } from "lucide-react"
+import { Inbox, Archive, ArchiveRestore, MoreVertical, Pause, Pencil, Play, Search, Sparkles, Trash2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -39,9 +39,10 @@ interface PersonaCardProps {
     onDelete: () => void
     onTest?: () => void
     onResearch?: () => void
+    onDemo?: () => void
 }
 
-export function PersonaCard({ persona, busy, onStatusChange, onDelete, onTest, onResearch }: PersonaCardProps) {
+export function PersonaCard({ persona, busy, onStatusChange, onDelete, onTest, onResearch, onDemo }: PersonaCardProps) {
     const [confirmDelete, setConfirmDelete] = useState(false)
     const badge = statusBadge[persona.status]
     const archived = persona.status === "archived"
@@ -71,6 +72,9 @@ export function PersonaCard({ persona, busy, onStatusChange, onDelete, onTest, o
                         )}
                         {persona.status === "active" && onResearch && (
                             <DropdownMenuItem onClick={onResearch}><Search className="mr-2 h-4 w-4" /> Run research</DropdownMenuItem>
+                        )}
+                        {!archived && onDemo && (
+                            <DropdownMenuItem onClick={onDemo}><Inbox className="mr-2 h-4 w-4" /> Try a demo</DropdownMenuItem>
                         )}
                         {!archived && onTest && (
                             <DropdownMenuItem onClick={onTest}><Sparkles className="mr-2 h-4 w-4" /> Test generate</DropdownMenuItem>

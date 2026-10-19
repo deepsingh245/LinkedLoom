@@ -38,7 +38,15 @@ async function guardReason(workspaceId: string, personaId: string, persona: Docu
         .where("approvalStatus", "==", "pending")
         .count()
         .get();
-    const waiting = pending.data().count;
+    // Demo drafts ("Try a demo") don't count: they are samples, not work waiting for review.
+    const demos = await workspaceRef(workspaceId)
+        .collection("contentItems")
+        .where("personaId", "==", personaId)
+        .where("approvalStatus", "==", "pending")
+        .where("demo", "==", true)
+        .count()
+        .get();
+    const waiting = pending.data().count - demos.data().count;
     if (waiting >= MAX_PENDING_DRAFTS) {
         return `Paused: ${waiting} drafts are waiting for your review. Review or reject some and automatic research resumes.`;
     }

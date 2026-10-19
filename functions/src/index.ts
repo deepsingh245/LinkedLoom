@@ -9,6 +9,7 @@ export * from "./scheduler";
 export * from "./images";
 export * from "./autopilot/personas";
 export * from "./autopilot/test-generate";
+export * from "./autopilot/demo";
 export * from "./autopilot/research/run";
 export { researchStep } from "./autopilot/research/steps";
 export * from "./autopilot/research/reaper";

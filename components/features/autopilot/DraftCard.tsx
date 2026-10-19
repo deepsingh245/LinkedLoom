@@ -33,7 +33,11 @@ export function DraftCard({ item, personaName, busy, onSave, onReject, onRestore
         <Card className="space-y-4 rounded-xl border border-[#e2e6ea] bg-white p-4 shadow-none md:p-5">
             <div className="flex flex-wrap items-center gap-2 border-b border-[#edf0f2] pb-3">
                 <Badge variant={rejected ? "outline" : "scheduled"} className="text-[9px]">{rejected ? "Rejected" : "Needs review"}</Badge>
-                <Badge variant="published" className="text-[9px]"><ShieldCheck className="mr-1 h-3 w-3" />Fact-checked · {item.qualityScore}/100</Badge>
+                {item.demo ? (
+                    <Badge variant="draft" className="text-[9px]">Demo · not researched</Badge>
+                ) : (
+                    <Badge variant="published" className="text-[9px]"><ShieldCheck className="mr-1 h-3 w-3" />Fact-checked · {item.qualityScore}/100</Badge>
+                )}
                 {item.edited && <Badge variant="draft" className="text-[9px]">Edited</Badge>}
                 {item.exportedPostId && <Badge variant="outline" className="text-[9px]">In your drafts</Badge>}
                 <span className="ml-auto text-[10px] text-[#89939a]">{personaName ? `${personaName} · ` : ""}{item.createdAt?.toLocaleString() ?? "Date unavailable"}</span>
@@ -41,7 +45,7 @@ export function DraftCard({ item, personaName, busy, onSave, onReject, onRestore
 
             <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8b959c]">Research topic</p>
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8b959c]">{item.demo ? "Demo angle" : "Research topic"}</p>
                     <p className="mt-1 text-xs font-semibold text-[#38434a]">{item.topic}</p>
                 </div>
                 <span className="rounded-md border border-[#e4ebe8] bg-[#f8fbfa] px-2 py-1 text-[9px] font-medium text-[#62766f]">Manual approval</span>
@@ -55,6 +59,11 @@ export function DraftCard({ item, personaName, busy, onSave, onReject, onRestore
                 </div>
             </div>
 
+            {item.demo ? (
+                <p className="rounded-lg border border-dashed border-[#e2e6ea] bg-[#fafbfb] p-3 text-[11px] leading-relaxed text-[#6e7b81]">
+                    This is a demo draft. Real drafts list their sources with quoted evidence here and carry a fact-check score. Try editing, rejecting or sending it to your drafts.
+                </p>
+            ) : (
             <div>
                 <button type="button" className="text-xs font-semibold text-[#357d72] hover:underline" onClick={() => setShowSources((value) => !value)}>
                     {showSources ? "Hide" : "Show"} {item.sources.length} sources and evidence
@@ -73,6 +82,7 @@ export function DraftCard({ item, personaName, busy, onSave, onReject, onRestore
                     </ul>
                 )}
             </div>
+            )}
 
             <div className="flex flex-wrap gap-2 border-t border-[#edf0f2] pt-3">
                 {dirty && !rejected && <Button size="sm" disabled={busy || text.trim().length < 40} onClick={() => onSave(text.trim())} className="h-8 rounded-lg bg-[#357d72] px-3 text-[10px] text-white hover:bg-[#286c63]"><Check className="mr-1 h-3.5 w-3.5" />Save changes</Button>}

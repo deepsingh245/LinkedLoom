@@ -46,6 +46,7 @@ export type AuditAction =
     | "ai.connection.revoke"
     | "credits.grant"
     | "persona.testGenerate"
+    | "persona.demo"
     | "research.run"
     | "content.update"
     | "content.status"

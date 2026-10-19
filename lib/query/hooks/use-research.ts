@@ -118,3 +118,16 @@ export function useExportContentToDraft(userId?: string) {
     },
   });
 }
+
+/** Sample drafts for a persona, delivered to the approval queue the same way research drafts arrive. */
+export function useRunPersonaDemo(userId?: string) {
+  const invalidate = useInvalidateAutopilot(userId);
+  return useMutation({
+    mutationFn: (personaId: string) => api.firebaseService.runPersonaDemo(personaId),
+    // Drafts and credits change even if the UI is closed before the call returns.
+    onSettled: invalidate,
+    onError: (error) => {
+      dangerToast(callableErrorMessage(error, 'The demo could not run.'));
+    },
+  });
+}

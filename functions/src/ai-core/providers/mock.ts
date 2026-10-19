@@ -106,6 +106,17 @@ function researchResponse(name: string, request: AIRequest): unknown {
         return { post, hashtags: ["AI", "Tech"], sourceIds: ids.length ? ids : ["s1"] };
     }
 
+    if (name === "persona_demo") {
+        const topics = (request.prompt.match(/covers: ([^.]+)\./)?.[1] ?? "work").split(",").map((t) => t.trim());
+        return {
+            drafts: [0, 1].map((i) => ({
+                angle: `Lesson ${i + 1} about ${topics[i % topics.length]}`,
+                post: `Here is a practical lesson about ${topics[i % topics.length]} that teams learn the hard way. Start small, measure what matters, and keep a human in the loop for anything risky. What would you add?`,
+                hashtags: ["Demo", "Learning"],
+            })),
+        };
+    }
+
     if (name === "research_check") {
         const postText = request.prompt.split("\n\n<<<SOURCE")[0].replace(/^POST:\n/, "");
         const sources = parseSources(request.prompt);

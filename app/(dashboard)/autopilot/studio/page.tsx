@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import {
+import { Inbox,
     ArrowRight,
     AudioLines,
     FileCheck2,
@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { AutopilotNav } from "@/components/features/autopilot/AutopilotNav";
 import { TestGenerateDialog } from "@/components/features/autopilot/TestGenerateDialog";
+import { PersonaDemoDialog } from "@/components/features/autopilot/PersonaDemoDialog";
+import { QueryError } from "@/components/features/autopilot/QueryError";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,8 +26,9 @@ import type { Persona } from "@/types/autopilot";
 
 export default function PersonaStudioPage() {
     const { user } = useAuth();
-    const { data: personas = [], isLoading } = usePersonas(user?.uid);
+    const { data: personas = [], isLoading, error, refetch } = usePersonas(user?.uid);
     const [testing, setTesting] = useState<Persona | null>(null);
+    const [demoing, setDemoing] = useState<Persona | null>(null);
     const visiblePersonas = personas.filter((persona) => persona.status !== "archived");
     const activeCount = visiblePersonas.filter((persona) => persona.status === "active").length;
     const canCreate = visiblePersonas.length < PERSONA_LIMITS.personasPerWorkspace;
@@ -74,6 +77,8 @@ export default function PersonaStudioPage() {
                     <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
                         {Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-[280px] rounded-2xl" />)}
                     </div>
+                ) : error ? (
+                    <QueryError what="your personas" error={error} onRetry={() => refetch()} />
                 ) : visiblePersonas.length === 0 ? (
                     <Card className="flex min-h-[280px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#dfe5e7] bg-white p-8 text-center shadow-none">
                         <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#e8f3f0] text-[#357d72]"><Sparkles className="h-5 w-5" /></span>
@@ -88,7 +93,7 @@ export default function PersonaStudioPage() {
                 ) : (
                     <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
                         {visiblePersonas.map((persona) => (
-                            <VoiceProfileCard key={persona.id} persona={persona} onPreview={() => setTesting(persona)} />
+                            <VoiceProfileCard key={persona.id} persona={persona} onPreview={() => setTesting(persona)} onDemo={() => setDemoing(persona)} />
                         ))}
                     </div>
                 )}
@@ -99,6 +104,7 @@ export default function PersonaStudioPage() {
                 <p>Voice previews generate a sample only. They do not save, schedule, or publish a post. Generation uses the persona’s selected AI connection or LinkedLoom credits.</p>
             </div>
 
+            {demoing && <PersonaDemoDialog persona={demoing} userId={user?.uid} open={!!demoing} onOpenChange={(open) => !open && setDemoing(null)} />}
             {testing && <TestGenerateDialog persona={testing} userId={user?.uid} open={!!testing} onOpenChange={(open) => !open && setTesting(null)} />}
         </div>
     );
@@ -117,7 +123,7 @@ function SummaryCard({ icon, label, value, note }: { icon: React.ReactNode; labe
     );
 }
 
-function VoiceProfileCard({ persona, onPreview }: { persona: Persona; onPreview: () => void }) {
+function VoiceProfileCard({ persona, onPreview, onDemo }: { persona: Persona; onPreview: () => void; onDemo: () => void }) {
     const tone = persona.identity.tone.charAt(0).toUpperCase() + persona.identity.tone.slice(1);
     const instructions = persona.identity.customInstructions?.trim();
 
@@ -163,6 +169,9 @@ function VoiceProfileCard({ persona, onPreview }: { persona: Persona; onPreview:
             <div className="flex gap-2 border-t border-[#edf0f2] pt-3">
                 <Button onClick={onPreview} variant="outline" className="h-9 flex-1 rounded-lg border-[#dfe5e7] bg-white px-2 text-[11px] text-[#46525a] hover:bg-[#f7f9f9]">
                     <Sparkles className="h-3.5 w-3.5" /> Preview voice
+                </Button>
+                <Button onClick={onDemo} variant="outline" className="h-9 flex-1 rounded-lg border-[#dfe5e7] bg-white px-2 text-[11px] text-[#46525a] hover:bg-[#f7f9f9]">
+                    <Inbox className="h-3.5 w-3.5" /> Try a demo
                 </Button>
                 <Button asChild variant="outline" className="h-9 flex-1 rounded-lg border-[#dfe5e7] bg-white px-2 text-[11px] text-[#46525a] hover:bg-[#f7f9f9]">
                     <Link href={`${Routes.AUTOPILOT}/${persona.id}`}>Edit profile <ArrowRight className="h-3.5 w-3.5" /></Link>

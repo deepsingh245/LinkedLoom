@@ -16,6 +16,7 @@ export enum FirebaseFunctions {
     RUN_RESEARCH = "runResearch",
     CANCEL_RUN = "cancelRun",
     RETRY_RUN = "retryRun",
+    RUN_PERSONA_DEMO = "runPersonaDemo",
     UPDATE_CONTENT_ITEM = "updateContentItem",
     SET_CONTENT_STATUS = "setContentStatus",
     EXPORT_CONTENT_TO_DRAFT = "exportContentToDraft",
