@@ -16,8 +16,6 @@ Audit date: 2026-10-20. Before this audit **only Theme did anything**; every oth
 | Density (comfortable/compact) | ⏳ Not implemented | Control is disabled and labelled "Coming soon". Needs layout work (spacing tokens), not a quick fix. |
 | Smart suggestions | ⏳ Not implemented | No dashboard feature exists that shows AI topic ideas. Labelled "coming soon". |
 | Notifications (6 toggles) | ⏳ Not implemented | No email/push/in-app notification system exists, nothing reads these. Card labelled "Coming soon". Needs a sender (e.g. Cloud Functions + email provider) before it is meaningful. `postPublished` is the most natural first one now that the publisher records outcomes. |
-| Public profile | 🚫 Irrelevant today | There is no public LinkedLoom profile page. Remove the toggle or build the page. |
-| Analytics sharing | 🚫 Irrelevant today | No data-sharing pipeline exists; the toggle would imply consent for something that doesn't happen. Remove, or tie it to a real policy first. |
 | Two-factor authentication | ⏳ Not implemented | Firebase Auth supports MFA, but it needs enrolment UI and re-auth flows. The chip used to say "Disabled" (looked like a real, off setting); it now says "Not available yet". |
 
 ## Fixed in this change
@@ -26,6 +24,7 @@ Audit date: 2026-10-20. Before this audit **only Theme did anything**; every oth
 2. **Silent stubs.** Disabled controls looked identical to broken ones. Notifications and Privacy now carry a "Coming soon" badge; Density and Smart suggestions say so too.
 3. **Misleading 2FA state** (above).
 4. **Live controls:** animations, default tone, language, auto-hashtags (above).
+5. **Removed irrelevant settings:** "Public profile" (no public profile page exists) and "Analytics sharing" (no sharing pipeline) are gone from the page, the defaults and `UserPreferences`. Old saved values on user documents are simply ignored.
 
 ## Still open / suggestions (small to medium)
 
@@ -33,6 +32,5 @@ Audit date: 2026-10-20. Before this audit **only Theme did anything**; every oth
 - **Language list:** only four languages; the persona form accepts any language string. Consider a shared list or free text.
 - **Density:** one CSS variable for page padding/gaps plus `data-density` on `<html>` would be enough for a first version.
 - **Notifications:** start with a single "Post published / failed" email using the publisher's results; hide the rest until they exist.
-- **Remove or build:** Public profile and Analytics sharing. Keeping unimplemented privacy toggles is a trust/legal risk.
 - **Firestore rules:** `users/{uid}` is owner read/write, so a client can write any `preferences` shape. Harmless today, but if preferences ever gate server behaviour, validate them in rules or a callable.
 - **Saving UX:** every toggle writes immediately and toasts "Preferences updated." Fine for switches; rapid changes can race (last write wins because the whole object is rewritten). Writing only the changed key (`updateDoc(..., { "preferences.ai.language": value })`) would avoid that.

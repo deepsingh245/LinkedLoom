@@ -94,8 +94,6 @@ export interface UserPreferences {
     smartSuggestions: boolean;
   };
   privacy: {
-    publicProfile: boolean;
-    analyticsSharing: boolean;
     twoFactorAuth: boolean;
   };
 }

@@ -19,8 +19,6 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     smartSuggestions: true,
   },
   privacy: {
-    publicProfile: true,
-    analyticsSharing: false,
     twoFactorAuth: false,
   },
 };

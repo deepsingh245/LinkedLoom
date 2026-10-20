@@ -349,28 +349,6 @@ export default function SettingsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 pt-0">
-          <SettingsRow
-            title="Public Profile"
-            description="Allow others to view your LinkedLoom profile"
-            control={
-              <CustomSwitch
-                checked={!!prefs.privacy?.publicProfile}
-                onCheckedChange={(val) => handleUpdate("privacy.publicProfile", val)}
-                disabled
-              />
-            }
-          />
-          <SettingsRow
-            title="Analytics Sharing"
-            description="Share anonymized data to improve AI quality"
-            control={
-              <CustomSwitch
-                checked={!!prefs.privacy?.analyticsSharing}
-                onCheckedChange={(val) => handleUpdate("privacy.analyticsSharing", val)}
-                disabled
-              />
-            }
-          />
           <div className="flex items-center justify-between py-4">
             <div className="space-y-0.5">
               <Label className="text-sm font-medium text-foreground">

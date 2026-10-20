@@ -13,7 +13,6 @@ import {
     LayoutDashboard,
     PenTool,
     SlidersHorizontal,
-    Workflow,
     Unplug,
     CreditCard,
 } from "lucide-react";
@@ -83,13 +82,6 @@ export function Sidebar({ className }: SidebarProps) {
                     <NavItem href={Routes.SETTINGS_CONNECTIONS} active={pathname === Routes.SETTINGS_CONNECTIONS || pathname.startsWith(`${Routes.SETTINGS_CONNECTIONS}/`)} icon={<Unplug className="h-4 w-4" />}>Connections</NavItem>
                     <NavItem href={Routes.SETTINGS_BILLING} active={pathname === Routes.SETTINGS_BILLING || pathname.startsWith(`${Routes.SETTINGS_BILLING}/`)} icon={<CreditCard className="h-4 w-4" />}>Settings & Billing</NavItem>
                 </nav>
-
-                <div className="mt-5 border-t border-border pt-3">
-                    <p className="mb-2 px-2.5 text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Coming later</p>
-                    <div className="space-y-1">
-                        <UnavailableItem icon={<Workflow className="h-4 w-4" />}>Persona Studio</UnavailableItem>
-                    </div>
-                </div>
             </div>
 
             <div className="mt-3 border-t border-border pt-3">
@@ -123,13 +115,5 @@ function NavItem({ href, icon, children, active, indicator }: { href: string; ic
             <span className="flex-1">{children}</span>
             {indicator && <span className="h-1.5 w-1.5 rounded-full bg-[#51a37c]" />}
         </Link>
-    );
-}
-
-function UnavailableItem({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
-    return (
-        <div aria-disabled="true" title="This area is not available yet" className="flex min-h-9 cursor-not-allowed items-center gap-2.5 rounded-lg px-2.5 text-[12px] font-medium text-muted-foreground/70">
-            {icon}<span className="flex-1">{children}</span><span className="text-[9px]">Soon</span>
-        </div>
     );
 }
