@@ -19,8 +19,8 @@ Short version: A1–A4 are built and tested in emulators with mocked AI. **A5** 
 ## Verify your work (from `functions/`)
 
 ```bash
-npm run build && npm test          # 153 unit tests
-npm run test:rules                 # 11 rules tests (needs Java)
+npm run build && npm test          # 164 unit tests
+npm run test:rules                 # 12 rules tests (needs Java)
 npm run test:e2e                   # 78 + A5 emulator tests, mocked AI (~12 min)
 # repo root:
 npx tsc --noEmit

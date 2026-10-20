@@ -61,7 +61,7 @@ export default function PersonaStudioPage() {
             <section aria-label="Persona studio summary" className="grid gap-3 sm:grid-cols-3">
                 <SummaryCard icon={<UsersRound className="h-4 w-4" />} label="Personas" value={isLoading ? "—" : `${visiblePersonas.length} / ${PERSONA_LIMITS.personasPerWorkspace}`} note={`${activeCount} active`} />
                 <SummaryCard icon={<AudioLines className="h-4 w-4" />} label="Voice profiles" value={isLoading ? "—" : String(visiblePersonas.length)} note="Identity, audience, tone and guidance" />
-                <SummaryCard icon={<FileCheck2 className="h-4 w-4" />} label="Approval policy" value="Always manual" note="No draft is published automatically" />
+                <SummaryCard icon={<FileCheck2 className="h-4 w-4" />} label="Approval policy" value="Manual by default" note="Auto-publish is opt-in per persona" />
             </section>
 
             <section aria-labelledby="voice-profiles-title" className="space-y-3">

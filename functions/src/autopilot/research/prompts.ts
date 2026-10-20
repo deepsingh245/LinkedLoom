@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CONTEXT_RULE, contextBlock } from "../context/store";
 
 // ---------- Shapes the model must return ----------
 
@@ -79,7 +80,14 @@ export function extractPrompt(topics: string[], docs: SourceDoc[]) {
     };
 }
 
-export function draftPrompt(voice: PersonaVoice, topic: string, docs: SourceDoc[], claims: Array<{ sourceId: string; claim: string; quote: string }>) {
+export function draftPrompt(
+    voice: PersonaVoice,
+    topic: string,
+    docs: SourceDoc[],
+    claims: Array<{ sourceId: string; claim: string; quote: string }>,
+    /** The author's uploaded company context (already within budget); "" when there is none. */
+    companyContext = ""
+) {
     return {
         system: [
             `You write LinkedIn posts as: ${voice.role}.`,
@@ -91,8 +99,12 @@ export function draftPrompt(voice: PersonaVoice, topic: string, docs: SourceDoc[
             "Use ONLY facts from the listed claims. Do not add statistics, dates, names or quotes that are not in them.",
             "Mention where a fact comes from naturally (e.g. 'according to <site>'). List the ids of the sources you used in `sourceIds`.",
             "Add up to 5 relevant hashtags in `hashtags` (without the # symbol).",
+            companyContext
+                ? `${CONTEXT_RULE} Connect the news to the author's company where it genuinely fits; if it doesn't fit, don't force it. Facts about the outside world still come ONLY from the listed claims.`
+                : "",
         ].filter(Boolean).join("\n"),
         prompt: [
+            ...(companyContext ? [contextBlock(companyContext), ""] : []),
             `Angle: ${topic}`,
             "Verified claims you may use:",
             ...claims.map((c) => `- [${c.sourceId}] ${c.claim} (quote: "${c.quote}")`),
@@ -102,14 +114,17 @@ export function draftPrompt(voice: PersonaVoice, topic: string, docs: SourceDoc[
     };
 }
 
-export function checkPrompt(post: string, docs: SourceDoc[]) {
+export function checkPrompt(post: string, docs: SourceDoc[], companyContext = "") {
     return {
         system: [
             "You are a strict fact-checker. Break the post into its factual claims (numbers, dates, names, causal statements, attributed quotes).",
             "For each claim decide whether the sources below explicitly support it. If a source supports it, copy the supporting sentence into `quote` exactly.",
             "Opinions and generic advice are not claims. Anything not clearly supported must be marked supported=false.",
             UNTRUSTED_RULE,
-        ].join("\n"),
-        prompt: `POST:\n${post}\n\n${docs.map(sourceBlock).join("\n\n")}`,
+            companyContext
+                ? "The <<<COMPANY_CONTEXT>>> block was written by the author about their own company and products. It supports statements about the author's own company and products (copy the supporting sentence into `quote`), but never claims about the outside world, which must come from the sources."
+                : "",
+        ].filter(Boolean).join("\n"),
+        prompt: `POST:\n${post}\n\n${docs.map(sourceBlock).join("\n\n")}${companyContext ? `\n\n${contextBlock(companyContext)}` : ""}`,
     };
 }

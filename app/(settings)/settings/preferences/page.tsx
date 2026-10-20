@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { UserPreferences } from "@/types";
 import { useTheme } from "next-themes";
+import { mergePreferences } from "@/lib/preferences";
 
 function CustomSwitch({
   checked,
@@ -37,6 +38,14 @@ function CustomSwitch({
         className={`absolute top-1/2 -translate-y-1/2 left-1 w-4 h-4 bg-background rounded-full transition-transform duration-200 ${checked ? "translate-x-5" : "bg-muted-foreground"}`}
       ></span>
     </button>
+  );
+}
+
+function ComingSoon() {
+  return (
+    <span className="ml-2 rounded-full border border-border bg-secondary px-2 py-0.5 align-middle text-[10px] font-medium text-muted-foreground">
+      Coming soon
+    </span>
   );
 }
 
@@ -85,7 +94,7 @@ export default function SettingsPage() {
     try {
       // Deep copy to avoid state mutation issues
       const updatedPrefs: Partial<UserPreferences> = JSON.parse(
-        JSON.stringify(profile?.preferences || {})
+        JSON.stringify(mergePreferences(profile?.preferences))
       );
 
       set(updatedPrefs, key, value);
@@ -109,30 +118,7 @@ export default function SettingsPage() {
     return <div className="p-8 text-muted-foreground">Loading preferences...</div>;
   }
 
-  const prefs: UserPreferences = profile?.preferences || {
-    theme: "system",
-    density: "comfortable",
-    animationsEnabled: true,
-    notifications: {
-      postPublished: true,
-      weeklyDigest: true,
-      aiSuggestions: false,
-      commentAlerts: true,
-      milestoneAlerts: true,
-      productUpdates: false,
-    },
-    ai: {
-      defaultTone: "professional",
-      language: "english",
-      autoHashtags: true,
-      smartSuggestions: true,
-    },
-    privacy: {
-      publicProfile: true,
-      analyticsSharing: false,
-      twoFactorAuth: false,
-    },
-  };
+  const prefs: UserPreferences = mergePreferences(profile?.preferences);
 
   return (
     <div className="space-y-8 pb-20">
@@ -171,7 +157,7 @@ export default function SettingsPage() {
               </Select>
             </div>
             <div className="space-y-2 opacity-50 cursor-not-allowed">
-              <Label className="text-[13px] text-muted-foreground">Density</Label>
+              <Label className="text-[13px] text-muted-foreground">Density <ComingSoon /></Label>
               <Select
                 value={prefs.density || "comfortable"}
                 onValueChange={(val) => handleUpdate("density", val as UserPreferences["density"])}
@@ -188,20 +174,19 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="pt-2 opacity-50 cursor-not-allowed">
+          <div className="pt-2">
             <div className="flex items-center justify-between py-4">
               <div className="space-y-0.5">
                 <Label className="text-sm font-medium text-foreground">
                   Animations & Transitions
                 </Label>
                 <p className="text-[13px] text-muted-foreground">
-                  Disable for reduced-motion experience
+                  Turn off for a reduced-motion experience
                 </p>
               </div>
               <CustomSwitch
                 checked={prefs.animationsEnabled !== false}
                 onCheckedChange={(val) => handleUpdate("animationsEnabled", val)}
-                disabled
               />
             </div>
           </div>
@@ -212,7 +197,7 @@ export default function SettingsPage() {
       <Card className="bg-card border-border rounded-2xl opacity-50 cursor-not-allowed">
         <CardHeader className="p-6 pb-2">
           <CardTitle className="text-base font-semibold text-foreground">
-            Notifications
+            Notifications <ComingSoon />
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 pt-0">
@@ -286,7 +271,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* AI Preferences */}
-      <Card className="bg-card border-border rounded-2xl opacity-50 cursor-not-allowed">
+      <Card className="bg-card border-border rounded-2xl">
         <CardHeader className="p-6 pb-2">
           <CardTitle className="text-base font-semibold text-foreground">
             AI Preferences
@@ -295,11 +280,10 @@ export default function SettingsPage() {
         <CardContent className="p-6 pt-2 space-y-4">
           <div className="grid grid-cols-2 gap-6 w-full">
             <div className="space-y-2">
-              <Label className="text-[13px] text-muted-foreground">Default Tone</Label>
+              <Label className="text-[13px] text-muted-foreground">Default Tone (Content Studio)</Label>
               <Select
                 value={prefs.ai?.defaultTone || "professional"}
                 onValueChange={(val) => handleUpdate("ai.defaultTone", val)}
-                disabled
               >
                 <SelectTrigger className="w-full bg-background border-border text-foreground focus:ring-primary shadow-none h-10 rounded-lg">
                   <SelectValue placeholder="Tone" />
@@ -313,11 +297,10 @@ export default function SettingsPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-[13px] text-muted-foreground">Content Language</Label>
+              <Label className="text-[13px] text-muted-foreground">Content Language (Content Studio)</Label>
               <Select
                 value={prefs.ai?.language || "english"}
                 onValueChange={(val) => handleUpdate("ai.language", val)}
-                disabled
               >
                 <SelectTrigger className="w-full bg-background border-border text-foreground focus:ring-primary shadow-none h-10 rounded-lg">
                   <SelectValue placeholder="Language" />
@@ -335,17 +318,16 @@ export default function SettingsPage() {
           <div className="pt-2">
             <SettingsRow
               title="Auto-add Hashtags"
-              description="Automatically append relevant hashtags"
+              description="Let Content Studio's AI end posts with relevant hashtags"
               control={
                 <CustomSwitch
                   checked={!!prefs.ai?.autoHashtags}
                   onCheckedChange={(val) => handleUpdate("ai.autoHashtags", val)}
-                  disabled
                 />
               }
             />
             <SettingsRow
-              title="Smart Suggestions"
+              title="Smart Suggestions (coming soon)"
               description="Show AI-powered topic ideas in your dashboard"
               control={
                 <CustomSwitch
@@ -363,7 +345,7 @@ export default function SettingsPage() {
       <Card className="bg-card border-border rounded-2xl opacity-50 cursor-not-allowed">
         <CardHeader className="p-6 pb-2">
           <CardTitle className="text-base font-semibold text-foreground">
-            Privacy & Security
+            Privacy & Security <ComingSoon />
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 pt-0">
@@ -401,12 +383,12 @@ export default function SettingsPage() {
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary border border-border">
                 <span
-                  className={`w-1.5 h-1.5 rounded-full ${prefs.privacy?.twoFactorAuth ? "bg-primary" : "bg-amber-500"}`}
+                  className="w-1.5 h-1.5 rounded-full bg-muted-foreground"
                 ></span>
                 <span
-                  className={`text-[11px] font-medium ${prefs.privacy?.twoFactorAuth ? "text-primary" : "text-amber-500"}`}
+                  className="text-[11px] font-medium text-muted-foreground"
                 >
-                  {prefs.privacy?.twoFactorAuth ? "Enabled" : "Disabled"}
+                  Not available yet
                 </span>
               </div>
               <CustomSwitch

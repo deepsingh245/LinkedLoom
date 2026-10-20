@@ -1,6 +1,9 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
+import { Routes } from "@/lib/routes"
+import { mergePreferences } from "@/lib/preferences"
 import { format, set, isBefore } from "date-fns"
 import { Save } from "lucide-react"
 
@@ -59,10 +62,22 @@ export function PostEditor() {
     const [enhancingPrompt, setEnhancingPrompt] = React.useState(false)
     const [activePlatform, setActivePlatform] = React.useState<string>("linkedin")
 
+    // Start from the tone chosen in Preferences (once, when the profile arrives).
+    const toneFromPrefs = React.useRef(false)
+    React.useEffect(() => {
+        const preferred = profile?.preferences?.ai?.defaultTone
+        if (!toneFromPrefs.current && preferred) {
+            toneFromPrefs.current = true
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setTone(preferred.toLowerCase())
+        }
+    }, [profile?.preferences?.ai?.defaultTone])
+
     // TanStack Query mutations for CRUD operations
     const createMutation = useCreatePost();
     const updateMutation = useUpdatePost(user?.uid);
     const scheduleMutation = useSchedulePost(user?.uid);
+    const router = useRouter();
     const saving = createMutation.isPending || updateMutation.isPending || scheduleMutation.isPending;
 
     const [excludeIcons, setExcludeIcons] = React.useState(false)
@@ -128,7 +143,9 @@ export function PostEditor() {
                 tone, 
                 length: length[0],
                 excludeIcons,
-                creativeExpansion
+                creativeExpansion,
+                language: mergePreferences(profile?.preferences).ai.language,
+                autoHashtags: mergePreferences(profile?.preferences).ai.autoHashtags
             });
             
             const data = result.data as { content: string };
@@ -377,6 +394,8 @@ export function PostEditor() {
                             onSuccess: () => {
                                 successToast(`Post scheduled for ${format(finalDate, "PPP 'at' p")}!`);
                                 setDate(undefined);
+                                // Take the user to the queue so they can see the scheduled post.
+                                router.push(`${Routes.SCHEDULE}?tab=scheduled`);
                             },
                         }
                     );

@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { AlertTriangle, Bot, Calendar as CalendarIcon, Filter, List, Grid, Search, Plus, LayoutGrid, Clock, FileText, Type } from "lucide-react"
 import { isAutopilotPost, normalizeStatus, statusMeta, statusPillClass } from "@/lib/posts/status"
 import { Button } from "@/components/ui/button"
@@ -29,6 +30,19 @@ import { SmartImage } from "@/components/ui/smart-image"
 import { Post } from "@/types"
 
 export default function SchedulePage() {
+    // useSearchParams needs a Suspense boundary during the production build.
+    return (
+        <Suspense fallback={null}>
+            <SchedulePageContent />
+        </Suspense>
+    )
+}
+
+const TABS = ["all", "scheduled", "attention", "drafts"] as const
+
+function SchedulePageContent() {
+    const requestedTab = useSearchParams().get("tab")
+    const initialTab = (TABS as readonly string[]).includes(requestedTab ?? "") ? (requestedTab as string) : "scheduled"
     const { user } = useAuth();
     const { data: posts = [], isLoading: postsLoading } = usePosts(user?.uid);
     const { data: scheduledPosts = [], isLoading: scheduledLoading } = useScheduledPosts(user?.uid);
@@ -145,7 +159,7 @@ export default function SchedulePage() {
                 </div>
             </div>
 
-            <Tabs defaultValue="scheduled" className="w-full space-y-5">
+            <Tabs key={initialTab} defaultValue={initialTab} className="w-full space-y-5">
                 <TabsList className="bg-[#eff3f2] border border-[#e2e6ea] p-1 h-11 rounded-xl w-full sm:w-fit">
                     <TabsTrigger value="all" className="flex-1 sm:flex-none rounded-lg px-3 sm:px-5 h-9 data-[state=active]:bg-white data-[state=active]:text-[#286c63] data-[state=active]:shadow-sm font-semibold transition-all flex items-center justify-center gap-1.5 min-w-0 text-xs sm:text-sm">
                         <LayoutGrid className="w-4 h-4 shrink-0" />

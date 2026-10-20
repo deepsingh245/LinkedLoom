@@ -169,7 +169,7 @@ firebase deploy --only functions,firestore:rules,firestore:indexes,storage
 
 Functions in this repo: `generatePost`, `generateImage`, `enhanceImagePrompt` (ai.ts) · LinkedIn: `getLinkedInAuthUrl`, `exchangeLinkedInToken`, `publishToLinkedIn`, `getLinkedInAnalytics` · Reddit: `getRedditAuthUrl`, `exchangeRedditToken`, `publishToReddit`, `disconnectReddit`, `getRedditAnalytics` · `checkScheduledPosts` (every 10 min; claims each due post, publishes once per platform, retries only safe errors) · publishing callables `publishNow`, `resolvePublishCheck` · `generateResizedImages` (Storage trigger).
 
-AI Autopilot: personas `createPersona`, `updatePersona`, `setPersonaStatus`, `deletePersona`, `setAutopilotEnabled` · AI `addAIConnection`, `testAIConnection`, `revokeAIConnection`, `testPersonaGeneration` · credits `adminGrantCredits`, `sweepCreditReservations` (every 15 min) · research `runResearch` (queues a run and returns its id), `retryRun`, `cancelRun`, `updateContentItem`, `setContentStatus`, `exportContentToDraft`, approval `previewApproval`, `approveContent`, `unscheduleContent`, `setPersonaApprovalMode` (opt-in auto-publish), task worker `researchStep` (Cloud Tasks, one step per task), schedulers `dispatchResearch` (every 10 min), `reapResearchRuns` (every 15 min), `reconcileResearchSchedule` (daily), admin hooks `adminDispatchResearch` and `adminReapResearchRuns` (need the `admin: true` claim).
+AI Autopilot: personas `createPersona`, `updatePersona`, `setPersonaStatus`, `deletePersona`, `setAutopilotEnabled` · AI `addAIConnection`, `testAIConnection`, `revokeAIConnection`, `testPersonaGeneration` · credits `adminGrantCredits`, `sweepCreditReservations` (every 15 min) · research `runResearch` (queues a run and returns its id), `retryRun`, `cancelRun`, `updateContentItem`, `setContentStatus`, `exportContentToDraft`, company context `addContextDoc`, `updateContextDoc`, `deleteContextDoc`, approval `previewApproval`, `approveContent`, `unscheduleContent`, `setPersonaApprovalMode` (opt-in auto-publish), task worker `researchStep` (Cloud Tasks, one step per task), schedulers `dispatchResearch` (every 10 min), `reapResearchRuns` (every 15 min), `reconcileResearchSchedule` (daily), admin hooks `adminDispatchResearch` and `adminReapResearchRuns` (need the `admin: true` claim).
 
 Requirements: project on the **Blaze** plan; Node 22; Cloud Scheduler + Pub/Sub APIs are enabled automatically on first deploy of `checkScheduledPosts`.
 
@@ -235,7 +235,7 @@ Point `NEXT_PUBLIC_API_URL` at `http://127.0.0.1:5001/linkedloom/us-central1` wh
 ### Tests (functions folder)
 
 ```bash
-npm test             # 153 unit tests (persona validation, pricing, redaction, SSRF guard, research, schedule math, workflow logic, publishing slots/errors), no emulator needed
+npm test             # 164 unit tests (persona validation, pricing, redaction, SSRF guard, research, schedule math, workflow logic, publishing slots/errors), no emulator needed
 npm run test:rules   # Firestore rules tests in the emulator (needs Java)
 npm run test:e2e     # builds, then the emulator suites (78 + A5 publishing.process/publishing.e2e): callables, credits ledger, research, scheduling, durability, approval & publishing
 ```

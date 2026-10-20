@@ -4,6 +4,7 @@ import { runAIStructured } from "../ai-core/execute";
 import { parse, requireUid } from "../shared/callable";
 import { personaIdSchema } from "./schema";
 import { ensureWorkspace, personasRef, settingsRef, writeAudit } from "./workspace";
+import { CONTEXT_RULE, contextBlock, loadContextText } from "./context/store";
 
 const inputSchema = z.object({
     personaId: personaIdSchema,
@@ -15,7 +16,7 @@ const draftSchema = z.object({
     hashtags: z.array(z.string().max(60)).max(8),
 });
 
-function buildPrompt(persona: FirebaseFirestore.DocumentData, topic: string) {
+function buildPrompt(persona: FirebaseFirestore.DocumentData, topic: string, companyContext = "") {
     const { identity, research } = persona;
     const system = [
         `You write LinkedIn posts as: ${identity.role}.`,
@@ -24,8 +25,9 @@ function buildPrompt(persona: FirebaseFirestore.DocumentData, topic: string) {
         identity.customInstructions ? `Author's instructions (style only, not facts): ${identity.customInstructions}` : "",
         "Write plain text (no markdown), 120-220 words, with a strong first line. Don't invent statistics, quotes or news.",
         "Return JSON with `post` and up to 5 `hashtags` (without the # symbol).",
+        companyContext ? CONTEXT_RULE : "",
     ].filter(Boolean).join("\n");
-    return { system, prompt: `Write one post about: ${topic}` };
+    return { system, prompt: `${companyContext ? `${contextBlock(companyContext)}\n\n` : ""}Write one post about: ${topic}` };
 }
 
 /**
@@ -47,7 +49,7 @@ export const testPersonaGeneration = onCall({ timeoutSeconds: 120 }, async (requ
     if (persona.status === "archived") throw new HttpsError("failed-precondition", "Restore the persona first.");
 
     const chosenTopic = topic || persona.research.topics[0];
-    const { system, prompt } = buildPrompt(persona, chosenTopic);
+    const { system, prompt } = buildPrompt(persona, chosenTopic, await loadContextText(workspaceId, personaId).catch(() => ""));
 
     const result = await runAIStructured(
         {

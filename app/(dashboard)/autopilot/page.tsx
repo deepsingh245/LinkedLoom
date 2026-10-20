@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, Bot, FileCheck2, Plus, Radio, Sparkles } from "lucide-react";
+import { AlertTriangle, AudioLines, Bot, Coins, FileCheck2, KeyRound, Plus, Radio, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AutopilotNav } from "@/components/features/autopilot/AutopilotNav";
+import { CompanyContextCard } from "@/components/features/autopilot/CompanyContextCard";
+import { DraftsPanel } from "@/components/features/autopilot/DraftsPanel";
+import { RunsPanel } from "@/components/features/autopilot/RunsPanel";
 import { KillSwitch } from "@/components/features/autopilot/KillSwitch";
 import { PersonaCard } from "@/components/features/autopilot/PersonaCard";
 import { QueryError } from "@/components/features/autopilot/QueryError";
@@ -37,6 +39,13 @@ export default function AutopilotPage() {
     const [testing, setTesting] = useState<Persona | null>(null);
     const [demoing, setDemoing] = useState<Persona | null>(null);
     const [researching, setResearching] = useState<Persona | null>(null);
+
+    // Deep links (#approval, #research) point into this page; scroll once the sections exist.
+    useEffect(() => {
+        if (personasLoading) return;
+        const id = window.location.hash.slice(1);
+        if (id) document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, [personasLoading]);
 
     const live = personas.filter((persona) => persona.status !== "archived");
     const active = live.filter((persona) => persona.status === "active").length;
@@ -75,16 +84,25 @@ export default function AutopilotPage() {
                     <h1 className="text-[26px] font-semibold tracking-[-0.035em] text-[#20242b] md:text-[30px]">Autopilot Control Room</h1>
                     <p className="mt-1 text-sm text-[#748087]">Manage research personas, monitor runs, and review every draft before it goes anywhere.</p>
                 </div>
-                {atLimit ? (
-                    <Button disabled title="Archive a persona to create a new one" className="h-9 rounded-lg"> <Plus className="mr-2 h-4 w-4" />New persona</Button>
-                ) : (
-                    <Button asChild className="h-9 rounded-lg bg-[#357d72] px-3 text-xs font-semibold text-white hover:bg-[#286c63]">
-                        <Link href={Routes.AUTOPILOT_NEW}><Plus className="mr-2 h-4 w-4" />New persona</Link>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Button asChild variant="outline" className="h-9 rounded-lg border-[#cfd8dc] bg-white px-3 text-xs font-medium text-[#38434a] hover:bg-[#f0f4f3]">
+                        <Link href={Routes.AUTOPILOT_STUDIO}><AudioLines className="mr-2 h-4 w-4" />Persona Studio</Link>
                     </Button>
-                )}
+                    <Button asChild variant="outline" className="h-9 rounded-lg border-[#cfd8dc] bg-white px-3 text-xs font-medium text-[#38434a] hover:bg-[#f0f4f3]">
+                        <Link href={Routes.AUTOPILOT_AI}><KeyRound className="mr-2 h-4 w-4" />AI keys</Link>
+                    </Button>
+                    <Button asChild variant="outline" className="h-9 rounded-lg border-[#cfd8dc] bg-white px-3 text-xs font-medium text-[#38434a] hover:bg-[#f0f4f3]">
+                        <Link href={Routes.AUTOPILOT_CREDITS}><Coins className="mr-2 h-4 w-4" />Credits &amp; usage</Link>
+                    </Button>
+                    {atLimit ? (
+                        <Button disabled title="Archive a persona to create a new one" className="h-9 rounded-lg"> <Plus className="mr-2 h-4 w-4" />New persona</Button>
+                    ) : (
+                        <Button asChild className="h-9 rounded-lg bg-[#357d72] px-3 text-xs font-semibold text-white hover:bg-[#286c63]">
+                            <Link href={Routes.AUTOPILOT_NEW}><Plus className="mr-2 h-4 w-4" />New persona</Link>
+                        </Button>
+                    )}
+                </div>
             </section>
-
-            <AutopilotNav />
 
             {runAlerts > 0 && (
                 <Card className="flex items-start gap-3 rounded-xl border border-[#f0d8d8] bg-[#fff9f9] p-4 text-sm shadow-none" role="status">
@@ -92,7 +110,7 @@ export default function AutopilotPage() {
                     <div className="flex-1 text-[#634646]">
                         <span className="font-semibold">{runAlerts} scheduled run{runAlerts === 1 ? "" : "s"} need attention.</span> These runs failed or were skipped in the last 7 days.
                     </div>
-                    <Link href={Routes.AUTOPILOT_RUNS} className="shrink-0 text-xs font-semibold text-[#9d4b4b] underline underline-offset-2">Review</Link>
+                    <a href="#research" className="shrink-0 text-xs font-semibold text-[#9d4b4b] underline underline-offset-2">Review</a>
                 </Card>
             )}
 
@@ -162,6 +180,18 @@ export default function AutopilotPage() {
                     ))}</div>}
                 </section>
             )}
+
+            <div className="border-t border-[#e7ebed] pt-6">
+                <CompanyContextCard userId={user?.uid} personas={personas} />
+            </div>
+
+            <section id="approval" className="scroll-mt-4 space-y-3 border-t border-[#e7ebed] pt-6">
+                <DraftsPanel />
+            </section>
+
+            <section id="research" className="scroll-mt-4 space-y-3 border-t border-[#e7ebed] pt-6">
+                <RunsPanel />
+            </section>
 
             {researching && <RunResearchDialog persona={researching} userId={user?.uid} open={!!researching} onOpenChange={(open) => !open && setResearching(null)} />}
             {modeFor && (

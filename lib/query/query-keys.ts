@@ -31,5 +31,6 @@ export const queryKeys = {
     usage: (userId: string) => ['autopilot', userId, 'usage'] as const,
     drafts: (userId: string) => ['autopilot', userId, 'drafts'] as const,
     runs: (userId: string) => ['autopilot', userId, 'runs'] as const,
+    context: (userId: string) => ['autopilot', userId, 'context'] as const,
   },
 } as const;

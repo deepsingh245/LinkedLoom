@@ -100,6 +100,9 @@ function researchResponse(name: string, request: AIRequest): unknown {
         const ordinals = ["the first source", "the second source", "the third source", "the fourth source", "the fifth source", "the sixth source"];
         const domains = ids.map((_, i) => ordinals[i] ?? "another source").join(" and ");
         let post = `According to ${domains}, ${claims.map((c) => c.claim.replace(/[.!?]+$/, "")).join(". Also, ")}. This matters for teams building with AI today and it is worth watching closely.`;
+        // Company context (uploaded by the author) reached the prompt: echo its first sentence so tests can see it was used.
+        const ctx = request.prompt.match(/<<<COMPANY_CONTEXT>>>\n([\s\S]*?)\n<<<END COMPANY_CONTEXT>>>/)?.[1];
+        if (ctx) post += ` ${firstSentence(ctx.replace(/^## [^\n]*\n/, ""))}`;
         if (full.includes("[mock:invent-number]")) post += " Revenue grew 73% last year.";
         if (full.includes("[mock:unsupported]")) post += " It will certainly transform every industry overnight.";
         if (full.includes("[mock:leak]")) post += " <<<SOURCE id=x>>>";

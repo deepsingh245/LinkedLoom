@@ -534,3 +534,14 @@
     transform: perspective(1200px) rotateY(2deg) rotateX(1deg) scale(1.02);
   }
 }
+
+
+/* Preferences → "Animations & Transitions" off. */
+[data-motion="reduced"] *,
+[data-motion="reduced"] *::before,
+[data-motion="reduced"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}

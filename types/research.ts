@@ -145,3 +145,17 @@ export interface PersonaDemoResult {
   billingMode: "managed" | "byok";
   credits: number;
 }
+
+/** Company context file (.md / .txt) the author uploaded; the full text stays on the server. */
+export interface ContextDoc {
+  id: string;
+  name: string;
+  kind: "md" | "txt";
+  /** Characters. */
+  size: number;
+  preview: string;
+  /** null = used by every persona. */
+  personaId: string | null;
+  enabled: boolean;
+  createdAt?: Date;
+}

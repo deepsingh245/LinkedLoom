@@ -149,6 +149,18 @@ describe("existing rules still behave", () => {
         await assertFails(setDoc(doc(asBob(), "posts/post3"), { user_id: ALICE, content: "x" }));
     });
 
+    it("context files: metadata readable by the owner, full text and writes denied", async () => {
+        await env.withSecurityRulesDisabled(async (ctx) => {
+            const admin = ctx.firestore();
+            await setDoc(doc(admin, "workspaces/alice/contextDocs/d1"), { name: "brand.md", enabled: true });
+            await setDoc(doc(admin, "workspaces/alice/contextTexts/d1"), { text: "private company text" });
+        });
+        await assertSucceeds(getDoc(doc(asAlice(), "workspaces/alice/contextDocs/d1")));
+        await assertFails(getDoc(doc(asBob(), "workspaces/alice/contextDocs/d1")));
+        await assertFails(getDoc(doc(asAlice(), "workspaces/alice/contextTexts/d1")));
+        await assertFails(setDoc(doc(asAlice(), "workspaces/alice/contextDocs/d2"), { name: "x.md" }));
+    });
+
     it("posts: clients can draft and schedule but never set publish state (A5)", async () => {
         const db = asAlice();
         await assertSucceeds(setDoc(doc(db, "posts/d1"), { user_id: ALICE, content: "x", status: "DRAFT", platforms: ["linkedin"], linkedinUrn: "" }));

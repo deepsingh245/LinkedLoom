@@ -49,6 +49,9 @@ export default function PrivacyPage() {
                         (and, if you turn it on, pages found through Google Search via Gemini) and to have AI write and fact-check sourced drafts for you to review.
                         Automatic research runs before posting windows, uses LinkedLoom credits or your own AI key, and pauses when 6 drafts await review. You can turn it off for a persona or use Stop all to stop Autopilot activity. Drafts are published only when you approve them, or – if you separately turn on auto-publish for a persona and confirm it – when they pass fact-checking with a high quality score. Auto-publish is off by default, LinkedIn-only, and can be turned off at any time.
                     </li>
+                    <li>
+                        To use the company information you upload to Autopilot (.md or .txt files such as company details, brand guidelines or product descriptions): the text is stored privately in your workspace and parts of it are sent to the selected AI provider when drafts are written. You can turn each file off or delete it at any time. Don&apos;t upload passwords, personal data of others or confidential material you aren&apos;t allowed to share with an AI provider.
+                    </li>
                     <li>To generate drafts and images with AI when you ask for it, or when you opt into automatic research. Relevant persona settings, source excerpts and draft text may be sent to the selected AI provider.</li>
                     <li>To secure the service, prevent abuse (for example, a daily limit on Reddit posts per user) and fix problems.</li>
                 </ul>

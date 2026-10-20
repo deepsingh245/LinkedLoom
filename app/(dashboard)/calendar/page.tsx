@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { ArrowRight, Bot, CalendarDays, Clock3, FileText, Plus } from "lucide-react";
-import { isAutopilotPost, statusMeta, statusPillClass } from "@/lib/posts/status";
+import { ArrowRight, Bot, CalendarDays, Clock3, FileText, Pencil, Plus } from "lucide-react";
+import { isAutopilotPost, normalizeStatus, statusMeta, statusPillClass } from "@/lib/posts/status";
 import { Post } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,9 @@ import { EditPostDialog } from "@/components/features/dashboard/EditPostDialog";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useScheduledPosts } from "@/lib/query/hooks/use-posts";
 import { Routes } from "@/lib/routes";
+
+// Posts the publisher already owns can't be edited here.
+const canEdit = (post: Post) => !["PUBLISHING", "PUBLISHED", "RECONCILIATION_REQUIRED"].includes(normalizeStatus(post.status));
 
 export default function CalendarPage() {
     const { user } = useAuth();
@@ -106,13 +109,13 @@ export default function CalendarPage() {
                             <ol className="space-y-2">
                                 {selectedPosts.map((post) => (
                                     <li key={post.id}>
-                                        <button type="button" className="group flex w-full items-start gap-3 rounded-lg border border-[#e7ebed] bg-white p-3 text-left transition hover:border-[#bdd5ce] hover:bg-[#fbfdfc] md:p-4" onClick={() => { setSelectedPost(post); setShowEdit(true); }}>
+                                        <div className="flex w-full items-start gap-3 rounded-lg border border-[#e7ebed] bg-white p-3 text-left md:p-4">
                                             <span className="flex h-10 min-w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-[#f2f6f5] text-[#526f67]">
                                                 <Clock3 className="mb-0.5 h-3.5 w-3.5" />
                                                 <span className="text-[9px] font-semibold">{post.scheduledFor ? format(new Date(post.scheduledFor), "h:mm a") : "—"}</span>
                                             </span>
                                             <span className="min-w-0 flex-1">
-                                                <span className="line-clamp-3 block text-xs leading-relaxed text-[#39444b] transition group-hover:text-[#286c63]">{post.content || "No post content"}</span>
+                                                <span className="line-clamp-3 block text-xs leading-relaxed text-[#39444b]">{post.content || "No post content"}</span>
                                                 <span className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-[#89939a]">
                                                     {isAutopilotPost(post)
                                                         ? <span className="inline-flex items-center gap-1 font-medium text-[#357d72]"><Bot className="h-3 w-3" />Autopilot · reschedule in Drafts</span>
@@ -120,14 +123,21 @@ export default function CalendarPage() {
                                                     {post.topic && <><span aria-hidden="true">·</span><span className="truncate">{post.topic}</span></>}
                                                 </span>
                                             </span>
-                                            <span className={`shrink-0 rounded-md border px-2 py-0.5 text-[9px] font-semibold ${statusPillClass(statusMeta(post.status).tone)}`}>{statusMeta(post.status).label}</span>
-                                        </button>
+                                            <span className="flex shrink-0 flex-col items-end gap-2">
+                                                <span className={`rounded-md border px-2 py-0.5 text-[9px] font-semibold ${statusPillClass(statusMeta(post.status).tone)}`}>{statusMeta(post.status).label}</span>
+                                                {canEdit(post) && (
+                                                    <Button type="button" size="sm" variant="outline" onClick={() => { setSelectedPost(post); setShowEdit(true); }} className="h-7 rounded-lg border-[#b9cdc7] bg-white px-2.5 text-[10px] font-medium text-[#286c63] hover:bg-[#e8f3f0]">
+                                                        <Pencil className="mr-1 h-3 w-3" />Edit
+                                                    </Button>
+                                                )}
+                                            </span>
+                                        </div>
                                     </li>
                                 ))}
                             </ol>
                         )}
                     </CardContent>
-                    {selectedPosts.length > 0 && <div className="flex items-center justify-between border-t border-[#edf0f2] px-4 py-3 text-[10px] text-[#89939a] md:px-5"><span>Click a post to edit its content</span><Link href={Routes.SCHEDULE} className="inline-flex items-center gap-1 font-semibold text-[#357d72] hover:text-[#286c63]">Content library<ArrowRight className="h-3 w-3" /></Link></div>}
+                    {selectedPosts.length > 0 && <div className="flex items-center justify-between border-t border-[#edf0f2] px-4 py-3 text-[10px] text-[#89939a] md:px-5"><span>Use Edit on a post to change its content</span><Link href={Routes.SCHEDULE} className="inline-flex items-center gap-1 font-semibold text-[#357d72] hover:text-[#286c63]">Content library<ArrowRight className="h-3 w-3" /></Link></div>}
                 </Card>
             </section>
 

@@ -127,6 +127,13 @@ service cloud.firestore {
         allow read: if isWorkspaceMember(workspaceId);
         allow write: if false;
       }
+
+      // Company context files: readable metadata only (name, size, preview, scope, enabled).
+      // The full text lives in contextTexts, which is intentionally absent here (catch-all denies it).
+      match /contextDocs/{docId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
     }
 
     // Everything else (oauthStates, analytics, ...) is backend-only.

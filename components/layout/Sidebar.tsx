@@ -66,9 +66,7 @@ export function Sidebar({ className }: SidebarProps) {
                     ))}
                     {AUTOPILOT_ENABLED && (
                         <>
-                            <NavItem href={Routes.AUTOPILOT} active={pathname === Routes.AUTOPILOT} icon={<Bot className="h-4 w-4" />}>Autopilot</NavItem>
-                            <NavItem href={Routes.AUTOPILOT_RUNS} active={pathname.startsWith(Routes.AUTOPILOT_RUNS)} icon={<Activity className="h-4 w-4" />}>Research</NavItem>
-                            <NavItem href={Routes.AUTOPILOT_DRAFTS} active={pathname.startsWith(Routes.AUTOPILOT_DRAFTS)} icon={<FileText className="h-4 w-4" />}>Approval Inbox</NavItem>
+                            <NavItem href={Routes.AUTOPILOT} active={pathname.startsWith(Routes.AUTOPILOT)} icon={<Bot className="h-4 w-4" />}>Autopilot</NavItem>
                         </>
                     )}
                 </nav>

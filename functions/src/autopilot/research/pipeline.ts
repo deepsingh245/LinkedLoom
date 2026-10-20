@@ -22,6 +22,7 @@ import {
 } from "./types";
 import { qualityScore, quoteInText, verifyDeterministic } from "./verify";
 import { approveContentInternal } from "../approval/approve";
+import { loadContextText } from "../context/store";
 
 /**
  * The research pipeline as resumable steps. Each step:
@@ -482,6 +483,18 @@ export async function stepExtract(ctx: StepCtx): Promise<StepOutcome> {
     return usable.length ? { state: "done" } : { state: "failed", note: "No verifiable claims found in the articles." };
 }
 
+/**
+ * The author's company context for this run. Loaded once and kept in a run artifact so the generate and
+ * verify steps (and retries) all see the same text even if files change mid-run. "" when there is none.
+ */
+async function runContextText(ctx: StepCtx): Promise<string> {
+    const stored = await readArtifact<{ text: string }>(ctx.workspaceId, ctx.runId, "context");
+    if (stored) return stored.text;
+    const text = await loadContextText(ctx.workspaceId, ctx.personaId).catch(() => "");
+    await writeArtifact(ctx.workspaceId, ctx.runId, "context", { text });
+    return text;
+}
+
 // ------------------------------------------------------------------ 5. GENERATE
 export async function stepGenerate(ctx: StepCtx): Promise<StepOutcome> {
     const { research } = ctx;
@@ -493,6 +506,7 @@ export async function stepGenerate(ctx: StepCtx): Promise<StepOutcome> {
     }
 
     const groups = groupDocs(docs, research.minSourceCount, RESEARCH_LIMITS.maxDraftsPerRun);
+    const companyContext = await runContextText(ctx);
     const drafts = (await readArtifact<DraftArtifact[]>(ctx.workspaceId, ctx.runId, "drafts")) ?? [];
 
     // Resume after the last draft that was saved; each AI call has its own idempotency key.
@@ -501,7 +515,7 @@ export async function stepGenerate(ctx: StepCtx): Promise<StepOutcome> {
         const group = groups[gi];
         const topic = group[0].title;
         const claims = group.flatMap((d) => d.claims.map((c) => ({ sourceId: d.id, ...c })));
-        const prompt = draftPrompt(ctx.voice, topic, group, claims);
+        const prompt = draftPrompt(ctx.voice, topic, group, claims, companyContext);
         const result = await runAIStructured(
             ctx.aiCtx("generate", `gen:${gi}`),
             { ...prompt, maxOutputTokens: 1500, temperature: 0.7 },
@@ -532,6 +546,8 @@ export async function stepVerify(ctx: StepCtx): Promise<StepOutcome> {
 
     const docs = ((await readArtifact<DocsArtifact>(ctx.workspaceId, ctx.runId, "docs")) ?? { docs: [] }).docs;
     const byId = new Map(docs.map((d) => [d.id, d]));
+    // Company context the author supplied: evidence for statements about their own company only (see checkPrompt).
+    const companyContext = await runContextText(ctx);
     const state = (await readArtifact<VerifyArtifact>(ctx.workspaceId, ctx.runId, "verify")) ?? { next: 0, accepted: [], rejections: [] };
     ctx.rejections = state.rejections;
 
@@ -551,7 +567,7 @@ export async function stepVerify(ctx: StepCtx): Promise<StepOutcome> {
             hashtags: d.hashtags,
             citedUrls: cited.map((c) => c.url),
             fetchedUrls: docs.map((x) => x.url),
-            evidenceTexts: cited.map((c) => c.text),
+            evidenceTexts: [...cited.map((c) => c.text), ...(companyContext ? [companyContext] : [])],
             excludedTopics: research.excludedTopics,
             minSourceCount: research.minSourceCount,
         });
@@ -563,7 +579,7 @@ export async function stepVerify(ctx: StepCtx): Promise<StepOutcome> {
         }
 
         ctx.guard();
-        const prompt = checkPrompt(d.post, cited);
+        const prompt = checkPrompt(d.post, cited, companyContext);
         const check = await runAIStructured(
             ctx.aiCtx("verify", `check:${di}`),
             { ...prompt, maxOutputTokens: 2048, temperature: 0 },
@@ -572,7 +588,7 @@ export async function stepVerify(ctx: StepCtx): Promise<StepOutcome> {
 
         // A claim only counts as supported if the checker also quotes the sources verbatim.
         const verdicts = check.data.claims.map((c) => ({
-            ok: c.supported && !!c.quote && cited.some((s) => quoteInText(c.quote ?? "", s.text)),
+            ok: c.supported && !!c.quote && (cited.some((s) => quoteInText(c.quote ?? "", s.text)) || (!!companyContext && quoteInText(c.quote ?? "", companyContext))),
             text: c.text,
         }));
         const unsupported = verdicts.filter((v) => !v.ok);

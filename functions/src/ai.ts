@@ -204,7 +204,7 @@ export const generatePost = onCall(
         }
 
         const data = request.data;
-        const { topic, tone, length, excludeIcons, creativeExpansion } = data;
+        const { topic, tone, length, excludeIcons, creativeExpansion, language, autoHashtags } = data;
 
         if (!topic) {
             throw new HttpsError(
@@ -220,7 +220,7 @@ export const generatePost = onCall(
             );
         }
 
-        const prompt = getPrompt(topic, tone, length, excludeIcons, creativeExpansion);
+        const prompt = getPrompt(topic, tone, length, excludeIcons, creativeExpansion, typeof language === "string" ? language : undefined, autoHashtags !== false);
         const uid = request.auth.uid;
         const workspaceId = await ensureWorkspace(uid);
 
@@ -239,13 +239,18 @@ function getPrompt(
     tone?: string,
     length?: number,
     excludeIcons?: boolean,
-    creativeExpansion?: boolean
+    creativeExpansion?: boolean,
+    language?: string,
+    autoHashtags = true
 ): string {
+    // `language` comes from the client: allow only a short plain word so it can't carry instructions.
+    const writeIn = language && /^[A-Za-z][A-Za-z ()-]{1,30}$/.test(language.trim()) ? language.trim() : "English";
     let prompt = `You are a professional LinkedIn content writer.
 
 Write a LinkedIn post about "${topic}".
 
 Tone: ${tone || "professional"}
+Language: Write the post in ${writeIn}.
 Length: Approximately ${length || 800} characters.
 
 Requirements:
@@ -264,7 +269,7 @@ Requirements:
 
     prompt += `- Make it engaging and practical
 - Do NOT use any markdown formatting. No bold (**), no italics (*), no headers (#, ##), no bullet points with dashes. Write in plain text only.
-- End the post with 3-5 relevant hashtags on a new line (e.g. #Leadership #CareerGrowth #Tech)
+${autoHashtags ? "- End the post with 3-5 relevant hashtags on a new line (e.g. #Leadership #CareerGrowth #Tech)" : "- Do NOT add hashtags."}
 `;
     return prompt;
 }

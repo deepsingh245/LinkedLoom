@@ -7,6 +7,7 @@ import { parse, requireUid } from "../shared/callable";
 import { personaIdSchema } from "./schema";
 import { envNum } from "./research/types";
 import { ensureWorkspace, personasRef, settingsRef, workspaceRef, writeAudit } from "./workspace";
+import { CONTEXT_RULE, contextBlock, loadContextText } from "./context/store";
 
 /** How many demos a workspace can run per day (each costs one AI call). */
 const DEMO_DAILY_CAP = envNum("AUTOPILOT_DEMO_DAILY_CAP", 10);
@@ -27,7 +28,7 @@ export const demoSchema = z.object({
 
 export const demoDraftId = (personaId: string, index: number) => `demo_${personaId}_${index}`;
 
-function buildPrompt(persona: FirebaseFirestore.DocumentData) {
+function buildPrompt(persona: FirebaseFirestore.DocumentData, companyContext = "") {
     const { identity, research } = persona;
     const system = [
         `You write LinkedIn posts as: ${identity.role}.`,
@@ -37,10 +38,11 @@ function buildPrompt(persona: FirebaseFirestore.DocumentData) {
         "These are DEMO drafts that show the author how their review queue will look. They are not based on research,",
         "so do not state specific statistics, dates, quotes, company announcements or news as facts. Write experience-based",
         "insights, practical advice or opinions instead. Plain text, no markdown, 100-180 words each, strong first line.",
+        companyContext ? `${CONTEXT_RULE} The drafts should clearly be about this author's company where it fits.` : "",
         `Return JSON with exactly ${DEMO_DRAFTS} drafts on DIFFERENT angles; each has a short \`angle\`, the \`post\`, and up to 5 \`hashtags\` (without #).`,
     ].filter(Boolean).join("\n");
     const topics = (research.topics as string[]).slice(0, 5).join(", ");
-    return { system, prompt: `Topics this author covers: ${topics}. Write ${DEMO_DRAFTS} sample posts.` };
+    return { system, prompt: `${companyContext ? `${contextBlock(companyContext)}\n\n` : ""}Topics this author covers: ${topics}. Write ${DEMO_DRAFTS} sample posts.` };
 }
 
 /**
@@ -65,7 +67,7 @@ export const runPersonaDemo = onCall({ timeoutSeconds: 120 }, async (request) =>
 
     await consumeDailyQuota(workspaceId, "autopilot.demo", DEMO_DAILY_CAP, `You've reached today's limit of ${DEMO_DAILY_CAP} demos. Try again tomorrow.`);
 
-    const { system, prompt } = buildPrompt(persona);
+    const { system, prompt } = buildPrompt(persona, await loadContextText(workspaceId, personaId).catch(() => ""));
     const result = await runAIStructured(
         {
             workspaceId,

@@ -25,6 +25,9 @@ export enum FirebaseFunctions {
     UNSCHEDULE_CONTENT = "unscheduleContent",
     SET_PERSONA_APPROVAL_MODE = "setPersonaApprovalMode",
     PUBLISH_NOW = "publishNow",
+    ADD_CONTEXT_DOC = "addContextDoc",
+    UPDATE_CONTEXT_DOC = "updateContextDoc",
+    DELETE_CONTEXT_DOC = "deleteContextDoc",
     RESOLVE_PUBLISH_CHECK = "resolvePublishCheck",
 }
 

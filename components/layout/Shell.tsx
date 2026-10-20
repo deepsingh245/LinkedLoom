@@ -14,6 +14,7 @@ import { useTheme } from "next-themes";
 import { useAuth } from "@/components/providers/auth-provider";
 import { updateUserProfile } from "@/lib/firebase/user";
 import type { UserPreferences } from "@/types";
+import { applyDisplayPreferences, mergePreferences } from "@/lib/preferences";
 
 const AUTOPILOT_ENABLED = process.env.NEXT_PUBLIC_AUTOPILOT_ENABLED === "true";
 
@@ -25,8 +26,7 @@ const routeNames: Array<[string, string]> = [
     [Routes.AUTOPILOT_NEW, "New pipeline"],
     [Routes.AUTOPILOT_STUDIO, "Persona Studio"],
     [Routes.AUTOPILOT_CREDITS, "Autopilot credits"],
-    [Routes.AUTOPILOT_DRAFTS, "Approval Inbox"],
-    [Routes.AUTOPILOT_RUNS, "Research"],
+    [Routes.AUTOPILOT_AI, "AI keys"],
     [Routes.AUTOPILOT, "Autopilot"],
     [Routes.CREATE_POST, "Content Studio"],
     [Routes.SCHEDULE, "Content Library"],
@@ -48,36 +48,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         const savedTheme = profile?.preferences?.theme;
         if (savedTheme) setTheme(savedTheme);
     }, [profile?.preferences?.theme, setTheme]);
+    useEffect(() => {
+        applyDisplayPreferences(mergePreferences(profile?.preferences));
+    }, [profile?.preferences]);
 
     const toggleTheme = () => {
         const nextTheme = resolvedTheme === "dark" ? "light" : "dark";
         setTheme(nextTheme);
         if (profile?.uid) {
-            const saved = profile.preferences;
-            const preferences: UserPreferences = {
-                theme: nextTheme,
-                density: saved?.density ?? "comfortable",
-                animationsEnabled: saved?.animationsEnabled ?? true,
-                notifications: {
-                    postPublished: saved?.notifications?.postPublished ?? true,
-                    weeklyDigest: saved?.notifications?.weeklyDigest ?? true,
-                    aiSuggestions: saved?.notifications?.aiSuggestions ?? false,
-                    commentAlerts: saved?.notifications?.commentAlerts ?? true,
-                    milestoneAlerts: saved?.notifications?.milestoneAlerts ?? true,
-                    productUpdates: saved?.notifications?.productUpdates ?? false,
-                },
-                ai: {
-                    defaultTone: saved?.ai?.defaultTone ?? "professional",
-                    language: saved?.ai?.language ?? "english",
-                    autoHashtags: saved?.ai?.autoHashtags ?? true,
-                    smartSuggestions: saved?.ai?.smartSuggestions ?? true,
-                },
-                privacy: {
-                    publicProfile: saved?.privacy?.publicProfile ?? true,
-                    analyticsSharing: saved?.privacy?.analyticsSharing ?? false,
-                    twoFactorAuth: saved?.privacy?.twoFactorAuth ?? false,
-                },
-            };
+            const preferences: UserPreferences = { ...mergePreferences(profile.preferences), theme: nextTheme };
             void updateUserProfile(profile.uid, { preferences }).catch((error) => {
                 console.error("Failed to save theme preference:", error);
             });
@@ -109,11 +88,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2.5">
-                        {AUTOPILOT_ENABLED && !isSettings && (
-                            <Link href={Routes.AUTOPILOT} className="hidden items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2 text-[11px] font-semibold text-primary transition hover:bg-accent sm:flex">
-                                Autopilot controls
-                            </Link>
-                        )}
                         <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} theme`} title={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} theme`} className="h-9 w-9 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground">
                             {resolvedTheme === "dark" ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
                         </Button>

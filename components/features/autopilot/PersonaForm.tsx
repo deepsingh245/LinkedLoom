@@ -67,17 +67,24 @@ export const personaToFormValues = (p: Persona): PersonaFormValues => ({
     ai: { connectionId: p.ai.connectionId ?? MANAGED, modelProfile: p.ai.modelProfile, monthlyCreditLimit: p.ai.monthlyCreditLimit },
 })
 
-/** Strip empty optional strings so the backend clears them instead of storing "". */
-const toInput = (v: PersonaFormValues): PersonaInput => ({
-    ...v,
-    description: v.description?.trim() || undefined,
-    identity: { ...v.identity, customInstructions: v.identity.customInstructions?.trim() || undefined },
-    ai: {
-        modelProfile: v.ai.modelProfile,
-        monthlyCreditLimit: v.ai.monthlyCreditLimit,
-        ...(v.ai.connectionId !== MANAGED ? { connectionId: v.ai.connectionId } : {}),
-    },
-})
+/**
+ * Leave out empty optional strings so the backend clears them instead of storing "".
+ * Omit the key entirely: the callable SDK sends `undefined` values as `null`, which the schema rejects.
+ */
+const toInput = (v: PersonaFormValues): PersonaInput => {
+    const { description, ...rest } = v
+    const { customInstructions, ...identity } = v.identity
+    return {
+        ...rest,
+        ...(description?.trim() ? { description: description.trim() } : {}),
+        identity: { ...identity, ...(customInstructions?.trim() ? { customInstructions: customInstructions.trim() } : {}) },
+        ai: {
+            modelProfile: v.ai.modelProfile,
+            monthlyCreditLimit: v.ai.monthlyCreditLimit,
+            ...(v.ai.connectionId !== MANAGED ? { connectionId: v.ai.connectionId } : {}),
+        },
+    }
+}
 
 const numberField = (onChange: (v: number) => void) => (e: React.ChangeEvent<HTMLInputElement>) =>
     onChange(e.target.value === "" ? 0 : Number(e.target.value))

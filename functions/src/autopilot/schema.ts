@@ -12,6 +12,12 @@ export function isValidTimeZone(tz: string): boolean {
     }
 }
 
+/**
+ * Optional text: missing, null (the callable SDK sends `undefined` as `null`) or blank all mean "not set".
+ */
+const optionalText = (max: number) =>
+    z.string().trim().max(max).nullish().transform((v) => (v ? v : undefined));
+
 const tag = z.string().trim().min(1).max(L.tagMax);
 
 const uniqueList = (max: number) =>
@@ -39,13 +45,13 @@ const postingWindow = z
 export const personaInputSchema = z
     .object({
         name: z.string().trim().min(1, { message: "Name is required." }).max(L.nameMax),
-        description: z.string().trim().max(L.descriptionMax).optional(),
+        description: optionalText(L.descriptionMax),
         identity: z.object({
             role: z.string().trim().min(1, { message: "Role is required." }).max(L.roleMax),
             targetAudience: z.string().trim().min(1, { message: "Audience is required." }).max(L.audienceMax),
             tone: z.enum(TONES),
             language: z.string().trim().min(2).max(35),
-            customInstructions: z.string().trim().max(L.customInstructionsMax).optional(),
+            customInstructions: optionalText(L.customInstructionsMax),
         }),
         research: z.object({
             topics: uniqueList(L.topicsMax).refine((t) => t.length > 0, { message: "Add at least one topic." }),
@@ -86,7 +92,13 @@ export const personaInputSchema = z
     .refine((p) => !p.research.autoRun || p.research.feedUrls.length > 0 || p.research.webSearch, {
         message: "Add an RSS feed or turn on web search before enabling automatic research.",
         path: ["research", "autoRun"],
-    });
+    })
+    // Firestore rejects `undefined` values: drop unset optional text instead of storing it.
+    .transform(({ description, identity: { customInstructions, ...identity }, ...rest }) => ({
+        ...rest,
+        ...(description !== undefined ? { description } : {}),
+        identity: { ...identity, ...(customInstructions !== undefined ? { customInstructions } : {}) },
+    }));
 
 export type PersonaInput = z.infer<typeof personaInputSchema>;
 

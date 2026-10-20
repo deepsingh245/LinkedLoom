@@ -19,3 +19,4 @@ export * from "./billing/grants";
 export * from "./billing/sweeper";
 export * from "./autopilot/approval/approve";
 export * from "./publishing/callables";
+export * from "./autopilot/context/callables";

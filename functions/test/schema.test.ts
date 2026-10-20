@@ -89,6 +89,17 @@ describe("personaInputSchema", () => {
         expect(fails((p) => (p.publishing.postingWindows = [{ start: "09:00", end: "10:00" }, { start: "10:00", end: "11:00" }]))).toBe(false);
     });
 
+    it("treats null or blank optional text as not set (the callable SDK sends undefined as null)", () => {
+        const p = valid() as any;
+        p.description = null;
+        p.identity.customInstructions = null;
+        const parsed = personaInputSchema.parse(p);
+        expect(parsed.description).toBeUndefined();
+        expect(parsed.identity.customInstructions).toBeUndefined();
+        p.identity.customInstructions = "   ";
+        expect(personaInputSchema.parse(p).identity.customInstructions).toBeUndefined();
+    });
+
     it("approval mode is manual or automatic (automatic is only applied via setPersonaApprovalMode)", () => {
         expect(fails((p) => (p.publishing.approvalMode = "automatic"))).toBe(false);
         expect(fails((p) => ((p.publishing as { approvalMode: string }).approvalMode = "auto"))).toBe(true);

@@ -25,8 +25,9 @@ interface DraftCardProps {
 }
 
 const MAX = 3000;
-const GHOST = "h-8 rounded-lg border-[#dfe5e7] bg-white px-3 text-[10px] text-[#59656d]";
-const PRIMARY = "h-8 rounded-lg bg-[#357d72] px-3 text-[10px] text-white hover:bg-[#286c63]";
+// Secondary actions: clearly clickable (teal text + visible border). Only real `disabled` buttons look faded.
+const GHOST = "h-8 rounded-lg border-[#9fbab3] bg-white px-3 text-[11px] font-medium text-[#286c63] hover:border-[#357d72] hover:bg-[#e8f3f0] hover:text-[#1f5a52] disabled:border-[#dfe5e7] disabled:text-[#8a959c]";
+const PRIMARY = "h-8 rounded-lg bg-[#357d72] px-3 text-[11px] font-medium text-white hover:bg-[#286c63]";
 
 /** What the card shows for each stage of a draft's life. */
 function stageOf(item: ContentItem) {
