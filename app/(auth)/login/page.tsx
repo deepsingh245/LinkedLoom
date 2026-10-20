@@ -79,8 +79,7 @@ export default function LoginPage() {
 
   const loginWithLinkedin = async () => {
     try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/getLinkedInAuthUrl`)
-        const data = await res.json()
+        const data = await api.firebaseService.getLinkedInAuthUrl()
         if (data.url) {
             window.location.href = data.url
         } else {

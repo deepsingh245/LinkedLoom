@@ -136,7 +136,7 @@ service cloud.firestore {
       }
     }
 
-    // Everything else (oauthStates, analytics, ...) is backend-only.
+    // Everything else (oauthStates, linkedinIdentities, analytics, ...) is backend-only.
     match /{document=**} {
       allow read, write: if false;
     }

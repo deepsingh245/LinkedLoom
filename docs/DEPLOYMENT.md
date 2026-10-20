@@ -97,6 +97,7 @@ AUTOPILOT_AUTO_PUBLISH_MIN_QUALITY=70       # opt-in auto-publish only schedules
 PUBLISH_MAX_ATTEMPTS=3                      # automatic attempts for temporary publish errors before FAILED
 PUBLISH_LEASE_MS=300000                     # a post stuck in PUBLISHING longer than this goes to RECONCILIATION_REQUIRED
 # LINKEDIN_API_BASE=http://127.0.0.1:9xxx   # TESTS ONLY: honoured only inside the emulator
+# LINKEDIN_OAUTH_BASE=http://127.0.0.1:9xxx # TESTS ONLY (token endpoint), emulator only
 ```
 
 Users' own keys (BYOK) are **not** in `.env`: they go to Google Cloud Secret Manager at runtime (see §7.1). Managed keys still come from `.env`; moving them to `firebase functions:secrets:set` is a later hardening step (remove them from `.env` at the same time, or deploy fails on the name clash).
@@ -235,7 +236,7 @@ Point `NEXT_PUBLIC_API_URL` at `http://127.0.0.1:5001/linkedloom/us-central1` wh
 ### Tests (functions folder)
 
 ```bash
-npm test             # 164 unit tests (persona validation, pricing, redaction, SSRF guard, research, schedule math, workflow logic, publishing slots/errors), no emulator needed
+npm test             # 178 unit tests (persona validation, pricing, redaction, SSRF guard, research, schedule math, workflow logic, publishing slots/errors), no emulator needed
 npm run test:rules   # Firestore rules tests in the emulator (needs Java)
 npm run test:e2e     # builds, then the emulator suites (78 + A5 publishing.process/publishing.e2e): callables, credits ledger, research, scheduling, durability, approval & publishing
 ```

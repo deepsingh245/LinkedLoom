@@ -1038,7 +1038,7 @@ The `AuthProvider` uses a Firestore `onSnapshot` (real-time push listener) for t
 
 **Frontend**: pages `app/(dashboard)/autopilot/{page,new,[personaId],drafts,runs,ai,credits}`; components `components/features/autopilot/*`; data `lib/firebase/{autopilot,ai,research,errors}.ts`, hooks `lib/query/hooks/{use-autopilot,use-ai-billing,use-research}.ts` (keys under `queryKeys.autopilot.*`), form schema `lib/schemas/persona.ts` (mirrors the backend limits), types `types/{autopilot,ai,research}.ts`.
 
-**Status (2026-10-20):** A1–A4 done; **A5 code complete** (rules/e2e suites written but not yet run); A6 (payments/hardening) not started. Tests (`functions/`): `npm test` (164 unit), `npm run test:rules` (12), `npm run test:e2e` (78 + A5 files, mocked AI on project `demo-linkedloom-test`). Shared post-status helper: `lib/posts/status.ts`.
+**Status (2026-10-20):** A1–A4 done; **A5 code complete** (rules/e2e suites written but not yet run); A6 (payments/hardening) not started. Tests (`functions/`): `npm test` (178 unit), `npm run test:rules` (12), `npm run test:e2e` (78 + A5 files, mocked AI on project `demo-linkedloom-test`). Shared post-status helper: `lib/posts/status.ts`.
 
 ---
 

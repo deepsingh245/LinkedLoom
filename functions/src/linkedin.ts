@@ -4,6 +4,7 @@ import axios from "axios";
 import * as crypto from "crypto";
 import { authenticate, ApiError, sendError } from "./shared/http-auth";
 import { isExpired } from "./publishing/errors";
+import { decideLinkedInAccount, profileFieldsForLinkedIn, type LinkedInFacts, type LinkedInMode } from "./linkedin-identity";
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -39,58 +40,91 @@ const getLinkedInConfig = () => {
 };
 
 /**
- * Generate LinkedIn OAuth URL
+ * LinkedIn OAuth (token) base URL – test-only override, emulator only (same rule as linkedinApiBase).
  */
-export const getLinkedInAuthUrl = onRequest({ cors: true }, async (req, res) => {
-  const { clientId, redirectUri } = getLinkedInConfig();
-  const state = crypto.randomUUID();
+const linkedinOauthBase = () =>
+    process.env.FUNCTIONS_EMULATOR === "true" && process.env.LINKEDIN_OAUTH_BASE ? process.env.LINKEDIN_OAUTH_BASE.replace(/\/$/, "") : "https://www.linkedin.com";
 
-  // Save state for CSRF protection
-  await db
-  .collection("oauthStates")
-  .doc(state)
-  .set({
-    createdAt: new Date().toISOString(),
-  });
-  const authUrl =
-    `https://www.linkedin.com/oauth/v2/authorization` +
-    `?response_type=code` +
-    `&client_id=${clientId}` +
-    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-    `&state=${state}` +
-    `&scope=${encodeURIComponent(LINKEDIN_SCOPE)}`;
-
-    res.json({ url: authUrl, state });
-    return;
-});
+const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+const identityRef = (sub: string) => db.collection("linkedinIdentities").doc(sub);
+const connectionRef = (uid: string) => db.collection("users").doc(uid).collection("connections").doc("linkedin");
 
 /**
- * Exchange LinkedIn OAuth code for tokens
+ * Generate the LinkedIn OAuth URL.
+ *  - Sent with the user's Firebase ID token (`Authorization: Bearer …`) → "connect": the state remembers the
+ *    uid, so LinkedIn is attached to the account that is logged in (never a new one).
+ *  - Sent without a token (login / register pages) → "login".
+ */
+export const getLinkedInAuthUrl = onRequest({ cors: true }, async (req, res) => {
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+  try {
+    const { clientId, redirectUri } = getLinkedInConfig();
+    // A token that is present but invalid is an error, not a silent downgrade to "login".
+    const uid = req.headers.authorization ? await authenticate(req) : undefined;
+    const state = crypto.randomUUID();
+
+    await db.collection("oauthStates").doc(state).set({
+      createdAt: new Date().toISOString(),
+      createdAtMs: Date.now(),
+      mode: uid ? "connect" : "login",
+      ...(uid ? { uid } : {}),
+    });
+    const authUrl =
+      `https://www.linkedin.com/oauth/v2/authorization` +
+      `?response_type=code` +
+      `&client_id=${clientId}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&state=${state}` +
+      `&scope=${encodeURIComponent(LINKEDIN_SCOPE)}`;
+
+    res.json({ url: authUrl, state, mode: uid ? "connect" : "login" });
+  } catch (error: any) {
+    if (error instanceof HttpsError) {
+      res.status(500).json({ success: false, message: error.message, error: { message: error.message } });
+      return;
+    }
+    sendError(res, error, "Could not start LinkedIn sign-in.");
+  }
+});
+
+/** Read and delete an OAuth state in one transaction: it can be used once, within its lifetime. */
+async function consumeOAuthState(state: string): Promise<{ mode: LinkedInMode; uid?: string }> {
+  const ref = db.collection("oauthStates").doc(state);
+  const data = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return null;
+    tx.delete(ref);
+    return snap.data()!;
+  });
+  if (!data) throw new ApiError(403, "This LinkedIn sign-in link was already used or is invalid. Please start again.");
+  const createdAtMs = Number(data.createdAtMs ?? Date.parse(String(data.createdAt ?? "")));
+  if (!Number.isFinite(createdAtMs) || Date.now() - createdAtMs > OAUTH_STATE_TTL_MS) {
+    throw new ApiError(403, "This LinkedIn sign-in link expired. Please start again.");
+  }
+  return { mode: data.mode === "connect" && data.uid ? "connect" : "login", ...(data.uid ? { uid: String(data.uid) } : {}) };
+}
+
+/**
+ * Exchange the LinkedIn OAuth code. Which account it belongs to is decided by `decideLinkedInAccount`:
+ * a logged-in user's connection always goes to their own account; a login finds the linked account
+ * (by LinkedIn id, then by verified email) and only creates a new one when there is none.
+ * Returns a custom token only for logins.
  */
 export const exchangeLinkedInToken = onRequest({ cors: true }, async (req, res) => {
-  const { code, state } = req.body;
-
-  if (!code || !state) {
-    throw new HttpsError("invalid-argument", "Missing OAuth parameters.");
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
   }
-
   try {
-// Validate OAuth state
-    const stateDoc = await db
-      .collection("oauthStates")
-      .doc(state)
-      .get();
+    const { code, state } = req.body ?? {};
+    if (typeof code !== "string" || typeof state !== "string" || !code || !state) throw new ApiError(400, "Missing OAuth parameters.");
 
-    if (!stateDoc.exists) {
-      throw new HttpsError("permission-denied", "Invalid OAuth state.");
-    }
-
-    // Delete state after use
-    await stateDoc.ref.delete();
-
+    const oauthState = await consumeOAuthState(state);
     const { clientId, clientSecret, redirectUri } = getLinkedInConfig();
 
-    // Exchange authorization code for access token
     const params = new URLSearchParams();
     params.append("grant_type", "authorization_code");
     params.append("code", code);
@@ -98,125 +132,119 @@ export const exchangeLinkedInToken = onRequest({ cors: true }, async (req, res) 
     params.append("client_id", clientId);
     params.append("client_secret", clientSecret);
 
-    const tokenResponse = await axios.post(
-      "https://www.linkedin.com/oauth/v2/accessToken",
-      params,
-      {
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        timeout: 10000,
+    const tokenResponse = await axios.post(`${linkedinOauthBase()}/oauth/v2/accessToken`, params, {
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      timeout: 10000,
+    });
+    const { access_token, expires_in, refresh_token, refresh_token_expires_in } = tokenResponse.data;
+
+    const profileResponse = await axios.get(`${linkedinApiBase()}/v2/userinfo`, {
+      headers: { Authorization: `Bearer ${access_token}` },
+      timeout: 10000,
+    });
+    const profile = profileResponse.data as { sub?: string; email?: string; email_verified?: boolean | string; name?: string; picture?: string };
+    if (!profile.sub) throw new ApiError(502, "LinkedIn did not return a profile id.");
+    const email = profile.email?.trim().toLowerCase() || undefined;
+    const emailVerified = profile.email_verified === true || profile.email_verified === "true";
+
+    // ---- gather the facts
+    const identity = await identityRef(profile.sub).get();
+    let emailUser: LinkedInFacts["emailUser"];
+    if (oauthState.mode === "login" && !identity.exists && email) {
+      try {
+        const record = await admin.auth().getUserByEmail(email);
+        const existing = (await connectionRef(record.uid).get()).data();
+        emailUser = { uid: record.uid, emailVerified: record.emailVerified, ...(existing?.providerUserId ? { linkedinSub: String(existing.providerUserId) === profile.sub ? undefined : String(existing.providerUserId) } : {}) };
+      } catch (firebaseError: any) {
+        if (firebaseError.code !== "auth/user-not-found") throw firebaseError;
       }
-    );
+    }
 
-    const {
-      access_token,
-      expires_in,
-      refresh_token,
-      refresh_token_expires_in,
-    } = tokenResponse.data;
+    const decision = decideLinkedInAccount({
+      mode: oauthState.mode,
+      stateUid: oauthState.uid,
+      identityUid: identity.exists ? String(identity.data()!.uid) : undefined,
+      email,
+      emailVerified,
+      emailUser,
+    });
+    if (decision.action === "reject") throw new ApiError(decision.status, decision.message);
 
-    // Fetch LinkedIn user profile
-    const profileResponse = await axios.get(
-      "https://api.linkedin.com/v2/userinfo",
-      {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-        timeout: 10000,
+    // A stale link to an account that no longer exists must not mint a token for a ghost uid.
+    if (decision.action === "login" && decision.via === "identity") {
+      try {
+        await admin.auth().getUser(decision.uid);
+      } catch (firebaseError: any) {
+        if (firebaseError.code === "auth/user-not-found") {
+          await identityRef(profile.sub).delete();
+          throw new ApiError(409, "The account linked to this LinkedIn profile no longer exists. Please try signing in again.");
+        }
+        throw firebaseError;
       }
-    );
+    }
 
-    const profileData = profileResponse.data;
-
-    // Check if user already exists in Firebase Auth by email
+    // ---- carry it out
     let uid: string;
-    let isNewUser = false;
-    if (!profileData.email) {
-      throw new HttpsError("failed-precondition", "LinkedIn profile has no email associated.");
+    if (decision.action === "create") {
+      const created = await admin.auth().createUser({ email, emailVerified: true, displayName: profile.name, photoURL: profile.picture });
+      uid = created.uid;
+    } else {
+      uid = decision.uid;
     }
 
-    try {
-      const userRecord = await admin.auth().getUserByEmail(profileData.email);
-      uid = userRecord.uid;
-    } catch (firebaseError: any) {
-      // User doesn't exist, create them
-      if (firebaseError.code === "auth/user-not-found") {
-         const newUser = await admin.auth().createUser({
-            email: profileData.email,
-            emailVerified: true,
-            displayName: profileData.name,
-            photoURL: profileData.picture,
-         });
-         uid = newUser.uid;
-         isNewUser = true;
-      } else {
-         throw firebaseError;
-      }
-    }
+    // Link the LinkedIn identity to this account (and drop the link of a LinkedIn profile this account used before).
+    const previous = (await connectionRef(uid).get()).data();
+    await db.runTransaction(async (tx) => {
+      const current = await tx.get(identityRef(profile.sub!));
+      if (current.exists && current.data()!.uid !== uid) throw new ApiError(409, "This LinkedIn account is already connected to a different LinkedLoom account.");
+      tx.set(identityRef(profile.sub!), { uid, email: email ?? null, updatedAt: new Date(), ...(current.exists ? {} : { createdAt: new Date() }) }, { merge: true });
+      if (previous?.providerUserId && String(previous.providerUserId) !== profile.sub) tx.delete(identityRef(String(previous.providerUserId)));
+    });
 
-    const expiresAt = new Date(Date.now() + expires_in * 1000);
-
-    const refreshExpiresAt = refresh_token_expires_in
-      ? new Date(Date.now() + refresh_token_expires_in * 1000)
-      : null;
-
-    // Store LinkedIn connection
     const userRef = db.collection("users").doc(uid);
-    const userPayload: any = {
-        uid: uid,
-        email: profileData.email,
-        displayName: profileData.name,
-        photoURL: profileData.picture,
-        linkedin: profileData.name,
-    };
-    
-    // Only set createdAt if the user was just created
-    if (isNewUser) {
-        userPayload.createdAt = new Date();
-    }
-    
-    await userRef.set(userPayload, { merge: true });
+    const existingProfile = (await userRef.get()).data() as { displayName?: string; photoURL?: string; email?: string } | undefined;
+    await userRef.set(
+      {
+        uid,
+        ...profileFieldsForLinkedIn(existingProfile, { name: profile.name, picture: profile.picture, email }),
+        ...(existingProfile ? {} : { createdAt: new Date() }),
+      },
+      { merge: true }
+    );
 
-    const connectionRef = userRef.collection("connections").doc("linkedin");
-    
-    // Check if connection existed before overriding its createdAt
-    const existingConnection = await connectionRef.get();
-    const connectionPayload: any = {
-      provider: "linkedin",
-      providerUserId: profileData.sub,
-      accessToken: access_token,
-      refreshToken: refresh_token || null,
-      expiresAt: expiresAt,
-      refreshExpiresAt: refreshExpiresAt,
-      name: profileData.name,
-      email: profileData.email,
-      picture: profileData.picture,
-      updatedAt: new Date(),
-    };
-    
-    if (!existingConnection.exists) {
-        connectionPayload.createdAt = new Date();
-    }
-    
-    await connectionRef.set(connectionPayload, { merge: true });
+    await connectionRef(uid).set(
+      {
+        provider: "linkedin",
+        providerUserId: profile.sub,
+        accessToken: access_token,
+        refreshToken: refresh_token || null,
+        expiresAt: new Date(Date.now() + Number(expires_in) * 1000),
+        refreshExpiresAt: refresh_token_expires_in ? new Date(Date.now() + Number(refresh_token_expires_in) * 1000) : null,
+        name: profile.name ?? null,
+        email: email ?? null,
+        picture: profile.picture ?? null,
+        updatedAt: new Date(),
+        ...(previous ? {} : { createdAt: new Date() }),
+      },
+      { merge: true }
+    );
 
-    console.log(`LinkedIn account connected/created for user ${uid}`);
+    console.log(`LinkedIn ${oauthState.mode} for user ${uid}${decision.action === "create" ? " (new account)" : ""}`);
 
-    // Generate Firebase Custom Token to log the user in on the frontend
-    const customToken = await admin.auth().createCustomToken(uid);
-
-    res.json({ success: true, customToken: customToken });
-    return;
+    // Only a login needs a token; a connect keeps the session the user already has.
+    const customToken = oauthState.mode === "login" ? await admin.auth().createCustomToken(uid) : undefined;
+    res.json({ success: true, mode: oauthState.mode, ...(customToken ? { customToken } : {}) });
   } catch (error: any) {
-    console.error(
-      "LinkedIn Exchange Error:",
-      error.response?.data || error.message
-    );
-
-    throw new HttpsError(
-      "internal",
-      "Failed to link LinkedIn account.",
-      error.message
-    );
+    if (axios.isAxiosError(error)) {
+      console.error("LinkedIn Exchange Error:", error.response?.status, error.response?.data?.error || error.message);
+      sendError(res, new ApiError(502, "LinkedIn rejected the sign-in. Please try again."), "Failed to link LinkedIn account.");
+      return;
+    }
+    if (error instanceof HttpsError) {
+      res.status(500).json({ success: false, message: error.message, error: { message: error.message } });
+      return;
+    }
+    sendError(res, error, "Failed to link LinkedIn account.");
   }
 });
 
