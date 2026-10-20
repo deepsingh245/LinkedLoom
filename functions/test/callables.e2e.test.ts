@@ -85,8 +85,13 @@ describe("persona callables", () => {
         expect(await code(httpsCallable(fns, "createPersona")(persona()))).toBe("unauthenticated");
         await deleteApp(anon);
 
-        const bad = { ...persona(), publishing: { ...persona().publishing, approvalMode: "automatic" } };
-        expect(await code(alice.call("createPersona", bad))).toBe("invalid-argument");
+        // Asking for auto-publish on create is ignored: new personas always start with manual approval.
+        const sneaky = { ...persona(), name: "Sneaky", publishing: { ...persona().publishing, approvalMode: "automatic" } };
+        const created = await alice.call<{ id: string }>("createPersona", sneaky);
+        const stored = await getDoc(doc(alice.db, "workspaces", alice.uid, "personas", created.id));
+        expect(stored.data()?.publishing.approvalMode).toBe("manual");
+        await alice.call("setPersonaStatus", { personaId: created.id, status: "archived" });
+        await alice.call("deletePersona", { personaId: created.id });
         expect(await code(alice.call("createPersona", { ...persona(), workspaceId: bob.uid }))).toBe("invalid-argument");
     });
 

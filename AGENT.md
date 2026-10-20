@@ -1021,21 +1021,23 @@ The `AuthProvider` uses a Firestore `onSnapshot` (real-time push listener) for t
 
 > **Resuming this feature? Read `docs/ai-autopilot/HANDOFF.md` first** (local, gitignored planning docs: status, immediate TODO, commands, gotchas). This section is only the code map.
 
-**What it is:** personas (role/audience/tone/topics/feeds/schedule/budget) research the web, write sourced, fact-checked LinkedIn drafts and queue them for review. Manual approval only; LinkedIn-only; Reddit is on hold. Feature-flagged by `NEXT_PUBLIC_AUTOPILOT_ENABLED=true` (nav item + `/autopilot/*` pages return 404 otherwise).
+**What it is:** personas (role/audience/tone/topics/feeds/schedule/budget) research the web, write sourced, fact-checked LinkedIn drafts and queue them for review. Manual approval by default (approve → next free posting slot → exactly-once LinkedIn publish); opt-in auto-publish per persona; LinkedIn-only; Reddit is on hold. Feature-flagged by `NEXT_PUBLIC_AUTOPILOT_ENABLED=true` (nav item + `/autopilot/*` pages return 404 otherwise).
 
-**Data model** – all under `workspaces/{uid}` (`workspaceId == uid`); the client only **reads** (owner), every write goes through callable Cloud Functions: `personas`, `settings/config` (kill switch), `members`, `auditLogs`, `aiConnections`, `creditWallets/main`, `creditLedger`, `creditReservations`, `usageRecords`, `personaUsage`, `workflowRuns` (+ server-only `artifacts`), `contentItems`, `researchItems`. Server-only: `aiConnectionSecrets`, `runLocks`, `usageCounters`, top-level `researchSchedule`. Drafts leave Autopilot only via `exportContentToDraft` → normal `posts` doc (`status: "DRAFT"`).
+**Data model** – all under `workspaces/{uid}` (`workspaceId == uid`); the client only **reads** (owner), every write goes through callable Cloud Functions: `personas`, `settings/config` (kill switch), `members`, `auditLogs`, `aiConnections`, `creditWallets/main`, `creditLedger`, `creditReservations`, `usageRecords`, `personaUsage`, `workflowRuns` (+ server-only `artifacts`), `contentItems`, `researchItems`. Server-only: `aiConnectionSecrets`, `runLocks`, `usageCounters`, top-level `researchSchedule`. Drafts leave Autopilot via `approveContent` → `posts/autopilot_<contentId>` (`SCHEDULED`, `source: "autopilot"`) or `exportContentToDraft` (`DRAFT`). Post publish state is server-only (rules).
 
 **Backend** (`functions/src/`):
 - `autopilot/` – `personas.ts` (CRUD callables), `schema.ts` (zod, `PersonaInput`), `limits.ts`, `workspace.ts` (`ensureWorkspace` creates workspace + trial credits), `test-generate.ts`.
 - `autopilot/research/` – durable research pipeline: `pipeline.ts` (7 steps), `steps.ts` (`processStep`, `researchStep` Cloud Tasks worker, `finalizeRun`), `start.ts`, `run.ts` (callables `runResearch`/`retryRun`/`cancelRun`/content actions), `reaper.ts`, `lock.ts`, `artifacts.ts`, `errors.ts`, `safe-fetch.ts` (SSRF-hardened fetch – never loosen), `feeds.ts`, `extract.ts`, `dedupe.ts`, `relevance.ts`, `prompts.ts`, `verify.ts`, `types.ts`.
 - `autopilot/scheduling/` – `next-run.ts` (DST-safe), `schedule-index.ts`, `dispatcher.ts` (`dispatchResearch` every 10 min).
+- `autopilot/approval/` – `slots.ts` (next free posting slot), `approve.ts` (`previewApproval`, `approveContent`, `unscheduleContent`, `approveContentInternal` used by auto-publish).
+- `publishing/` – `publish-post.ts` (claim/lease, per-platform results, retry/reconciliation, `runPublishSweep` used by `scheduler.ts`), `errors.ts` (error classification), `publishers.ts` (LinkedIn/Reddit adapters), `callables.ts` (`publishNow`, `resolvePublishCheck`). `shared/http-auth.ts` verifies ID tokens for the LinkedIn/Reddit HTTP endpoints.
 - `ai-core/` – provider abstraction (`providers/{gemini,openai,mock}.ts`), `execute.ts` (`runAI`, `runAIStructured`, `runAIGrounded`: key resolution, credit reserve/settle, metering), `registry.ts`, `pricing.ts` (**placeholder prices**), `secret-store.ts` (Secret Manager / emulator), `connections*.ts` (BYOK callables).
 - `billing/` – `credits.ts` (append-only ledger, reservations), `grants.ts`, `sweeper.ts`. Shared helpers: `shared/callable.ts` (`requireUid`, `parse`).
 - Heavy SDKs are **lazy-loaded** with `require()` (function discovery has a 10 s limit) – keep them lazy.
 
 **Frontend**: pages `app/(dashboard)/autopilot/{page,new,[personaId],drafts,runs,ai,credits}`; components `components/features/autopilot/*`; data `lib/firebase/{autopilot,ai,research,errors}.ts`, hooks `lib/query/hooks/{use-autopilot,use-ai-billing,use-research}.ts` (keys under `queryKeys.autopilot.*`), form schema `lib/schemas/persona.ts` (mirrors the backend limits), types `types/{autopilot,ai,research}.ts`.
 
-**Status (2026-10-15):** phases A1–A3 done; A4 backend done (Cloud Tasks steps, dispatcher, reaper), **A4 frontend pending**; A5 (publishing) and A6 (payments/hardening) not started. Tests (`functions/`): `npm test` (135 unit), `npm run test:rules` (10), `npm run test:e2e` (75, mocked AI on project `demo-linkedloom-test`).
+**Status (2026-10-20):** A1–A4 done; **A5 code complete** (rules/e2e suites written but not yet run); A6 (payments/hardening) not started. Tests (`functions/`): `npm test` (153 unit), `npm run test:rules` (11), `npm run test:e2e` (78 + A5 files, mocked AI on project `demo-linkedloom-test`). Shared post-status helper: `lib/posts/status.ts`.
 
 ---
 

@@ -2,12 +2,21 @@ import { onRequest, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import axios from "axios";
 import * as crypto from "crypto";
+import { authenticate, ApiError, sendError } from "./shared/http-auth";
+import { isExpired } from "./publishing/errors";
 
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 
 const db = admin.firestore();
+
+/**
+ * LinkedIn REST base URL. Tests can point it at a local fixture server, but only inside the
+ * emulator – in production it is always the real API.
+ */
+export const linkedinApiBase = () =>
+    process.env.FUNCTIONS_EMULATOR === "true" && process.env.LINKEDIN_API_BASE ? process.env.LINKEDIN_API_BASE.replace(/\/$/, "") : "https://api.linkedin.com";
 
 // LinkedIn Configuration
 const LINKEDIN_SCOPE = "openid profile email w_member_social";
@@ -219,7 +228,7 @@ export async function uploadMediaToLinkedIn(accessToken: string, personUrn: stri
         console.log("Registering upload with LinkedIn...");
         // 1. Register the upload
         const registerResponse = await axios.post(
-            "https://api.linkedin.com/v2/assets?action=registerUpload",
+            `${linkedinApiBase()}/v2/assets?action=registerUpload`,
             {
                 registerUploadRequest: {
                     recipes: ["urn:li:digitalmediaRecipe:feedshare-image"],
@@ -276,7 +285,7 @@ export async function uploadMediaToLinkedIn(accessToken: string, personUrn: stri
 /**
  * Internal helper for LinkedIn API submission
  */
-export async function publishToLinkedInInternal(connection: any, content: string, articleUrl?: string, imageUrl?: string) {
+export async function publishToLinkedInInternal(connection: any, content: string, articleUrl?: string, imageUrl?: string): Promise<any> {
     let shareMediaCategory = "NONE";
     const media: any[] = [];
     const authorUrn = `urn:li:person:${connection.providerUserId}`;
@@ -289,7 +298,13 @@ export async function publishToLinkedInInternal(connection: any, content: string
       });
     } else if (imageUrl) {
       shareMediaCategory = "IMAGE";
-      const assetUrn = await uploadMediaToLinkedIn(connection.accessToken, authorUrn, imageUrl);
+      let assetUrn: string;
+      try {
+        assetUrn = await uploadMediaToLinkedIn(connection.accessToken, authorUrn, imageUrl);
+      } catch (error) {
+        // Tag it: the post itself was never sent, so the publisher may safely retry.
+        throw Object.assign(error instanceof Error ? error : new Error(String(error)), { linkedinStage: "media" });
+      }
       media.push({
         status: "READY",
         media: assetUrn,
@@ -317,7 +332,7 @@ export async function publishToLinkedInInternal(connection: any, content: string
     }
 
     const response = await axios.post(
-      "https://api.linkedin.com/v2/ugcPosts",
+      `${linkedinApiBase()}/v2/ugcPosts`,
       payload,
       {
         headers: {
@@ -329,67 +344,36 @@ export async function publishToLinkedInInternal(connection: any, content: string
       }
     );
 
-    return response.data;
+    // The URN of the new post is in the body (`id`) or the `x-restli-id` header.
+    const id = response.data?.id || response.headers?.["x-restli-id"] || "";
+    return { ...(response.data ?? {}), id };
 }
 
 /**
  * Publish Post to LinkedIn (HTTP Endpoint)
  */
 export const publishToLinkedIn = onRequest({ cors: true }, async (req, res) => {
-  res.set('Access-Control-Allow-Origin', 'http://localhost:3000');
-  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-  if (req.method === 'OPTIONS') {
-    res.status(204).send('');
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
     return;
-  }
-
-  const { userId, content, articleUrl, imageUrl } = req.body;
-
-  if (!userId || !content) {
-    throw new HttpsError("invalid-argument", "Missing userId or content parameter.");
   }
 
   try {
-    const connectionDoc = await db
-      .collection("users")
-      .doc(userId)
-      .collection("connections")
-      .doc("linkedin")
-      .get();
+    // The user comes from the verified ID token – never from the request body.
+    const userId = await authenticate(req);
+    const { content, articleUrl, imageUrl } = req.body ?? {};
+    if (!content || typeof content !== "string") throw new ApiError(400, "Missing content.");
 
-    if (!connectionDoc.exists) {
-        throw new HttpsError("failed-precondition", "No LinkedIn connection found for this user.");
-    }
-
+    const connectionDoc = await db.collection("users").doc(userId).collection("connections").doc("linkedin").get();
     const connection = connectionDoc.data();
-    if (!connection?.accessToken) {
-        throw new HttpsError("failed-precondition", "Missing LinkedIn access token.");
-    }
-
-    console.log("Publishing to LinkedIn for user:", userId);
+    if (!connectionDoc.exists || !connection?.accessToken) throw new ApiError(412, "No LinkedIn connection found. Connect LinkedIn in Settings.");
+    if (isExpired(connection.expiresAt)) throw new ApiError(412, "Your LinkedIn connection expired. Reconnect LinkedIn in Settings.");
 
     const responseData = await publishToLinkedInInternal(connection, content, articleUrl, imageUrl);
-    console.log("LinkedIn post published successfully! URN:", responseData.id);
-
-    res.json({
-        success: true,
-        data: responseData
-    });
-    return;
-
+    console.log("LinkedIn post published. URN:", responseData.id);
+    res.json({ success: true, data: responseData });
   } catch (error: any) {
-    console.error(
-      "LinkedIn Publish Error:",
-      error.response?.data || error.message
-    );
-
-    throw new HttpsError(
-      "internal",
-      "Failed to publish to LinkedIn.",
-      error.response?.data?.message || error.message
-    );
+    sendError(res, error, "Failed to publish to LinkedIn.");
   }
 });
 
@@ -397,22 +381,13 @@ export const publishToLinkedIn = onRequest({ cors: true }, async (req, res) => {
  * Fetch Analytics from LinkedIn
  */
 export const getLinkedInAnalytics = onRequest({ cors: true }, async (req, res) => {
-  res.set('Access-Control-Allow-Origin', 'http://localhost:3000');
-  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-  if (req.method === 'OPTIONS') {
-    res.status(204).send('');
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
     return;
   }
 
-  const { userId } = req.body;
-
-  if (!userId) {
-    throw new HttpsError("invalid-argument", "Missing userId parameter.");
-  }
-
   try {
+    const userId = await authenticate(req);
     // 1. Fetch the user's LinkedIn connection
     const connectionDoc = await db
       .collection("users")
@@ -434,7 +409,7 @@ export const getLinkedInAnalytics = onRequest({ cors: true }, async (req, res) =
     const connection = connectionDoc.data();
     
     if (!connection?.accessToken) {
-        throw new HttpsError("failed-precondition", "Missing LinkedIn access token.");
+        throw new ApiError(412, "Missing LinkedIn access token. Reconnect LinkedIn in Settings.");
     }
 
     // 2. Fetch recent posts from LinkedIn to build analytics
@@ -447,7 +422,7 @@ export const getLinkedInAnalytics = onRequest({ cors: true }, async (req, res) =
     
     try {
         const postsResponse = await axios.get(
-            `https://api.linkedin.com/v2/ugcPosts?q=authors&authors=List(urn%3Ali%3Aperson%3A${connection.providerUserId})`,
+            `${linkedinApiBase()}/v2/ugcPosts?q=authors&authors=List(urn%3Ali%3Aperson%3A${connection.providerUserId})`,
             {
                 headers: {
                     Authorization: `Bearer ${connection.accessToken}`,
@@ -474,7 +449,7 @@ export const getLinkedInAnalytics = onRequest({ cors: true }, async (req, res) =
         
         // Fallback to searching our local database for published posts if LinkedIn API blocks read access
         const localPostsSnapshot = await db.collection("posts")
-            .where("userId", "==", userId)
+            .where("user_id", "==", userId)
             .where("status", "==", "PUBLISHED")
             .get();
         totalPosts = localPostsSnapshot.size;
@@ -512,7 +487,6 @@ export const getLinkedInAnalytics = onRequest({ cors: true }, async (req, res) =
     });
 
   } catch (error: any) {
-    console.error("LinkedIn Analytics Error:", error);
-    throw new HttpsError("internal", "Failed to fetch LinkedIn analytics.", error.message);
+    sendError(res, error, "Failed to fetch LinkedIn analytics.");
   }
 });

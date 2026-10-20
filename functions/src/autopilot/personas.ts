@@ -5,6 +5,7 @@ import {
     deletePersonaSchema,
     personaInputSchema,
     setAutopilotEnabledSchema,
+    setPersonaApprovalModeSchema,
     setPersonaStatusSchema,
     updatePersonaSchema,
 } from "./schema";
@@ -12,6 +13,7 @@ import { ensureWorkspace, personasRef, settingsRef, writeAudit } from "./workspa
 import { parse, requireUid } from "../shared/callable";
 import { assertConnectionUsable } from "../ai-core/connections-store";
 import { syncScheduleFor } from "./scheduling/schedule-index";
+import { linkedinStatus } from "./approval/approve";
 
 /**
  * Create a persona in the caller's personal workspace (workspaces/{uid}).
@@ -37,6 +39,8 @@ export const createPersona = onCall(async (request) => {
         tx.set(ref, {
             ...input,
             research: { ...input.research, sourceIds: [] },
+            // New personas always start with manual approval; auto-publish is a separate, confirmed opt-in.
+            publishing: { ...input.publishing, approvalMode: "manual" },
             id: ref.id,
             workspaceId,
             status: "active",
@@ -76,6 +80,8 @@ export const updatePersona = onCall(async (request) => {
         tx.update(ref, {
             ...persona,
             research: { ...persona.research, sourceIds: current.research?.sourceIds ?? [] },
+            // Editing never changes the approval mode (see setPersonaApprovalMode).
+            publishing: { ...persona.publishing, approvalMode: current.publishing?.approvalMode === "automatic" ? "automatic" : "manual" },
             // Optional fields removed by the user must be cleared, not kept.
             description: persona.description ?? FieldValue.delete(),
             version: next,
@@ -144,6 +150,39 @@ export const deletePersona = onCall(async (request) => {
     await writeAudit(workspaceId, uid, "persona.delete", personaId);
     await syncScheduleFor(workspaceId, personaId); // persona is gone → removes its schedule entry
     return { id: personaId, deleted: true };
+});
+
+/**
+ * Turn opt-in auto-publish on or off for one persona. "automatic" means drafts that pass verification
+ * with a high enough quality score are scheduled into the next free slot without review.
+ * Needs explicit confirmation, Autopilot on, and a working LinkedIn connection. The kill switch still
+ * stops everything; turning it back to "manual" never touches posts that are already scheduled.
+ */
+export const setPersonaApprovalMode = onCall(async (request) => {
+    const uid = requireUid(request);
+    const { personaId, mode } = parse(setPersonaApprovalModeSchema, request.data);
+    const workspaceId = await ensureWorkspace(uid);
+    const ref = personasRef(workspaceId).doc(personaId);
+
+    if (mode === "automatic") {
+        const [settings, linkedin] = await Promise.all([settingsRef(workspaceId).get(), linkedinStatus(uid)]);
+        if (settings.data()?.autopilotEnabled === false) throw new HttpsError("failed-precondition", "Autopilot is stopped. Turn it on first.");
+        if (!linkedin.connected || linkedin.expired) throw new HttpsError("failed-precondition", "Connect LinkedIn in Settings before turning on auto-publish.");
+    }
+
+    const version = await getFirestore().runTransaction(async (tx) => {
+        const snap = await tx.get(ref);
+        if (!snap.exists) throw new HttpsError("not-found", "Persona not found.");
+        const current = snap.data()!;
+        if (current.status === "archived") throw new HttpsError("failed-precondition", "Restore the persona first.");
+        if ((current.publishing?.approvalMode ?? "manual") === mode) return current.version as number;
+        const next = (current.version as number) + 1;
+        tx.update(ref, { "publishing.approvalMode": mode, version: next, updatedAt: FieldValue.serverTimestamp() });
+        return next;
+    });
+
+    await writeAudit(workspaceId, uid, "persona.approvalMode", personaId, { mode });
+    return { id: personaId, approvalMode: mode, version };
 });
 
 /**

@@ -20,5 +20,11 @@ export enum FirebaseFunctions {
     UPDATE_CONTENT_ITEM = "updateContentItem",
     SET_CONTENT_STATUS = "setContentStatus",
     EXPORT_CONTENT_TO_DRAFT = "exportContentToDraft",
+    PREVIEW_APPROVAL = "previewApproval",
+    APPROVE_CONTENT = "approveContent",
+    UNSCHEDULE_CONTENT = "unscheduleContent",
+    SET_PERSONA_APPROVAL_MODE = "setPersonaApprovalMode",
+    PUBLISH_NOW = "publishNow",
+    RESOLVE_PUBLISH_CHECK = "resolvePublishCheck",
 }
 

@@ -87,7 +87,8 @@ export const personaFormSchema = z.object({
         },
         { message: "Posting windows must not overlap." }
       ),
-    approvalMode: z.literal("manual"),
+    // Changed only through the auto-publish dialog (setPersonaApprovalMode); the server ignores it on save.
+    approvalMode: z.enum(["manual", "automatic"]),
     allowImages: z.boolean(),
   }),
   ai: z.object({

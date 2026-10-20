@@ -89,8 +89,9 @@ describe("personaInputSchema", () => {
         expect(fails((p) => (p.publishing.postingWindows = [{ start: "09:00", end: "10:00" }, { start: "10:00", end: "11:00" }]))).toBe(false);
     });
 
-    it("only allows manual approval for now", () => {
-        expect(fails((p) => (p.publishing.approvalMode = "automatic"))).toBe(true);
+    it("approval mode is manual or automatic (automatic is only applied via setPersonaApprovalMode)", () => {
+        expect(fails((p) => (p.publishing.approvalMode = "automatic"))).toBe(false);
+        expect(fails((p) => ((p.publishing as { approvalMode: string }).approvalMode = "auto"))).toBe(true);
     });
 
     it("only allows https feed URLs", () => {

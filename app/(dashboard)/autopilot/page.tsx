@@ -13,6 +13,8 @@ import { QueryError } from "@/components/features/autopilot/QueryError";
 import { RunResearchDialog } from "@/components/features/autopilot/RunResearchDialog";
 import { TestGenerateDialog } from "@/components/features/autopilot/TestGenerateDialog";
 import { PersonaDemoDialog } from "@/components/features/autopilot/PersonaDemoDialog";
+import { AutoPublishDialog } from "@/components/features/autopilot/AutoPublishDialog";
+import { useSetPersonaApprovalMode } from "@/lib/query/hooks/use-research";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useAutopilotSettings, useDeletePersona, usePersonas, useSetAutopilotEnabled, useSetPersonaStatus } from "@/lib/query/hooks/use-autopilot";
 import { countScheduledRunAlerts, useContentItems, useRuns } from "@/lib/query/hooks/use-research";
@@ -27,6 +29,8 @@ export default function AutopilotPage() {
     const { data: runs = [] } = useRuns(user?.uid);
     const { data: drafts = [], isLoading: draftsLoading } = useContentItems(user?.uid);
     const setStatus = useSetPersonaStatus(user?.uid);
+    const setApprovalMode = useSetPersonaApprovalMode(user?.uid);
+    const [modeFor, setModeFor] = useState<Persona | null>(null);
     const deletePersona = useDeletePersona(user?.uid);
     const setEnabled = useSetAutopilotEnabled(user?.uid);
     const [showArchived, setShowArchived] = useState(false);
@@ -137,6 +141,7 @@ export default function AutopilotPage() {
                                 persona={persona}
                                 onTest={() => setTesting(persona)}
                                 onDemo={() => setDemoing(persona)}
+                                onApprovalMode={() => setModeFor(persona)}
                                 onResearch={() => setResearching(persona)}
                                 busy={busyId === persona.id}
                                 onStatusChange={(status) => setStatus.mutate({ personaId: persona.id, status })}
@@ -159,6 +164,16 @@ export default function AutopilotPage() {
             )}
 
             {researching && <RunResearchDialog persona={researching} userId={user?.uid} open={!!researching} onOpenChange={(open) => !open && setResearching(null)} />}
+            {modeFor && (
+                <AutoPublishDialog
+                    personaName={modeFor.name}
+                    mode={modeFor.publishing.approvalMode === "automatic" ? "automatic" : "manual"}
+                    open={!!modeFor}
+                    busy={setApprovalMode.isPending}
+                    onOpenChange={(open) => !open && setModeFor(null)}
+                    onConfirm={(mode) => setApprovalMode.mutate({ personaId: modeFor.id, mode }, { onSuccess: () => setModeFor(null) })}
+                />
+            )}
             {demoing && <PersonaDemoDialog persona={demoing} userId={user?.uid} open={!!demoing} onOpenChange={(open) => !open && setDemoing(null)} />}
             {testing && <TestGenerateDialog persona={testing} userId={user?.uid} open={!!testing} onOpenChange={(open) => !open && setTesting(null)} />}
         </div>

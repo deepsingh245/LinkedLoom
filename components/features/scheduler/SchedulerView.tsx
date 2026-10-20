@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/components/providers/auth-provider";
 import { useScheduledPosts, useDraftPosts } from "@/lib/query/hooks/use-posts";
+import { normalizeStatus, statusMeta } from "@/lib/posts/status";
 
 export function SchedulerView() {
     const [date, setDate] = React.useState<Date | undefined>(new Date())
@@ -138,7 +139,7 @@ export function SchedulerView() {
                         <Card key={post.id} className="cursor-pointer hover:bg-muted/50 transition-colors">
                             <CardContent className="p-3 flex items-start gap-3">
                                 <div className="mt-1">
-                                    {post.status === "scheduled" ?
+                                    {normalizeStatus(post.status) === "SCHEDULED" ?
                                         <Clock className="h-4 w-4 text-blue-500" /> :
                                         <FileText className="h-4 w-4 text-gray-500" />
                                     }
@@ -148,8 +149,8 @@ export function SchedulerView() {
                                     <p className="text-xs text-muted-foreground">
                                         {new Date(post.date).toLocaleDateString()}
                                     </p>
-                                    <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-sm ${post.status === 'scheduled' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'}`}>
-                                        {post.status}
+                                    <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-sm ${normalizeStatus(post.status) === 'SCHEDULED' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'}`}>
+                                        {statusMeta(post.status).label}
                                     </span>
                                 </div>
                             </CardContent>

@@ -16,10 +16,42 @@ service cloud.firestore {
       }
     }
 
-    // Posts: owner only.
+    // Posts: owner only. Publishing state is written by Cloud Functions only (functions/src/publishing):
+    // clients may create/edit drafts and schedule them, but never mark a post published, touch publish
+    // results/leases, or forge Autopilot links.
+    function serverPostFields() {
+      return ['results', 'publishLease', 'attempts', 'lastAttemptAt', 'publishedAt', 'nextAttemptAt',
+              'publishedUrl', 'redditUrl', 'error', 'source', 'contentItemId', 'personaId', 'workspaceId',
+              'approvedBy', 'resolvedBy'];
+    }
+    function clientPostStatus(data) {
+      return !('status' in data) || data.status in ['DRAFT', 'SCHEDULED', 'draft', 'scheduled'];
+    }
+    function postChanges() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
     match /posts/{postId} {
-      allow create: if request.auth != null && request.resource.data.user_id == request.auth.uid;
-      allow read, update, delete: if request.auth != null && resource.data.user_id == request.auth.uid;
+      allow read: if request.auth != null && resource.data.user_id == request.auth.uid;
+      allow create: if request.auth != null
+        && request.resource.data.user_id == request.auth.uid
+        && clientPostStatus(request.resource.data)
+        && !request.resource.data.keys().hasAny(serverPostFields())
+        && request.resource.data.get('linkedinUrn', '') in ['', null];
+      allow update: if request.auth != null
+        && resource.data.user_id == request.auth.uid
+        && request.resource.data.user_id == resource.data.user_id
+        && clientPostStatus(request.resource.data)
+        && !(resource.data.get('status', '').upper() in ['PUBLISHING', 'PUBLISHED', 'RECONCILIATION_REQUIRED'])
+        && !postChanges().hasAny(serverPostFields().concat(['linkedinUrn']))
+        // An approved Autopilot post in the queue is (re)scheduled through the Autopilot callables,
+        // so its draft stays in sync.
+        && !(resource.data.get('source', '') == 'autopilot'
+             && resource.data.get('status', '').upper() in ['SCHEDULED', 'RETRY_PENDING']
+             && postChanges().hasAny(['status', 'scheduledFor', 'platforms']));
+      allow delete: if request.auth != null
+        && resource.data.user_id == request.auth.uid
+        && resource.data.get('status', '').upper() != 'PUBLISHING';
     }
 
     // AI Autopilot workspaces. Personal workspace id == owner uid; members/{uid}

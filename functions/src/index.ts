@@ -17,3 +17,5 @@ export * from "./autopilot/scheduling/dispatcher";
 export * from "./ai-core/connections";
 export * from "./billing/grants";
 export * from "./billing/sweeper";
+export * from "./autopilot/approval/approve";
+export * from "./publishing/callables";

@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Inbox, Archive, ArchiveRestore, MoreVertical, Pause, Pencil, Play, Search, Sparkles, Trash2 } from "lucide-react"
+import { Inbox, Archive, ArchiveRestore, MoreVertical, Pause, Pencil, Play, Search, Sparkles, Trash2, Zap } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -40,13 +40,16 @@ interface PersonaCardProps {
     onTest?: () => void
     onResearch?: () => void
     onDemo?: () => void
+    /** Open the auto-publish on/off dialog. */
+    onApprovalMode?: () => void
 }
 
-export function PersonaCard({ persona, busy, onStatusChange, onDelete, onTest, onResearch, onDemo }: PersonaCardProps) {
+export function PersonaCard({ persona, busy, onStatusChange, onDelete, onTest, onResearch, onDemo, onApprovalMode }: PersonaCardProps) {
     const [confirmDelete, setConfirmDelete] = useState(false)
     const badge = statusBadge[persona.status]
     const archived = persona.status === "archived"
     const windows = persona.publishing.postingWindows.map((w) => `${w.start}–${w.end}`).join(", ")
+    const autoPublish = persona.publishing.approvalMode === "automatic"
 
     return (
         <Card className={`flex flex-col gap-4 rounded-xl border border-[#e2e6ea] bg-white p-4 shadow-none md:p-5 ${archived ? "opacity-65" : ""}`}>
@@ -55,6 +58,7 @@ export function PersonaCard({ persona, busy, onStatusChange, onDelete, onTest, o
                     <div className="flex items-center gap-2">
                         <h3 className="font-semibold text-foreground truncate">{persona.name}</h3>
                         <Badge variant={badge.variant}>{badge.label}</Badge>
+                        {autoPublish && <Badge variant="scheduled" className="gap-1"><Zap className="h-3 w-3" />Auto-publish</Badge>}
                     </div>
                     <p className="text-sm text-muted-foreground truncate">{persona.identity.role}</p>
                 </div>
@@ -75,6 +79,9 @@ export function PersonaCard({ persona, busy, onStatusChange, onDelete, onTest, o
                         )}
                         {!archived && onDemo && (
                             <DropdownMenuItem onClick={onDemo}><Inbox className="mr-2 h-4 w-4" /> Try a demo</DropdownMenuItem>
+                        )}
+                        {!archived && onApprovalMode && (
+                            <DropdownMenuItem onClick={onApprovalMode}><Zap className="mr-2 h-4 w-4" /> {autoPublish ? "Turn off auto-publish" : "Turn on auto-publish…"}</DropdownMenuItem>
                         )}
                         {!archived && onTest && (
                             <DropdownMenuItem onClick={onTest}><Sparkles className="mr-2 h-4 w-4" /> Test generate</DropdownMenuItem>
@@ -125,7 +132,7 @@ export function PersonaCard({ persona, busy, onStatusChange, onDelete, onTest, o
                         : "Auto research off"}
                 </span>
                 {persona.lastRunStatus && <span className="col-span-2">Last run: {persona.lastRunStatus}</span>}
-                <span>{persona.ai.connectionId ? "Your AI key" : "LinkedLoom credits"} · manual approval</span>
+                <span>{persona.ai.connectionId ? "Your AI key" : "LinkedLoom credits"} · {autoPublish ? "auto-publish" : "manual approval"}</span>
                 <span className="text-right">v{persona.version}</span>
             </div>
 

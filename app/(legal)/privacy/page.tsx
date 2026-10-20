@@ -42,12 +42,12 @@ export default function PrivacyPage() {
             <section>
                 <h2>2. How we use it</h2>
                 <ul>
-                    <li>To publish and schedule posts you create, only at your request and only to the accounts you connected.</li>
+                    <li>To publish and schedule posts you create or approve, only at your request (or under auto-publish, if you turned it on for a persona) and only to the accounts you connected. We keep a record of each publish attempt and its result (for example the LinkedIn post id) so a post is never sent twice.</li>
                     <li>To show you post history and analytics for your own posts.</li>
                     <li>
                         When you run research for a persona, or opt that persona into automatic research, to fetch the RSS feeds and public web pages you configured
                         (and, if you turn it on, pages found through Google Search via Gemini) and to have AI write and fact-check sourced drafts for you to review.
-                        Automatic research runs before posting windows, uses LinkedLoom credits or your own AI key, and pauses when 6 drafts await review. You can turn it off for a persona or use Stop all to stop Autopilot activity. Drafts are never published automatically.
+                        Automatic research runs before posting windows, uses LinkedLoom credits or your own AI key, and pauses when 6 drafts await review. You can turn it off for a persona or use Stop all to stop Autopilot activity. Drafts are published only when you approve them, or – if you separately turn on auto-publish for a persona and confirm it – when they pass fact-checking with a high quality score. Auto-publish is off by default, LinkedIn-only, and can be turned off at any time.
                     </li>
                     <li>To generate drafts and images with AI when you ask for it, or when you opt into automatic research. Relevant persona settings, source excerpts and draft text may be sent to the selected AI provider.</li>
                     <li>To secure the service, prevent abuse (for example, a daily limit on Reddit posts per user) and fix problems.</li>

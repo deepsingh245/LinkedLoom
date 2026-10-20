@@ -93,6 +93,10 @@ AUTOPILOT_RESEARCH_LEAD_MINUTES=90          # research starts this long before e
 AUTOPILOT_MAX_SCHEDULE_LATENESS_MINUTES=240 # a scheduled run overdue by more than this is skipped (window passed)
 AUTOPILOT_STUCK_AFTER_MINUTES=20            # a run with no progress this long is re-queued/failed by the reaper
 RESEARCH_RETRY_MIN_BACKOFF=15               # seconds before Cloud Tasks retries a failed step (Firebase param; 1 in the test env)
+AUTOPILOT_AUTO_PUBLISH_MIN_QUALITY=70       # opt-in auto-publish only schedules drafts at or above this quality score
+PUBLISH_MAX_ATTEMPTS=3                      # automatic attempts for temporary publish errors before FAILED
+PUBLISH_LEASE_MS=300000                     # a post stuck in PUBLISHING longer than this goes to RECONCILIATION_REQUIRED
+# LINKEDIN_API_BASE=http://127.0.0.1:9xxx   # TESTS ONLY: honoured only inside the emulator
 ```
 
 Users' own keys (BYOK) are **not** in `.env`: they go to Google Cloud Secret Manager at runtime (see §7.1). Managed keys still come from `.env`; moving them to `firebase functions:secrets:set` is a later hardening step (remove them from `.env` at the same time, or deploy fails on the name clash).
@@ -163,9 +167,9 @@ Whole "release" in one go:
 firebase deploy --only functions,firestore:rules,firestore:indexes,storage
 ```
 
-Functions in this repo: `generatePost`, `generateImage`, `enhanceImagePrompt` (ai.ts) · LinkedIn: `getLinkedInAuthUrl`, `exchangeLinkedInToken`, `publishToLinkedIn`, `getLinkedInAnalytics` · Reddit: `getRedditAuthUrl`, `exchangeRedditToken`, `publishToReddit`, `disconnectReddit`, `getRedditAnalytics` · `checkScheduledPosts` (every 10 min) · `generateResizedImages` (Storage trigger).
+Functions in this repo: `generatePost`, `generateImage`, `enhanceImagePrompt` (ai.ts) · LinkedIn: `getLinkedInAuthUrl`, `exchangeLinkedInToken`, `publishToLinkedIn`, `getLinkedInAnalytics` · Reddit: `getRedditAuthUrl`, `exchangeRedditToken`, `publishToReddit`, `disconnectReddit`, `getRedditAnalytics` · `checkScheduledPosts` (every 10 min; claims each due post, publishes once per platform, retries only safe errors) · publishing callables `publishNow`, `resolvePublishCheck` · `generateResizedImages` (Storage trigger).
 
-AI Autopilot: personas `createPersona`, `updatePersona`, `setPersonaStatus`, `deletePersona`, `setAutopilotEnabled` · AI `addAIConnection`, `testAIConnection`, `revokeAIConnection`, `testPersonaGeneration` · credits `adminGrantCredits`, `sweepCreditReservations` (every 15 min) · research `runResearch` (queues a run and returns its id), `retryRun`, `cancelRun`, `updateContentItem`, `setContentStatus`, `exportContentToDraft`, task worker `researchStep` (Cloud Tasks, one step per task), schedulers `dispatchResearch` (every 10 min), `reapResearchRuns` (every 15 min), `reconcileResearchSchedule` (daily), admin hooks `adminDispatchResearch` and `adminReapResearchRuns` (need the `admin: true` claim).
+AI Autopilot: personas `createPersona`, `updatePersona`, `setPersonaStatus`, `deletePersona`, `setAutopilotEnabled` · AI `addAIConnection`, `testAIConnection`, `revokeAIConnection`, `testPersonaGeneration` · credits `adminGrantCredits`, `sweepCreditReservations` (every 15 min) · research `runResearch` (queues a run and returns its id), `retryRun`, `cancelRun`, `updateContentItem`, `setContentStatus`, `exportContentToDraft`, approval `previewApproval`, `approveContent`, `unscheduleContent`, `setPersonaApprovalMode` (opt-in auto-publish), task worker `researchStep` (Cloud Tasks, one step per task), schedulers `dispatchResearch` (every 10 min), `reapResearchRuns` (every 15 min), `reconcileResearchSchedule` (daily), admin hooks `adminDispatchResearch` and `adminReapResearchRuns` (need the `admin: true` claim).
 
 Requirements: project on the **Blaze** plan; Node 22; Cloud Scheduler + Pub/Sub APIs are enabled automatically on first deploy of `checkScheduledPosts`.
 
@@ -177,7 +181,8 @@ Requirements: project on the **Blaze** plan; Node 22; Cloud Scheduler + Pub/Sub 
 4. Indexes: `firebase deploy --only firestore:indexes` adds collection-group overrides for `personas.research.autoRun` and `workflowRuns.status` (used by the reconcile job and the reaper). They take a few minutes to build.
 5. Automatic research is **opt-in per persona** and runs only for `active` personas with a feed or web search; the kill switch ("Stop all") stops everything. Check logs with `firebase functions:log --only dispatchResearch,researchStep`.
 6. Ops: with the admin claim you can call `adminDispatchResearch` (`{ reconcile: true }` rebuilds the schedule index) and `adminReapResearchRuns` by hand.
-7. Privacy: `/privacy` and `/terms` explain opt-in automatic research, the Stop all switch, and temporary fetched article text (deleted when a run ends; unfinished-run artifacts marked to expire after 24 hours).
+7. A5 publishing: deploy `firestore:rules` (clients can no longer set publish statuses/fields) and `firestore:indexes` (`posts (status, nextAttemptAt)` for retries) **before** the functions. Auto-publish is opt-in per persona (confirmation dialog) and off by default.
+8. Privacy: `/privacy` and `/terms` explain opt-in automatic research, approval/auto-publish, the Stop all switch, and temporary fetched article text (deleted when a run ends; unfinished-run artifacts marked to expire after 24 hours).
 
 ### 7.1 One-time setup for AI Autopilot (BYOK keys in Secret Manager)
 
@@ -230,9 +235,9 @@ Point `NEXT_PUBLIC_API_URL` at `http://127.0.0.1:5001/linkedloom/us-central1` wh
 ### Tests (functions folder)
 
 ```bash
-npm test             # 135 unit tests (persona validation, pricing, redaction, SSRF guard, research, schedule math, workflow logic), no emulator needed
+npm test             # 153 unit tests (persona validation, pricing, redaction, SSRF guard, research, schedule math, workflow logic, publishing slots/errors), no emulator needed
 npm run test:rules   # Firestore rules tests in the emulator (needs Java)
-npm run test:e2e     # builds, then 75 tests in auth+firestore+functions (+Cloud Tasks) emulators: callables, credits ledger, research, scheduling, durability
+npm run test:e2e     # builds, then the emulator suites (78 + A5 publishing.process/publishing.e2e): callables, credits ledger, research, scheduling, durability, approval & publishing
 ```
 `test:e2e` runs on the offline project `demo-linkedloom-test`; `functions/.env.demo-linkedloom-test` switches AI providers to a deterministic mock (no real AI calls, no keys needed) and lowers the editor daily cap to 3 so the cap can be tested.
 Windows gotcha: after `emulators:exec` finishes, the Firestore emulator (a `java` process on port 8080) sometimes keeps running, and the next run fails with "port taken". Find it with `Get-NetTCPConnection -LocalPort 8080 -State Listen` and stop that `java` process.

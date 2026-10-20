@@ -51,6 +51,10 @@ export type AuditAction =
     | "content.update"
     | "content.status"
     | "content.export"
+    | "content.approve"
+    | "content.unschedule"
+    | "persona.approvalMode"
+    | "post.resolve"
     | "run.cancel"
     | "run.retry"
     | "schedule.sync";

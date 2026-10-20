@@ -12,7 +12,7 @@ import { api } from "@/lib/api"
 import { successToast, dangerToast } from "@/lib/toast"
 import { useAuth } from "@/components/providers/auth-provider"
 import { PostPreview } from "../PostPreview"
-import { Post } from "@/types"
+import { Post, type PublishPlatform } from "@/types"
 import { httpsCallable } from "firebase/functions"
 import { functions } from "@/lib/firebase"
 import { FirebaseFunctions } from "@/lib/firebase/functions"
@@ -294,18 +294,23 @@ export function PostEditor() {
         }
     }
 
+    // The post goes to the network whose tab is selected (posts without `platforms` went to every connected network).
+    const targetPlatforms = (): PublishPlatform[] => (activePlatform === "reddit" ? ["reddit"] : ["linkedin"]);
+
     const createBasePayload = (): Partial<Post> => {
         if (!user?.uid) throw new Error("User not authenticated");
         return {
             content,
-            status: "draft",
+            status: "DRAFT",
+            platforms: targetPlatforms(),
             user_id: user.uid,
             tone: tone.toUpperCase() as string,
             date: new Date().toISOString(),
             mediaUrls: imageUrl ? [imageUrl] : [],
             imageUrl: imageUrl || null,
             linkedinUrn: "",
-            subreddit: subreddit.trim() || undefined,
+            // Firestore rejects `undefined` values.
+            ...(subreddit.trim() ? { subreddit: subreddit.trim() } : {}),
             versions: []
         };
     }
@@ -330,6 +335,8 @@ export function PostEditor() {
             payload.mediaUrls = storageUrl ? [storageUrl] : [];
 
             if (editingPostId) {
+                // Updating keeps the post's status (a scheduled post stays scheduled).
+                delete payload.status;
                 updateMutation.mutate(
                     { postId: editingPostId, data: payload },
                     { onSuccess: () => successToast("Post updated successfully!") }

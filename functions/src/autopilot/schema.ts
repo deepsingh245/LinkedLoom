@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MODEL_PROFILES, PERSONA_LIMITS as L, PERSONA_STATUSES, PLATFORMS, TONES } from "./limits";
+import { APPROVAL_MODES, MODEL_PROFILES, PERSONA_LIMITS as L, PERSONA_STATUSES, PLATFORMS, TONES } from "./limits";
 
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -71,8 +71,9 @@ export const personaInputSchema = z
                     const sorted = [...windows].sort((a, b) => a.start.localeCompare(b.start));
                     return sorted.every((w, i) => i === 0 || sorted[i - 1].end <= w.start);
                 }, { message: "Posting windows must not overlap." }),
-            // Automatic publishing is not available until the approval/publishing milestone (A5).
-            approvalMode: z.literal("manual", { message: "Only manual approval is available for now." }),
+            // "automatic" (opt-in auto-publish) can only be switched on through setPersonaApprovalMode, which asks for
+            // confirmation; create/update ignore this field and keep the stored value.
+            approvalMode: z.enum(APPROVAL_MODES).default("manual"),
             allowImages: z.boolean(),
         }),
         ai: z.object({
@@ -105,5 +106,12 @@ export const setPersonaStatusSchema = z.object({
 }).strict();
 
 export const deletePersonaSchema = z.object({ personaId: personaIdSchema }).strict();
+
+export const setPersonaApprovalModeSchema = z.object({
+    personaId: personaIdSchema,
+    mode: z.enum(APPROVAL_MODES),
+    // Required to turn auto-publish on: the user confirmed that posts will go out without review.
+    acknowledge: z.boolean().optional(),
+}).strict().refine((v) => v.mode === "manual" || v.acknowledge === true, { message: "Confirm that posts will be published without your review.", path: ["acknowledge"] });
 
 export const setAutopilotEnabledSchema = z.object({ enabled: z.boolean() }).strict();

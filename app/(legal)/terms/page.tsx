@@ -72,12 +72,18 @@ export default function TermsPage() {
                 <p>
                     The research feature reads public web pages and feeds that you configure (or that web search finds) on your behalf, and drafts posts that cite
                     them. You are responsible for the feeds you add and for complying with the terms of the sites involved. Drafts may still contain errors and are
-                    never published automatically: review the sources, edit, and make sure you have the right to share any quoted material before you post it.
+                    not published unless you approve them (or turn on auto-publish, below): review the sources, edit, and make sure you have the right to share any quoted material before you post it.
                     If you use your own AI provider key, you are responsible for that provider&apos;s charges and terms.
                 </p>
                 <p>
                     Automatic research is optional for each persona. When enabled, it runs before posting windows and can use LinkedLoom credits or your own AI key.
                     It pauses when 6 drafts await review. You can turn it off for the persona or use Stop all to stop Autopilot activity.
+                </p>
+                <p>
+                    Auto-publish is a separate, optional setting for each persona and is off by default. When you turn it on and confirm, drafts that pass
+                    fact-checking with a high enough quality score are scheduled and published on your LinkedIn account without your review. You remain
+                    responsible for everything published this way. You can edit or unschedule scheduled posts until they go out, and turn auto-publish off
+                    or use Stop all at any time. If we cannot confirm whether LinkedIn published a post, we will not retry on our own and will ask you to check.
                     Fetched article text is held temporarily in server-only run artifacts, deleted when the run ends, and marked to expire after 24 hours if the run does not finish.
                 </p>
             </section>

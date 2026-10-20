@@ -21,6 +21,7 @@ import {
     type ContentClaim, type ContentSource, type Rejection, type RunStats,
 } from "./types";
 import { qualityScore, quoteInText, verifyDeterministic } from "./verify";
+import { approveContentInternal } from "../approval/approve";
 
 /**
  * The research pipeline as resumable steps. Each step:
@@ -600,6 +601,38 @@ export async function stepVerify(ctx: StepCtx): Promise<StepOutcome> {
 }
 
 // ------------------------------------------------------------------ 7. STORE
+/** Opt-in auto-publish: drafts at or above this quality score are scheduled without review. */
+export const autoPublishMinQuality = () => {
+    const value = Number(process.env.AUTOPILOT_AUTO_PUBLISH_MIN_QUALITY);
+    return Number.isFinite(value) && value > 0 ? Math.min(100, value) : 70;
+};
+
+/**
+ * Schedule high-quality drafts into the next free slots when the persona opted into auto-publish.
+ * approveContentInternal re-checks everything live (kill switch, persona still automatic and active,
+ * LinkedIn connected), so turning auto-publish off mid-run takes effect. Failures leave drafts for review.
+ */
+async function autoApprove(ctx: StepCtx, draftIds: string[], scores: Map<string, number>) {
+    const min = autoPublishMinQuality();
+    let scheduled = 0;
+    let below = 0;
+    for (const id of draftIds) {
+        if ((scores.get(id) ?? 0) < min) {
+            below++;
+            continue;
+        }
+        try {
+            await approveContentInternal({ workspaceId: ctx.workspaceId, uid: ctx.uid, contentId: id, auto: true });
+            scheduled++;
+        } catch (error) {
+            ctx.addNote(`Auto-publish skipped: ${error instanceof Error ? error.message : "couldn't schedule the draft."} Drafts wait for your review.`);
+            break; // the same reason (no slot, LinkedIn, kill switch) applies to the rest
+        }
+    }
+    if (scheduled) ctx.addNote(`Auto-publish scheduled ${scheduled} draft(s) on LinkedIn.`);
+    if (below) ctx.addNote(`${below} draft(s) scored below ${min}/100 and wait for your review.`);
+}
+
 export interface StoreResult {
     draftIds: string[];
 }
@@ -615,12 +648,22 @@ export async function stepStore(ctx: StepCtx): Promise<StepOutcome & StoreResult
     const batch = workspaceRef(workspaceId).firestore.batch();
     const usedByUrl = new Map<string, string>();
     const draftIds: string[] = [];
+    const scores = new Map<string, number>();
+
+    // A retried store must not reset drafts the user (or auto-publish) already acted on.
+    const contentCol = workspaceRef(workspaceId).collection("contentItems");
+    const existing = verify.accepted.length ? await contentCol.firestore.getAll(...verify.accepted.map((_, i) => contentCol.doc(`${runId}_${i}`))) : [];
+    const handled = new Set(existing.filter((d) => d.exists && d.data()?.approvalStatus !== "pending").map((d) => d.id));
 
     for (const [i, a] of verify.accepted.entries()) {
         const sourcesDocs = a.citedIds.map((id) => byId.get(id)).filter((x): x is DocArtifact => !!x);
         const id = `${runId}_${i}`;
-        const ref = workspaceRef(workspaceId).collection("contentItems").doc(id);
+        const ref = contentCol.doc(id);
         draftIds.push(id);
+        if (handled.has(id)) {
+            for (const s of sourcesDocs) usedByUrl.set(s.canonical, id);
+            continue;
+        }
         const newest = sourcesDocs.map((s) => s.publishedAtMs).filter((t): t is number => !!t).sort((x, y) => y - x)[0];
         const sources: ContentSource[] = sourcesDocs.map((s) => ({
             url: s.url,
@@ -629,6 +672,15 @@ export async function stepStore(ctx: StepCtx): Promise<StepOutcome & StoreResult
             publishedAt: s.publishedAtMs ? Timestamp.fromMillis(s.publishedAtMs) : null,
             quote: (s.claims[0]?.quote ?? "").slice(0, RESEARCH_LIMITS.evidenceQuoteMax),
         }));
+        const score = qualityScore({
+            distinctDomains: new Set(sourcesDocs.map((s) => s.domain)).size,
+            minSourceCount: research.minSourceCount,
+            claimsChecked: a.checked,
+            claimsSupported: a.supported,
+            newestSourceAgeHours: newest ? Math.max(0, (Date.now() - newest) / 3_600_000) : undefined,
+            freshnessHours: research.freshnessHours,
+        });
+        scores.set(id, score);
         batch.set(ref, {
             id,
             personaId: ctx.personaId,
@@ -642,14 +694,7 @@ export async function stepStore(ctx: StepCtx): Promise<StepOutcome & StoreResult
             sources,
             claims: a.claims.slice(0, 12),
             fingerprint: fingerprint(a.topic),
-            qualityScore: qualityScore({
-                distinctDomains: new Set(sourcesDocs.map((s) => s.domain)).size,
-                minSourceCount: research.minSourceCount,
-                claimsChecked: a.checked,
-                claimsSupported: a.supported,
-                newestSourceAgeHours: newest ? Math.max(0, (Date.now() - newest) / 3_600_000) : undefined,
-                freshnessHours: research.freshnessHours,
-            }),
+            qualityScore: score,
             verification: { deterministic: "passed", ai: "passed", claimsChecked: a.checked },
             state: "PENDING_APPROVAL",
             approvalStatus: "pending",
@@ -679,6 +724,9 @@ export async function stepStore(ctx: StepCtx): Promise<StepOutcome & StoreResult
         }, { merge: true });
     }
     await batch.commit();
+
+    const fresh = draftIds.filter((id) => !handled.has(id));
+    if (persona.publishing?.approvalMode === "automatic" && fresh.length) await autoApprove(ctx, fresh, scores);
 
     if (!verify.accepted.length) {
         if (verify.rejections.length) ctx.addNote("Drafts were written but none passed verification.");

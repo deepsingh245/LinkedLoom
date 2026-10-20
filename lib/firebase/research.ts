@@ -3,7 +3,7 @@ import { httpsCallable } from "firebase/functions";
 import { db, functions } from "../firebase";
 import { Collections } from "./collections";
 import { FirebaseFunctions } from "./functions";
-import type { ContentItem, PersonaDemoResult, RunResearchResult, WorkflowRun } from "@/types/research";
+import type { ApprovalPreview, ApproveResult, ContentItem, PersonaDemoResult, PublishOutcome, RunResearchResult, WorkflowRun } from "@/types/research";
 
 // Everything lives in the personal workspace (workspaces/{uid}); clients only read.
 
@@ -35,6 +35,7 @@ const toContent = (id: string, data: DocumentData): ContentItem =>
     claims: data.claims ?? [],
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
+    scheduledFor: toDate(data.scheduledFor),
   }) as ContentItem;
 
 export const getContentItems = async (uid: string, max = 100): Promise<ContentItem[]> => {
@@ -89,4 +90,38 @@ export const exportContentToDraft = async (contentId: string) => {
 export const runPersonaDemo = async (personaId: string) => {
   const call = httpsCallable<{ personaId: string }, PersonaDemoResult>(functions, FirebaseFunctions.RUN_PERSONA_DEMO, { timeout: 130_000 });
   return (await call({ personaId })).data;
+};
+
+// Approval & publishing (A5).
+
+/** Suggested slot and readiness for "Approve & schedule". */
+export const previewApproval = async (contentId: string) => {
+  const call = httpsCallable<{ contentId: string }, ApprovalPreview>(functions, FirebaseFunctions.PREVIEW_APPROVAL);
+  return (await call({ contentId })).data;
+};
+
+/** Approve a draft and schedule it on LinkedIn (next free slot, or `scheduledFor` ISO). Again = reschedule. */
+export const approveContent = async (contentId: string, scheduledFor?: string) => {
+  const call = httpsCallable<{ contentId: string; scheduledFor?: string }, ApproveResult>(functions, FirebaseFunctions.APPROVE_CONTENT);
+  return (await call(scheduledFor ? { contentId, scheduledFor } : { contentId })).data;
+};
+
+export const unscheduleContent = async (contentId: string) => {
+  const call = httpsCallable<{ contentId: string }, { id: string; status: "pending" }>(functions, FirebaseFunctions.UNSCHEDULE_CONTENT);
+  return (await call({ contentId })).data;
+};
+
+/** Turn opt-in auto-publish on/off for a persona. Turning it on requires `acknowledge: true`. */
+export const setPersonaApprovalMode = async (personaId: string, mode: "manual" | "automatic") => {
+  const call = httpsCallable<{ personaId: string; mode: string; acknowledge?: boolean }, { id: string; approvalMode: string; version: number }>(
+    functions,
+    FirebaseFunctions.SET_PERSONA_APPROVAL_MODE
+  );
+  return (await call(mode === "automatic" ? { personaId, mode, acknowledge: true } : { personaId, mode })).data;
+};
+
+/** Answer a "needs check" post: it did go out (published), publish again (retry), or it didn't (failed). */
+export const resolvePublishCheck = async (postId: string, outcome: "published" | "retry" | "failed") => {
+  const call = httpsCallable<{ postId: string; outcome: string }, PublishOutcome>(functions, FirebaseFunctions.RESOLVE_PUBLISH_CHECK, { timeout: 130_000 });
+  return (await call({ postId, outcome })).data;
 };

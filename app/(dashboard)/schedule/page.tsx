@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Calendar as CalendarIcon, Filter, List, Grid, Search, Plus, LayoutGrid, Clock, FileText, Type } from "lucide-react"
+import { AlertTriangle, Bot, Calendar as CalendarIcon, Filter, List, Grid, Search, Plus, LayoutGrid, Clock, FileText, Type } from "lucide-react"
+import { isAutopilotPost, normalizeStatus, statusMeta, statusPillClass } from "@/lib/posts/status"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -33,6 +34,8 @@ export default function SchedulePage() {
     const { data: scheduledPosts = [], isLoading: scheduledLoading } = useScheduledPosts(user?.uid);
     const { data: draftPosts = [] } = useDraftPosts(user?.uid);
     const loading = postsLoading || scheduledLoading;
+    // Posts the publisher couldn't finish: failed, partly published, retrying, or waiting for the user's check.
+    const attention = posts.filter((post) => ["FAILED", "PARTIAL", "RETRY_PENDING", "RECONCILIATION_REQUIRED"].includes(normalizeStatus(post.status)));
     const [searchQuery, setSearchQuery] = useState("")
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
     const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest")
@@ -152,6 +155,10 @@ export default function SchedulePage() {
                         <Clock className="w-4 h-4 shrink-0" />
                         <span className="truncate">Scheduled</span>
                     </TabsTrigger>
+                    <TabsTrigger value="attention" className="flex-1 sm:flex-none rounded-lg px-3 sm:px-5 h-9 data-[state=active]:bg-white data-[state=active]:text-[#286c63] data-[state=active]:shadow-sm font-semibold transition-all flex items-center justify-center gap-1.5 min-w-0 text-xs sm:text-sm">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        <span className="truncate">Needs attention{attention.length ? ` (${attention.length})` : ""}</span>
+                    </TabsTrigger>
                     <TabsTrigger value="drafts" className="flex-1 sm:flex-none rounded-lg px-3 sm:px-5 h-9 data-[state=active]:bg-white data-[state=active]:text-[#286c63] data-[state=active]:shadow-sm font-semibold transition-all flex items-center justify-center gap-1.5 min-w-0 text-xs sm:text-sm">
                         <FileText className="w-4 h-4 shrink-0" />
                         <span className="truncate">Drafts</span>
@@ -166,6 +173,10 @@ export default function SchedulePage() {
 
                 <TabsContent value="scheduled" className="mt-0 outline-none">
                     <PostDisplay posts={processPosts(scheduledPosts)} searchQuery={searchQuery} viewMode={viewMode} label="No scheduled posts" />
+                </TabsContent>
+
+                <TabsContent value="attention" className="mt-0 outline-none">
+                    <PostDisplay posts={processPosts(attention)} searchQuery={searchQuery} viewMode={viewMode} label="Nothing needs your attention" />
                 </TabsContent>
 
                 <TabsContent value="drafts" className="mt-0 outline-none">
@@ -206,7 +217,8 @@ function PostDisplay({ posts, searchQuery, viewMode, label = "No posts found" }:
                                     <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                                         <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {post.date ? new Date(post.date).toLocaleDateString() : 'No date'}</span>
                                         <span>•</span>
-                                        <span className="uppercase font-bold tracking-wider">{post.status}</span>
+                                        <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${statusPillClass(statusMeta(post.status).tone)}`}>{statusMeta(post.status).label}</span>
+                                        {isAutopilotPost(post) && <span className="inline-flex items-center gap-1"><Bot className="h-3 w-3" />Autopilot</span>}
                                     </div>
                                 </div>
                             </div>
@@ -215,7 +227,7 @@ function PostDisplay({ posts, searchQuery, viewMode, label = "No posts found" }:
                                     <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-accent text-muted-foreground">Edit</Button>
                                 </Link>
                                 <div className="h-8 w-px bg-border mx-2" />
-                                <Badge variant="outline" className="border-border text-muted-foreground">{post.status}</Badge>
+                                <Badge variant="outline" className="border-border text-muted-foreground">{statusMeta(post.status).label}</Badge>
                             </div>
                         </div>
                     ))}

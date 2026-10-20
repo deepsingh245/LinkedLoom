@@ -63,7 +63,7 @@ export const personaToFormValues = (p: Persona): PersonaFormValues => ({
         webSearch: p.research.webSearch ?? false,
         autoRun: p.research.autoRun ?? false,
     },
-    publishing: { ...p.publishing, approvalMode: "manual" },
+    publishing: { ...p.publishing, approvalMode: p.publishing.approvalMode === "automatic" ? "automatic" : "manual" },
     ai: { connectionId: p.ai.connectionId ?? MANAGED, modelProfile: p.ai.modelProfile, monthlyCreditLimit: p.ai.monthlyCreditLimit },
 })
 

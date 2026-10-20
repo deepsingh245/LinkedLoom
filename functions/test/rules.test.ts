@@ -148,4 +148,33 @@ describe("existing rules still behave", () => {
         await assertSucceeds(setDoc(doc(asAlice(), "posts/post2"), { user_id: ALICE, content: "x" }));
         await assertFails(setDoc(doc(asBob(), "posts/post3"), { user_id: ALICE, content: "x" }));
     });
+
+    it("posts: clients can draft and schedule but never set publish state (A5)", async () => {
+        const db = asAlice();
+        await assertSucceeds(setDoc(doc(db, "posts/d1"), { user_id: ALICE, content: "x", status: "DRAFT", platforms: ["linkedin"], linkedinUrn: "" }));
+        await assertSucceeds(updateDoc(doc(db, "posts/d1"), { status: "SCHEDULED", scheduledFor: new Date(Date.now() + 3_600_000) }));
+        // Server-only statuses and fields.
+        await assertFails(setDoc(doc(db, "posts/d2"), { user_id: ALICE, content: "x", status: "PUBLISHED" }));
+        await assertFails(updateDoc(doc(db, "posts/d1"), { status: "PUBLISHED" }));
+        await assertFails(updateDoc(doc(db, "posts/d1"), { status: "PUBLISHING" }));
+        await assertFails(updateDoc(doc(db, "posts/d1"), { results: { linkedin: { status: "published" } } }));
+        await assertFails(updateDoc(doc(db, "posts/d1"), { linkedinUrn: "urn:li:share:1" }));
+        await assertFails(setDoc(doc(db, "posts/d3"), { user_id: ALICE, content: "x", source: "autopilot", contentItemId: "c1" }));
+
+        await env.withSecurityRulesDisabled(async (ctx) => {
+            const admin = ctx.firestore();
+            await setDoc(doc(admin, "posts/busy"), { user_id: ALICE, content: "x", status: "PUBLISHING" });
+            await setDoc(doc(admin, "posts/done"), { user_id: ALICE, content: "x", status: "PUBLISHED" });
+            await setDoc(doc(admin, "posts/auto"), { user_id: ALICE, content: "x", status: "SCHEDULED", source: "autopilot", contentItemId: "c1" });
+        });
+        // Being published: no edits, no delete. Published: read-only (delete allowed).
+        await assertFails(updateDoc(doc(db, "posts/busy"), { content: "y" }));
+        await assertFails(deleteDoc(doc(db, "posts/busy")));
+        await assertFails(updateDoc(doc(db, "posts/done"), { content: "y" }));
+        await assertSucceeds(deleteDoc(doc(db, "posts/done")));
+        // Approved Autopilot post: text edits ok, (re)scheduling only through the callables.
+        await assertSucceeds(updateDoc(doc(db, "posts/auto"), { content: "edited" }));
+        await assertFails(updateDoc(doc(db, "posts/auto"), { status: "DRAFT" }));
+        await assertFails(updateDoc(doc(db, "posts/auto"), { scheduledFor: new Date() }));
+    });
 });

@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCheck, FileCheck2, FileText, Search, ShieldCheck, XCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { ArrowRight, CalendarClock, CheckCheck, FileCheck2, FileText, Search, Send, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,12 +10,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/components/providers/auth-provider";
 import { AutopilotNav } from "@/components/features/autopilot/AutopilotNav";
 import { DraftCard } from "@/components/features/autopilot/DraftCard";
+import { ApproveDialog } from "@/components/features/autopilot/ApproveDialog";
 import { usePersonas } from "@/lib/query/hooks/use-autopilot";
-import { useContentItems, useExportContentToDraft, useSetContentStatus, useUpdateContentItem } from "@/lib/query/hooks/use-research";
+import {
+    useApproveContent, useContentItems, useExportContentToDraft, useResolvePublishCheck, useSetContentStatus, useUnscheduleContent, useUpdateContentItem,
+} from "@/lib/query/hooks/use-research";
+import type { ContentItem } from "@/types/research";
 import { QueryError } from "@/components/features/autopilot/QueryError";
 import { Routes } from "@/lib/routes";
 
-type Filter = "pending" | "rejected" | "all";
+type Filter = "pending" | "scheduled" | "published" | "rejected" | "all";
+
+/** Which tab a draft belongs to. Approved drafts are "scheduled" until they're published. */
+const bucketOf = (item: ContentItem): Exclude<Filter, "all"> =>
+    item.approvalStatus === "rejected" ? "rejected"
+        : item.approvalStatus !== "approved" ? "pending"
+            : item.state === "PUBLISHED" ? "published" : "scheduled";
 
 export default function DraftsPage() {
     const { user } = useAuth();
@@ -25,22 +34,32 @@ export default function DraftsPage() {
     const update = useUpdateContentItem(user?.uid);
     const setStatus = useSetContentStatus(user?.uid);
     const exportDraft = useExportContentToDraft(user?.uid);
+    const approve = useApproveContent(user?.uid);
+    const unschedule = useUnscheduleContent(user?.uid);
+    const resolve = useResolvePublishCheck(user?.uid);
+    const [approving, setApproving] = useState<ContentItem | null>(null);
     const [filter, setFilter] = useState<Filter>("pending");
     const [personaFilter, setPersonaFilter] = useState("all");
 
     const visible = useMemo(
-        () => items.filter((item) => (filter === "all" || item.approvalStatus === filter) && (personaFilter === "all" || item.personaId === personaFilter)),
+        () => items.filter((item) => (filter === "all" || bucketOf(item) === filter) && (personaFilter === "all" || item.personaId === personaFilter)),
         [items, filter, personaFilter],
     );
     const personaName = (id: string) => personas.find((persona) => persona.id === id)?.name;
-    const busyId = (update.isPending && update.variables?.contentId) || (setStatus.isPending && setStatus.variables?.contentId) || (exportDraft.isPending && exportDraft.variables) || "";
-    const pendingCount = items.filter((item) => item.approvalStatus === "pending").length;
-    const rejectedCount = items.filter((item) => item.approvalStatus === "rejected").length;
-    const sourceCount = items.reduce((total, item) => total + item.sources.length, 0);
+    const postIdOf = (item: ContentItem) => item.scheduledPostId ?? `autopilot_${item.id}`;
+    const busyId = (update.isPending && update.variables?.contentId) || (setStatus.isPending && setStatus.variables?.contentId) || (exportDraft.isPending && exportDraft.variables)
+        || (unschedule.isPending && unschedule.variables) || (resolve.isPending && items.find((item) => postIdOf(item) === resolve.variables?.postId)?.id) || "";
+    const count = (bucket: Exclude<Filter, "all">) => items.filter((item) => bucketOf(item) === bucket).length;
+    const pendingCount = count("pending");
+    const scheduledCount = count("scheduled");
+    const publishedCount = count("published");
+    const rejectedCount = count("rejected");
+    const needsCheck = items.filter((item) => item.state === "RECONCILIATION_REQUIRED" || item.state === "FAILED").length;
 
     const metrics = [
         { label: "Needs review", value: pendingCount, note: "Waiting for your approval", icon: FileCheck2, tint: "#f7f2e9", color: "#a67b37" },
-        { label: "Fact-checked", value: items.length, note: `${sourceCount} source${sourceCount === 1 ? "" : "s"} attached`, icon: ShieldCheck, tint: "#e8f3f0", color: "#357d72" },
+        { label: "Scheduled", value: scheduledCount, note: needsCheck ? `${needsCheck} need${needsCheck === 1 ? "s" : ""} your attention` : "Queued for LinkedIn", icon: CalendarClock, tint: "#eaf0fa", color: "#3d68a8" },
+        { label: "Published", value: publishedCount, note: "Live on LinkedIn", icon: Send, tint: "#e8f3f0", color: "#357d72" },
         { label: "Rejected", value: rejectedCount, note: "Saved for reference or restore", icon: XCircle, tint: "#f7eef1", color: "#a6647b" },
     ];
 
@@ -50,7 +69,7 @@ export default function DraftsPage() {
                 <div>
                     <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#7d898f]">Operations / Approval Inbox</div>
                     <h1 className="text-[26px] font-semibold tracking-[-0.035em] text-[#20242b] md:text-[30px]">Review sourced drafts</h1>
-                    <p className="mt-1 max-w-2xl text-sm text-[#748087]">Check the evidence, refine the copy, and choose what moves to your drafts. Nothing publishes without your approval.</p>
+                    <p className="mt-1 max-w-2xl text-sm text-[#748087]">Check the evidence, refine the copy, then approve to schedule it on LinkedIn in the persona&apos;s next free posting slot. Nothing publishes without your approval unless you turn on auto-publish for a persona.</p>
                 </div>
                 <Button asChild variant="outline" className="h-9 self-start rounded-lg border-[#dfe4e7] bg-white px-3 text-xs text-[#46515a] hover:bg-[#f5f7f7] sm:self-auto">
                     <Link href={Routes.AUTOPILOT}><Search className="mr-2 h-4 w-4" />Manage personas<ArrowRight className="ml-2 h-3.5 w-3.5" /></Link>
@@ -59,7 +78,7 @@ export default function DraftsPage() {
 
             <AutopilotNav />
 
-            <section aria-label="Approval inbox summary" className="grid gap-3 sm:grid-cols-3">
+            <section aria-label="Approval inbox summary" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {metrics.map(({ label, value, note, icon: Icon, tint, color }) => (
                     <Card key={label} className="rounded-xl border border-[#e2e6ea] bg-white p-4 shadow-none">
                         <div className="flex items-start justify-between gap-2">
@@ -74,9 +93,11 @@ export default function DraftsPage() {
 
             <section className="space-y-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="inline-flex w-fit rounded-lg border border-[#e2e6ea] bg-white p-1" role="group" aria-label="Filter drafts by approval status">
+                    <div className="inline-flex w-fit max-w-full flex-wrap rounded-lg border border-[#e2e6ea] bg-white p-1" role="group" aria-label="Filter drafts by approval status">
                         {([
                             ["pending", "Needs review", pendingCount],
+                            ["scheduled", "Scheduled", scheduledCount],
+                            ["published", "Published", publishedCount],
                             ["rejected", "Rejected", rejectedCount],
                             ["all", "All drafts", items.length],
                         ] as const).map(([value, label, count]) => (
@@ -123,10 +144,25 @@ export default function DraftsPage() {
                                 onReject={() => setStatus.mutate({ contentId: item.id, status: "rejected" })}
                                 onRestore={() => setStatus.mutate({ contentId: item.id, status: "pending" })}
                                 onExport={() => exportDraft.mutate(item.id)}
+                                onApprove={() => setApproving(item)}
+                                onUnschedule={() => unschedule.mutate(item.id)}
+                                onResolve={(outcome) => resolve.mutate({ postId: postIdOf(item), outcome })}
                             />
                         ))}
                     </div>
                 )}
+                <ApproveDialog
+                    key={approving?.id ?? "none"}
+                    item={approving}
+                    personaName={approving ? personaName(approving.personaId) : undefined}
+                    open={!!approving}
+                    busy={approve.isPending}
+                    onOpenChange={(open) => !open && setApproving(null)}
+                    onConfirm={(scheduledFor) => {
+                        if (!approving) return;
+                        approve.mutate({ contentId: approving.id, scheduledFor }, { onSuccess: () => setApproving(null) });
+                    }}
+                />
             </section>
         </div>
     );

@@ -71,6 +71,9 @@ export interface ContentClaim {
   sourceUrl: string;
 }
 
+export type ContentApprovalStatus = "pending" | "rejected" | "approved";
+export type ContentState = "PENDING_APPROVAL" | "REJECTED" | "SCHEDULED" | "PUBLISHING" | "PUBLISHED" | "FAILED" | "RECONCILIATION_REQUIRED";
+
 export interface ContentItem {
   id: string;
   personaId: string;
@@ -85,8 +88,15 @@ export interface ContentItem {
   qualityScore: number | null;
   /** Sample draft from "Try a demo": shows the review flow, not based on research. */
   demo?: boolean;
-  approvalStatus: "pending" | "rejected";
-  state: string;
+  approvalStatus: ContentApprovalStatus;
+  /** Mirrors the scheduled post: PENDING_APPROVAL | REJECTED | SCHEDULED | PUBLISHING | PUBLISHED | FAILED | RECONCILIATION_REQUIRED. */
+  state: ContentState | string;
+  /** Set once approved (A5): the post in `posts` that will be / was published. */
+  scheduledPostId?: string;
+  scheduledFor?: Date;
+  approvedBy?: "user" | "autopilot";
+  publishedUrl?: string;
+  publishError?: string;
   edited?: boolean;
   version: number;
   exportedPostId?: string;
@@ -97,6 +107,34 @@ export interface ContentItem {
 export interface RunResearchResult {
   runId: string;
   status: "queued";
+}
+
+export interface ApprovalPreview {
+  /** Next free posting slot (ISO), or null when none is free in the next 14 days. */
+  suggestedAt: string | null;
+  window: { start: string; end: string } | null;
+  timezone: string;
+  linkedinConnected: boolean;
+  linkedinExpired: boolean;
+  autopilotEnabled: boolean;
+  currentScheduledFor: string | null;
+  /** Why the draft can't be scheduled right now (null when it can). */
+  blocker: string | null;
+}
+
+export interface ApproveResult {
+  id: string;
+  postId: string;
+  scheduledFor: string;
+  rescheduled: boolean;
+}
+
+export interface PublishOutcome {
+  postId: string;
+  status: string;
+  reason?: string;
+  publishedUrl?: string;
+  error?: string;
 }
 
 export interface PersonaDemoResult {

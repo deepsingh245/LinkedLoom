@@ -10,6 +10,8 @@ export function useContentItems(userId: string | undefined) {
     queryKey: queryKeys.autopilot.drafts(userId!),
     queryFn: () => api.firebaseService.getContentItems(userId!),
     enabled: !!userId,
+    // Follow posts that are being published right now.
+    refetchInterval: (query) => query.state.data?.some((item) => item.state === 'PUBLISHING') ? 15_000 : false,
   });
 }
 
@@ -129,5 +131,84 @@ export function useRunPersonaDemo(userId?: string) {
     onError: (error) => {
       dangerToast(callableErrorMessage(error, 'The demo could not run.'));
     },
+  });
+}
+
+// ------------------------------------------------------------------ approval & publishing (A5)
+
+/** Invalidate Autopilot data and the normal post lists (calendar, schedule). */
+function useInvalidateAutopilotAndPosts(userId?: string) {
+  const invalidate = useInvalidateAutopilot(userId);
+  const queryClient = useQueryClient();
+  return () => {
+    invalidate();
+    if (userId) queryClient.invalidateQueries({ queryKey: queryKeys.posts.all(userId) });
+  };
+}
+
+/** Suggested slot + readiness for one draft. Only fetched while the approve dialog is open. */
+export function useApprovalPreview(contentId: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ['autopilot', 'approval-preview', contentId] as const,
+    queryFn: () => api.firebaseService.previewApproval(contentId!),
+    enabled: !!contentId && enabled,
+    staleTime: 0,
+    gcTime: 0,
+  });
+}
+
+export function useApproveContent(userId?: string) {
+  const invalidate = useInvalidateAutopilotAndPosts(userId);
+  return useMutation({
+    mutationFn: ({ contentId, scheduledFor }: { contentId: string; scheduledFor?: string }) =>
+      api.firebaseService.approveContent(contentId, scheduledFor),
+    onSuccess: (result) => {
+      invalidate();
+      successToast(`${result.rescheduled ? 'Rescheduled' : 'Scheduled'} for ${new Date(result.scheduledFor).toLocaleString()}.`);
+    },
+    onError: (error) => dangerToast(callableErrorMessage(error, 'Could not schedule the post.')),
+  });
+}
+
+export function useUnscheduleContent(userId?: string) {
+  const invalidate = useInvalidateAutopilotAndPosts(userId);
+  return useMutation({
+    mutationFn: (contentId: string) => api.firebaseService.unscheduleContent(contentId),
+    onSuccess: () => {
+      invalidate();
+      successToast('Unscheduled. The draft is back in review.');
+    },
+    onError: (error) => dangerToast(callableErrorMessage(error, 'Could not unschedule the post.')),
+  });
+}
+
+export function useSetPersonaApprovalMode(userId?: string) {
+  const invalidate = useInvalidateAutopilot(userId);
+  return useMutation({
+    mutationFn: ({ personaId, mode }: { personaId: string; mode: 'manual' | 'automatic' }) =>
+      api.firebaseService.setPersonaApprovalMode(personaId, mode),
+    onSuccess: (result) => {
+      invalidate();
+      successToast(result.approvalMode === 'automatic' ? 'Auto-publish is on for this persona.' : 'Back to manual approval.');
+    },
+    onError: (error) => dangerToast(callableErrorMessage(error, 'Could not change the approval mode.')),
+  });
+}
+
+export function useResolvePublishCheck(userId?: string) {
+  const invalidate = useInvalidateAutopilotAndPosts(userId);
+  return useMutation({
+    mutationFn: ({ postId, outcome }: { postId: string; outcome: 'published' | 'retry' | 'failed' }) =>
+      api.firebaseService.resolvePublishCheck(postId, outcome),
+    onSuccess: (result, { outcome }) => {
+      invalidate();
+      if (outcome === 'published') successToast('Marked as published.');
+      else if (outcome === 'failed') successToast('Marked as not published.');
+      // retry: the post was published again right away
+      else if (result.status === 'PUBLISHED') successToast('Published on LinkedIn.');
+      else if (result.status === 'RETRY_PENDING') successToast('LinkedIn is busy. We\'ll try again shortly.');
+      else dangerToast(result.error ?? 'Publishing failed.');
+    },
+    onError: (error) => dangerToast(callableErrorMessage(error, 'Could not update the post.')),
   });
 }

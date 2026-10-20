@@ -25,3 +25,4 @@ export const PLATFORMS = ["linkedin"] as const;
 export const TONES = ["professional", "casual", "technical"] as const;
 export const MODEL_PROFILES = ["economy", "balanced", "quality"] as const;
 export const PERSONA_STATUSES = ["active", "paused", "archived"] as const;
+export const APPROVAL_MODES = ["manual", "automatic"] as const;

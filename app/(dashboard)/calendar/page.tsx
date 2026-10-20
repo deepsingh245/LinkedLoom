@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { ArrowRight, CalendarDays, Clock3, FileText, Plus } from "lucide-react";
+import { ArrowRight, Bot, CalendarDays, Clock3, FileText, Plus } from "lucide-react";
+import { isAutopilotPost, statusMeta, statusPillClass } from "@/lib/posts/status";
 import { Post } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -113,11 +114,13 @@ export default function CalendarPage() {
                                             <span className="min-w-0 flex-1">
                                                 <span className="line-clamp-3 block text-xs leading-relaxed text-[#39444b] transition group-hover:text-[#286c63]">{post.content || "No post content"}</span>
                                                 <span className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-[#89939a]">
-                                                    <span className="inline-flex items-center gap-1"><FileText className="h-3 w-3" />Scheduled post</span>
+                                                    {isAutopilotPost(post)
+                                                        ? <span className="inline-flex items-center gap-1 font-medium text-[#357d72]"><Bot className="h-3 w-3" />Autopilot · reschedule in Drafts</span>
+                                                        : <span className="inline-flex items-center gap-1"><FileText className="h-3 w-3" />Scheduled post</span>}
                                                     {post.topic && <><span aria-hidden="true">·</span><span className="truncate">{post.topic}</span></>}
                                                 </span>
                                             </span>
-                                            <Badge variant="scheduled" className="shrink-0 text-[9px]">Scheduled</Badge>
+                                            <span className={`shrink-0 rounded-md border px-2 py-0.5 text-[9px] font-semibold ${statusPillClass(statusMeta(post.status).tone)}`}>{statusMeta(post.status).label}</span>
                                         </button>
                                     </li>
                                 ))}

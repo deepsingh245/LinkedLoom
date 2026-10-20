@@ -36,7 +36,8 @@ export interface PersonaInput {
     postsPerDay: number;
     timezone: string;
     postingWindows: PostingWindow[];
-    approvalMode: "manual";
+    /** "automatic" = opt-in auto-publish (set only via setPersonaApprovalMode). */
+    approvalMode: "manual" | "automatic";
     allowImages: boolean;
   };
   ai: {

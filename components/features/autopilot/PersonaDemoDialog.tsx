@@ -26,7 +26,7 @@ interface PersonaDemoDialogProps {
 const HOW_IT_WORKS = [
     { icon: Search, title: "Research", text: "Before each posting window the persona reads your feeds (and web search, if on)." },
     { icon: ShieldCheck, title: "Write & fact-check", text: "It drafts posts in its voice, citing sources, and drops any claim it can't back up." },
-    { icon: Inbox, title: "Your approval", text: "Drafts wait in Drafts. You edit, reject, or send them to your post drafts. Nothing is published automatically." },
+    { icon: Inbox, title: "Your approval", text: "Drafts wait in Drafts. You edit, reject, or approve them to schedule on LinkedIn. Nothing is published unless you approve it (or turn on auto-publish)." },
 ]
 
 /**

@@ -105,6 +105,20 @@ export const updateContentItem = onCall(async (request) => {
     await getFirestore().runTransaction(async (tx) => {
         const snap = await tx.get(ref);
         if (!snap.exists) throw new HttpsError("not-found", "Draft not found.");
+        const item = snap.data()!;
+        // A scheduled draft: keep the scheduled post's text in sync (only while it hasn't started publishing).
+        if (item.approvalStatus === "approved") {
+            const postRef = getFirestore().collection("posts").doc(String(item.scheduledPostId ?? `autopilot_${contentId}`));
+            const post = await tx.get(postRef);
+            const status = String(post.data()?.status ?? "").toUpperCase();
+            if (post.exists && !["SCHEDULED", "RETRY_PENDING", "DRAFT"].includes(status)) {
+                throw new HttpsError("failed-precondition", "This post is already being published, so it can't be edited here.");
+            }
+            if (post.exists) {
+                const tags = ((item.hashtags as string[]) ?? []).map((h) => `#${h}`).join(" ");
+                tx.update(postRef, { content: tags ? `${text}\n\n${tags}` : text, updatedAt: FieldValue.serverTimestamp() });
+            }
+        }
         tx.update(ref, {
             "variants.linkedin.text": text,
             "variants.linkedin.status": "draft",
@@ -127,6 +141,9 @@ export const setContentStatus = onCall(async (request) => {
     await getFirestore().runTransaction(async (tx) => {
         const snap = await tx.get(ref);
         if (!snap.exists) throw new HttpsError("not-found", "Draft not found.");
+        if (snap.data()!.approvalStatus === "approved") {
+            throw new HttpsError("failed-precondition", "This draft is scheduled. Unschedule it first.");
+        }
         tx.update(ref, { approvalStatus: status, state: status === "rejected" ? "REJECTED" : "PENDING_APPROVAL", updatedAt: FieldValue.serverTimestamp() });
     });
     await writeAudit(workspaceId, uid, "content.status", contentId, { status });
