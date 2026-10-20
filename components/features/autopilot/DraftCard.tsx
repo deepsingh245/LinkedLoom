@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, CalendarClock, CalendarX, Check, Copy, ExternalLink, FilePlus2, RotateCcw, Send, ShieldCheck, X } from "lucide-react";
+import { AlertTriangle, CalendarClock, CalendarX, Check, Copy, ExternalLink, FilePlus2, RefreshCw, RotateCcw, Send, ShieldCheck, X } from "lucide-react";
+import { SharedAlertDialog } from "@/components/shared/SharedAlertDialog";
+import { OVERDUE_AFTER_MIN } from "@/lib/posts/status";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,6 +24,10 @@ interface DraftCardProps {
     onUnschedule: () => void;
     /** Answer "did this post go out?" for a post we couldn't confirm. */
     onResolve: (outcome: "published" | "retry" | "failed") => void;
+    /** Publish a held-back (MISSED) post right now. */
+    onPublishNow: () => void;
+    /** "It's not on LinkedIn": publish a PUBLISHED post again. */
+    onRepublish: () => void;
 }
 
 const MAX = 3000;
@@ -38,19 +44,26 @@ function stageOf(item: ContentItem) {
         case "PUBLISHED": return { key: "published", label: "Published", variant: "published" as const };
         case "FAILED": return { key: "failed", label: "Not published", variant: "outline" as const };
         case "RECONCILIATION_REQUIRED": return { key: "check", label: "Needs your check", variant: "draft" as const };
-        default: return { key: "scheduled", label: item.scheduledFor ? `Scheduled · ${item.scheduledFor.toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : "Scheduled", variant: "scheduled" as const };
+        case "MISSED": return { key: "missed", label: "Missed · your call", variant: "draft" as const };
+        default:
+            // Still queued but well past its time: the scheduler hasn't published it.
+            if (item.scheduledFor && Date.now() - item.scheduledFor.getTime() > OVERDUE_AFTER_MIN * 60_000) {
+                return { key: "scheduled", label: `Overdue · ${item.scheduledFor.toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`, variant: "draft" as const };
+            }
+            return { key: "scheduled", label: item.scheduledFor ? `Scheduled · ${item.scheduledFor.toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : "Scheduled", variant: "scheduled" as const };
     }
 }
 
-export function DraftCard({ item, personaName, busy, onSave, onReject, onRestore, onExport, onApprove, onUnschedule, onResolve }: DraftCardProps) {
+export function DraftCard({ item, personaName, busy, onSave, onReject, onRestore, onExport, onApprove, onUnschedule, onResolve, onPublishNow, onRepublish }: DraftCardProps) {
     const saved = item.variants.linkedin.text;
     const [text, setText] = useState(saved);
     const [showSources, setShowSources] = useState(false);
+    const [confirmRepublish, setConfirmRepublish] = useState(false);
     const stage = stageOf(item);
     const rejected = stage.key === "rejected";
     const pending = stage.key === "pending";
     // Text can change while the draft is in review or still waiting in the queue.
-    const editable = pending || stage.key === "scheduled";
+    const editable = pending || stage.key === "scheduled" || stage.key === "missed";
     const dirty = text.trim() !== saved;
     const tags = item.hashtags.map((hashtag) => `#${hashtag}`).join(" ");
 
@@ -91,15 +104,35 @@ export function DraftCard({ item, personaName, busy, onSave, onReject, onRestore
                     </div>
                 </div>
             )}
+            {stage.key === "missed" && (
+                <div className="space-y-2 rounded-lg border border-orange-200 bg-orange-50 p-3">
+                    <p className="flex items-start gap-2 text-[11px] leading-relaxed text-orange-800">
+                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        {item.publishError ?? "This post was too late to publish on its own, so it was held back."}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                        <Button size="sm" disabled={busy || dirty} onClick={onPublishNow} className={PRIMARY}><Send className="mr-1 h-3.5 w-3.5" />Publish now</Button>
+                        <Button size="sm" variant="outline" disabled={busy || dirty} onClick={onApprove} className={GHOST}><CalendarClock className="mr-1 h-3.5 w-3.5" />Reschedule</Button>
+                        <Button size="sm" variant="ghost" disabled={busy} onClick={onUnschedule} className="h-8 rounded-lg px-3 text-[10px] text-[#9c5d5d] hover:bg-[#fff3f3]"><CalendarX className="mr-1 h-3.5 w-3.5" />Unschedule</Button>
+                    </div>
+                </div>
+            )}
             {stage.key === "failed" && item.publishError && (
                 <p className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-[11px] leading-relaxed text-red-700">
                     <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />{item.publishError}
                 </p>
             )}
-            {stage.key === "published" && item.publishedUrl && (
-                <a href={item.publishedUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-[#357d72] hover:underline">
-                    View on LinkedIn<ExternalLink className="h-3 w-3" />
-                </a>
+            {stage.key === "published" && (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                    {item.publishedUrl && (
+                        <a href={item.publishedUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-[#357d72] hover:underline">
+                            View on LinkedIn<ExternalLink className="h-3 w-3" />
+                        </a>
+                    )}
+                    <button type="button" disabled={busy} onClick={() => setConfirmRepublish(true)} className="inline-flex items-center gap-1 text-[11px] font-medium text-[#8a6d2f] hover:underline disabled:opacity-50">
+                        <RefreshCw className="h-3 w-3" />Not on LinkedIn? Publish again
+                    </button>
+                </div>
             )}
 
             <div className="space-y-1.5">
@@ -170,6 +203,14 @@ export function DraftCard({ item, personaName, busy, onSave, onReject, onRestore
                 {rejected && <Button size="sm" variant="outline" disabled={busy} onClick={onRestore} className={GHOST}><RotateCcw className="mr-1 h-3.5 w-3.5" />Restore</Button>}
                 {pending && <Button size="sm" variant="ghost" disabled={busy} onClick={onReject} className="h-8 rounded-lg px-3 text-[10px] text-[#9c5d5d] hover:bg-[#fff3f3]"><X className="mr-1 h-3.5 w-3.5" />Reject</Button>}
             </div>
+            <SharedAlertDialog
+                open={confirmRepublish}
+                onOpenChange={setConfirmRepublish}
+                title="Publish this post again?"
+                description="Only do this if you checked your LinkedIn profile and the post isn't there. If it is still live, this will post a duplicate."
+                confirmText="Publish again"
+                onConfirm={onRepublish}
+            />
         </Card>
     );
 }

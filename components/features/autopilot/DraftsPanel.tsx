@@ -14,6 +14,7 @@ import { usePersonas } from "@/lib/query/hooks/use-autopilot";
 import {
     useApproveContent, useContentItems, useExportContentToDraft, useResolvePublishCheck, useSetContentStatus, useUnscheduleContent, useUpdateContentItem,
 } from "@/lib/query/hooks/use-research";
+import { usePublishPostById, useRepublishPost } from "@/lib/query/hooks/use-publishing";
 import type { ContentItem } from "@/types/research";
 import { QueryError } from "@/components/features/autopilot/QueryError";
 import { Routes } from "@/lib/routes";
@@ -36,6 +37,8 @@ export function DraftsPanel() {
     const approve = useApproveContent(user?.uid);
     const unschedule = useUnscheduleContent(user?.uid);
     const resolve = useResolvePublishCheck(user?.uid);
+    const publishNow = usePublishPostById(user?.uid);
+    const republish = useRepublishPost(user?.uid);
     const [approving, setApproving] = useState<ContentItem | null>(null);
     const [filter, setFilter] = useState<Filter>("pending");
     const [personaFilter, setPersonaFilter] = useState("all");
@@ -47,13 +50,13 @@ export function DraftsPanel() {
     const personaName = (id: string) => personas.find((persona) => persona.id === id)?.name;
     const postIdOf = (item: ContentItem) => item.scheduledPostId ?? `autopilot_${item.id}`;
     const busyId = (update.isPending && update.variables?.contentId) || (setStatus.isPending && setStatus.variables?.contentId) || (exportDraft.isPending && exportDraft.variables)
-        || (unschedule.isPending && unschedule.variables) || (resolve.isPending && items.find((item) => postIdOf(item) === resolve.variables?.postId)?.id) || "";
+        || (unschedule.isPending && unschedule.variables) || (publishNow.isPending && items.find((item) => postIdOf(item) === publishNow.variables)?.id) || (republish.isPending && items.find((item) => postIdOf(item) === republish.variables)?.id) || (resolve.isPending && items.find((item) => postIdOf(item) === resolve.variables?.postId)?.id) || "";
     const count = (bucket: Exclude<Filter, "all">) => items.filter((item) => bucketOf(item) === bucket).length;
     const pendingCount = count("pending");
     const scheduledCount = count("scheduled");
     const publishedCount = count("published");
     const rejectedCount = count("rejected");
-    const needsCheck = items.filter((item) => item.state === "RECONCILIATION_REQUIRED" || item.state === "FAILED").length;
+    const needsCheck = items.filter((item) => item.state === "RECONCILIATION_REQUIRED" || item.state === "FAILED" || item.state === "MISSED").length;
 
 
     return (
@@ -122,6 +125,8 @@ export function DraftsPanel() {
                                 onApprove={() => setApproving(item)}
                                 onUnschedule={() => unschedule.mutate(item.id)}
                                 onResolve={(outcome) => resolve.mutate({ postId: postIdOf(item), outcome })}
+                                onPublishNow={() => publishNow.mutate(postIdOf(item))}
+                                onRepublish={() => republish.mutate(postIdOf(item))}
                             />
                         ))}
                     </div>

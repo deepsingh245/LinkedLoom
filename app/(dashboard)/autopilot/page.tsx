@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CompanyContextCard } from "@/components/features/autopilot/CompanyContextCard";
+import { PublishingHealthBanner } from "@/components/features/publishing/PublishingHealthBanner";
 import { DraftsPanel } from "@/components/features/autopilot/DraftsPanel";
 import { RunsPanel } from "@/components/features/autopilot/RunsPanel";
 import { KillSwitch } from "@/components/features/autopilot/KillSwitch";
@@ -113,6 +114,8 @@ export default function AutopilotPage() {
                     <a href="#research" className="shrink-0 text-xs font-semibold text-[#9d4b4b] underline underline-offset-2">Review</a>
                 </Card>
             )}
+
+            <PublishingHealthBanner userId={user?.uid} />
 
             <KillSwitch enabled={enabled} pending={setEnabled.isPending} onChange={(value) => setEnabled.mutate(value)} />
 

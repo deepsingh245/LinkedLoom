@@ -9,10 +9,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Post } from "@/types";
 import { format } from "date-fns";
-import { AlertTriangle, Bot, Calendar, CalendarOff, Edit, ExternalLink, MoreVertical, Trash2 } from "lucide-react";
+import { AlertTriangle, Bot, Calendar, CalendarOff, Edit, ExternalLink, MoreVertical, RefreshCw, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Routes } from "@/lib/routes";
-import { isAutopilotPost, normalizeStatus, statusMeta, statusPillClass } from "@/lib/posts/status";
+import { isAutopilotPost, normalizeStatus, statusMetaFor, statusPillClass } from "@/lib/posts/status";
+import { usePublishPostById, useRepublishPost } from "@/lib/query/hooks/use-publishing";
 import { useResolvePublishCheck } from "@/lib/query/hooks/use-research";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -36,15 +37,20 @@ export function PostCard({ post }: PostCardProps) {
     const deleteMutation = useDeletePost(user?.uid);
     const unscheduleMutation = useUnschedulePost(user?.uid);
     const resolveMutation = useResolvePublishCheck(user?.uid);
+    const publishNowMutation = usePublishPostById(user?.uid);
+    const republishMutation = useRepublishPost(user?.uid);
+    const [showRepublish, setShowRepublish] = useState(false);
 
     const status = normalizeStatus(post.status);
-    const meta = statusMeta(post.status);
+    const meta = statusMetaFor(post);
     const autopilot = isAutopilotPost(post);
     const queued = status === "SCHEDULED" || status === "RETRY_PENDING";
     // Approved Autopilot posts are rescheduled from Autopilot → Drafts so the draft stays in sync.
-    const lockedByAutopilot = autopilot && queued;
+    const missed = status === "MISSED";
+    const lockedByAutopilot = autopilot && (queued || missed);
+    const canRepublish = status === "PUBLISHED" && (post.platforms?.includes("linkedin") || !!post.linkedinUrn);
     const busyPublishing = status === "PUBLISHING";
-    const canSchedule = !autopilot && ["DRAFT", "FAILED", "PARTIAL", "UNKNOWN"].includes(status);
+    const canSchedule = !autopilot && ["DRAFT", "FAILED", "PARTIAL", "MISSED", "UNKNOWN"].includes(status);
     const scheduledAt = post.scheduledFor ? new Date(post.scheduledFor) : null;
 
     const handleEdit = () => {
@@ -94,9 +100,15 @@ export function PostCard({ post }: PostCardProps) {
                             ) : canSchedule ? (
                                 <DropdownMenuItem onClick={() => setShowSchedule(true)}>
                                     <Calendar className="mr-2 h-4 w-4" />
-                                    {status === "FAILED" || status === "PARTIAL" ? "Schedule again" : "Schedule"}
+                                    {status === "FAILED" || status === "PARTIAL" ? "Schedule again" : missed ? "Reschedule" : "Schedule"}
                                 </DropdownMenuItem>
                             ) : null}
+                            {canRepublish && (
+                                <DropdownMenuItem onClick={() => setShowRepublish(true)}>
+                                    <RefreshCw className="mr-2 h-4 w-4" />
+                                    Not on LinkedIn? Publish again…
+                                </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                                 disabled={busyPublishing}
                                 onClick={() => setShowDelete(true)}
@@ -119,10 +131,20 @@ export function PostCard({ post }: PostCardProps) {
                     <p className="line-clamp-4 text-sm text-muted-foreground whitespace-pre-wrap">
                         {post.content || "No content..."}
                     </p>
-                    {post.error && ["FAILED", "PARTIAL", "RETRY_PENDING", "RECONCILIATION_REQUIRED"].includes(status) && (
+                    {post.error && ["FAILED", "PARTIAL", "RETRY_PENDING", "RECONCILIATION_REQUIRED", "MISSED"].includes(status) && (
                         <p className="flex items-start gap-1.5 rounded-lg border border-orange-200 bg-orange-50 p-2 text-[11px] leading-relaxed text-orange-800">
                             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />{post.error}
                         </p>
+                    )}
+                    {missed && (
+                        <div className="flex flex-wrap gap-2">
+                            <Button size="sm" disabled={publishNowMutation.isPending} onClick={() => publishNowMutation.mutate(String(post.id))} className="h-7 rounded-lg bg-[#357d72] px-2.5 text-[10px] text-white hover:bg-[#286c63]">Publish now</Button>
+                            {lockedByAutopilot ? (
+                                <Button asChild size="sm" variant="outline" className="h-7 rounded-lg border-[#9fbab3] px-2.5 text-[10px] text-[#286c63]"><Link href={Routes.AUTOPILOT_DRAFTS}>Reschedule</Link></Button>
+                            ) : (
+                                <Button size="sm" variant="outline" onClick={() => setShowSchedule(true)} className="h-7 rounded-lg border-[#9fbab3] px-2.5 text-[10px] text-[#286c63]">Reschedule</Button>
+                            )}
+                        </div>
                     )}
                     {status === "RECONCILIATION_REQUIRED" && (
                         <div className="flex flex-wrap gap-2">
@@ -138,8 +160,8 @@ export function PostCard({ post }: PostCardProps) {
                     )}
                 </div>
                 <div className="mt-auto flex items-center justify-between border-t border-[#edf0f2] bg-[#fafbfb] p-4 text-xs text-[#758087]">
-                    {queued ? (
-                        <div className="flex items-center text-primary">
+                    {queued || missed ? (
+                        <div className={`flex items-center ${missed || meta.label === "Overdue" ? "text-orange-700" : "text-primary"}`}>
                             <Calendar className="mr-1.5 h-3.5 w-3.5" />
                             {scheduledAt ? format(scheduledAt, "MMM d, yyyy \u2022 h:mm a") : 'Date not set'}
                         </div>
@@ -156,6 +178,15 @@ export function PostCard({ post }: PostCardProps) {
                 post={post}
                 open={showSchedule}
                 onOpenChange={setShowSchedule}
+            />
+
+            <SharedAlertDialog
+                open={showRepublish}
+                onOpenChange={setShowRepublish}
+                title="Publish this post again?"
+                description="Only do this if you checked your LinkedIn profile and the post isn't there. If it is still live, this will post a duplicate."
+                confirmText="Publish again"
+                onConfirm={() => republishMutation.mutate(String(post.id))}
             />
 
             <SharedAlertDialog

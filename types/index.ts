@@ -11,6 +11,7 @@ export type PostStatusValue =
   | "PUBLISHING"
   | "RETRY_PENDING"
   | "PUBLISHED"
+  | "MISSED"
   | "PARTIAL"
   | "FAILED"
   | "RECONCILIATION_REQUIRED";

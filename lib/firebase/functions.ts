@@ -29,5 +29,6 @@ export enum FirebaseFunctions {
     UPDATE_CONTEXT_DOC = "updateContextDoc",
     DELETE_CONTEXT_DOC = "deleteContextDoc",
     RESOLVE_PUBLISH_CHECK = "resolvePublishCheck",
+    REPUBLISH_POST = "republishPost",
 }
 

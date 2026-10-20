@@ -96,6 +96,7 @@ RESEARCH_RETRY_MIN_BACKOFF=15               # seconds before Cloud Tasks retries
 AUTOPILOT_AUTO_PUBLISH_MIN_QUALITY=70       # opt-in auto-publish only schedules drafts at or above this quality score
 PUBLISH_MAX_ATTEMPTS=3                      # automatic attempts for temporary publish errors before FAILED
 PUBLISH_LEASE_MS=300000                     # a post stuck in PUBLISHING longer than this goes to RECONCILIATION_REQUIRED
+PUBLISH_MAX_LATE_MS=10800000                # a scheduled post more than 3 h late is NOT auto-published: status MISSED, the user decides
 # LINKEDIN_API_BASE=http://127.0.0.1:9xxx   # TESTS ONLY: honoured only inside the emulator
 # LINKEDIN_OAUTH_BASE=http://127.0.0.1:9xxx # TESTS ONLY (token endpoint), emulator only
 ```
@@ -168,7 +169,7 @@ Whole "release" in one go:
 firebase deploy --only functions,firestore:rules,firestore:indexes,storage
 ```
 
-Functions in this repo: `generatePost`, `generateImage`, `enhanceImagePrompt` (ai.ts) · LinkedIn: `getLinkedInAuthUrl`, `exchangeLinkedInToken`, `publishToLinkedIn`, `getLinkedInAnalytics` · Reddit: `getRedditAuthUrl`, `exchangeRedditToken`, `publishToReddit`, `disconnectReddit`, `getRedditAnalytics` · `checkScheduledPosts` (every 10 min; claims each due post, publishes once per platform, retries only safe errors) · publishing callables `publishNow`, `resolvePublishCheck` · `generateResizedImages` (Storage trigger).
+Functions in this repo: `generatePost`, `generateImage`, `enhanceImagePrompt` (ai.ts) · LinkedIn: `getLinkedInAuthUrl`, `exchangeLinkedInToken`, `publishToLinkedIn`, `getLinkedInAnalytics` · Reddit: `getRedditAuthUrl`, `exchangeRedditToken`, `publishToReddit`, `disconnectReddit`, `getRedditAnalytics` · `checkScheduledPosts` (every 10 min; claims each due post, publishes once per platform, retries only safe errors) · publishing callables `publishNow`, `resolvePublishCheck`, `republishPost` · `generateResizedImages` (Storage trigger).
 
 AI Autopilot: personas `createPersona`, `updatePersona`, `setPersonaStatus`, `deletePersona`, `setAutopilotEnabled` · AI `addAIConnection`, `testAIConnection`, `revokeAIConnection`, `testPersonaGeneration` · credits `adminGrantCredits`, `sweepCreditReservations` (every 15 min) · research `runResearch` (queues a run and returns its id), `retryRun`, `cancelRun`, `updateContentItem`, `setContentStatus`, `exportContentToDraft`, company context `addContextDoc`, `updateContextDoc`, `deleteContextDoc`, approval `previewApproval`, `approveContent`, `unscheduleContent`, `setPersonaApprovalMode` (opt-in auto-publish), task worker `researchStep` (Cloud Tasks, one step per task), schedulers `dispatchResearch` (every 10 min), `reapResearchRuns` (every 15 min), `reconcileResearchSchedule` (daily), admin hooks `adminDispatchResearch` and `adminReapResearchRuns` (need the `admin: true` claim).
 
@@ -182,8 +183,9 @@ Requirements: project on the **Blaze** plan; Node 22; Cloud Scheduler + Pub/Sub 
 4. Indexes: `firebase deploy --only firestore:indexes` adds collection-group overrides for `personas.research.autoRun` and `workflowRuns.status` (used by the reconcile job and the reaper). They take a few minutes to build.
 5. Automatic research is **opt-in per persona** and runs only for `active` personas with a feed or web search; the kill switch ("Stop all") stops everything. Check logs with `firebase functions:log --only dispatchResearch,researchStep`.
 6. Ops: with the admin claim you can call `adminDispatchResearch` (`{ reconcile: true }` rebuilds the schedule index) and `adminReapResearchRuns` by hand.
-7. A5 publishing: deploy `firestore:rules` (clients can no longer set publish statuses/fields) and `firestore:indexes` (`posts (status, nextAttemptAt)` for retries) **before** the functions. Auto-publish is opt-in per persona (confirmation dialog) and off by default.
-8. Privacy: `/privacy` and `/terms` explain opt-in automatic research, approval/auto-publish, the Stop all switch, and temporary fetched article text (deleted when a run ends; unfinished-run artifacts marked to expire after 24 hours).
+7. Scheduler health: `checkScheduledPosts` writes `system/publisher.lastRunAt` after every successful run; the app warns users with overdue posts when it is older than 30 min. If those warnings appear in production, check Cloud Scheduler for the `checkScheduledPosts` job and `firebase functions:log --only checkScheduledPosts`. (The Firestore emulator does not run scheduled functions by itself, so locally the warning is expected.)
+8. A5 publishing: deploy `firestore:rules` (clients can no longer set publish statuses/fields) and `firestore:indexes` (`posts (status, nextAttemptAt)` for retries) **before** the functions. Auto-publish is opt-in per persona (confirmation dialog) and off by default.
+9. Privacy: `/privacy` and `/terms` explain opt-in automatic research, approval/auto-publish, the Stop all switch, and temporary fetched article text (deleted when a run ends; unfinished-run artifacts marked to expire after 24 hours).
 
 ### 7.1 One-time setup for AI Autopilot (BYOK keys in Secret Manager)
 

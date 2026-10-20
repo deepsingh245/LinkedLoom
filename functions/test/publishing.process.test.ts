@@ -8,7 +8,7 @@ import { getFirestore, Timestamp } from "firebase-admin/firestore";
 
 process.env.FUNCTIONS_EMULATOR = "true";
 
-import { MAX_PUBLISH_ATTEMPTS, publishPost, recoverExpiredLeases, runPublishSweep, type PublishDeps } from "../src/publishing/publish-post";
+import { MAX_PUBLISH_ATTEMPTS, publishPost, recoverExpiredLeases, republishPostCore, runPublishSweep, type PublishDeps } from "../src/publishing/publish-post";
 import { PublishError, type PublishPlatform, type SocialPublisher } from "../src/publishing/types";
 
 const db = () => getFirestore();
@@ -124,7 +124,7 @@ describe("publishPost", () => {
         const deps: PublishDeps = { publishers: { linkedin: li.publisher }, loadConnection: connected("linkedin"), now: () => new Date(clock) };
         for (let i = 1; i < MAX_PUBLISH_ATTEMPTS; i++) {
             expect((await publishPost(ref.id, deps)).status).toBe("RETRY_PENDING");
-            clock += 2 * 3_600_000;
+            clock += 20 * 60_000; // each retry becomes due (5 and 15 min back-off), staying well inside the 3 h lateness limit
         }
         expect((await publishPost(ref.id, deps)).status).toBe("FAILED");
         expect(li.calls).toHaveLength(MAX_PUBLISH_ATTEMPTS);
@@ -205,5 +205,118 @@ describe("sweep and recovery", () => {
         await runPublishSweep({ publishers: { linkedin: li.publisher }, loadConnection: connected("linkedin") });
         expect((await read(a)).status).toBe("PUBLISHED");
         expect((await read(b)).status).toBe("PUBLISHED");
+    });
+});
+
+describe("late posts are held for the user", () => {
+    const HOUR = 3_600_000;
+
+    it("a post far past its time becomes MISSED and is never auto-published", async () => {
+        const { ref } = await seedPost({ scheduledFor: Timestamp.fromMillis(Date.now() - 5 * HOUR) });
+        const li = fake("linkedin", "ok");
+        const out = await publishPost(ref.id, { publishers: { linkedin: li.publisher }, loadConnection: connected("linkedin") });
+        expect(out.status).toBe("MISSED");
+        expect(li.calls).toHaveLength(0);
+        const post = await read(ref);
+        expect(post.status).toBe("MISSED");
+        expect(post.error).toMatch(/held back/);
+        expect(post.publishLease).toBeUndefined();
+
+        // The sweep leaves it alone from now on.
+        expect((await publishPost(ref.id, { publishers: { linkedin: li.publisher }, loadConnection: connected("linkedin") })).status).toBe("skipped");
+        expect(li.calls).toHaveLength(0);
+    });
+
+    it("a slightly late post (inside the limit) is still published", async () => {
+        const { ref } = await seedPost({ scheduledFor: Timestamp.fromMillis(Date.now() - 1 * HOUR) });
+        const li = fake("linkedin", "ok");
+        expect((await publishPost(ref.id, { publishers: { linkedin: li.publisher }, loadConnection: connected("linkedin") })).status).toBe("PUBLISHED");
+    });
+
+    it("the limit is adjustable, and a user-forced publish ignores it", async () => {
+        const { ref } = await seedPost({ scheduledFor: Timestamp.fromMillis(Date.now() - 20 * 60_000) });
+        const li = fake("linkedin", "ok");
+        const deps: PublishDeps = { publishers: { linkedin: li.publisher }, loadConnection: connected("linkedin"), maxLateMs: 10 * 60_000 };
+        expect((await publishPost(ref.id, deps)).status).toBe("MISSED");
+
+        // "Publish now" (what the user clicks) re-queues it and forces the publish.
+        await ref.update({ status: "SCHEDULED", scheduledFor: Timestamp.now() });
+        expect((await publishPost(ref.id, deps, { force: true })).status).toBe("PUBLISHED");
+    });
+
+    it("a retry that only becomes due after the limit is held too", async () => {
+        const { ref } = await seedPost({
+            status: "RETRY_PENDING", attempts: 1,
+            scheduledFor: Timestamp.fromMillis(Date.now() - 4 * HOUR), nextAttemptAt: Timestamp.fromMillis(Date.now() - 1000),
+        });
+        const li = fake("linkedin", "ok");
+        expect((await publishPost(ref.id, { publishers: { linkedin: li.publisher }, loadConnection: connected("linkedin") })).status).toBe("MISSED");
+        expect(li.calls).toHaveLength(0);
+    });
+
+    it("mirrors MISSED onto the Autopilot draft", async () => {
+        const uid = `pub-${randomUUID().slice(0, 10)}`;
+        const content = db().doc(`workspaces/${uid}/contentItems/c1`);
+        await content.set({ approvalStatus: "approved", state: "SCHEDULED" });
+        const { ref } = await seedPost({ user_id: uid, workspaceId: uid, source: "autopilot", contentItemId: "c1", scheduledFor: Timestamp.fromMillis(Date.now() - 6 * HOUR) });
+        await publishPost(ref.id, { publishers: { linkedin: fake("linkedin", "ok").publisher }, loadConnection: connected("linkedin") });
+        expect((await content.get()).data()).toMatchObject({ state: "MISSED" });
+        expect((await content.get()).data()!.publishError).toMatch(/held back/);
+    });
+
+    it("the sweep writes a heartbeat the app can check", async () => {
+        await db().doc("system/publisher").delete();
+        const before = Date.now();
+        const result = await runPublishSweep({ publishers: { linkedin: fake("linkedin", "ok").publisher }, loadConnection: connected("linkedin") });
+        const beat = (await db().doc("system/publisher").get()).data()!;
+        expect(beat.lastRunAt.toMillis()).toBeGreaterThanOrEqual(before - 1000);
+        expect(beat.due).toBe(result.due);
+        expect(beat.byStatus).toBeDefined();
+    });
+});
+
+describe("republish a post that isn't on the network", () => {
+    it("only for the owner and only for PUBLISHED posts", async () => {
+        const { uid, ref } = await seedPost({ status: "SCHEDULED" });
+        const li = fake("linkedin", "ok");
+        const deps: PublishDeps = { publishers: { linkedin: li.publisher }, loadConnection: connected("linkedin") };
+        await expect(republishPostCore(uid, ref.id, "linkedin", deps)).rejects.toThrow("not-published");
+        await expect(republishPostCore("someone-else", ref.id, "linkedin", deps)).rejects.toThrow("not-found");
+        expect(li.calls).toHaveLength(0);
+    });
+
+    it("publishes again, keeps what the user reported, and ends PUBLISHED with the new post", async () => {
+        const { uid, ref } = await seedPost({
+            status: "PUBLISHED", linkedinUrn: "urn:li:share:old", publishedUrl: "https://example.test/old",
+            results: { linkedin: { status: "published", id: "urn:li:share:old", url: "https://example.test/old" } },
+        });
+        const li = fake("linkedin", "ok");
+        const out = await republishPostCore(uid, ref.id, "linkedin", { publishers: { linkedin: li.publisher }, loadConnection: connected("linkedin") });
+        expect(out.status).toBe("PUBLISHED");
+        expect(li.calls).toHaveLength(1);
+        const post = await read(ref);
+        expect(post).toMatchObject({ status: "PUBLISHED", linkedinUrn: "urn:li:share:1", publishedUrl: "https://example.test/linkedin/1" });
+        expect(post.republishedFrom.linkedin).toMatchObject({ id: "urn:li:share:old", url: "https://example.test/old" });
+    });
+
+    it("if the second attempt fails it says so instead of pretending", async () => {
+        const { uid, ref } = await seedPost({ status: "PUBLISHED", results: { linkedin: { status: "published", id: "urn:li:share:old" } } });
+        const li = fake("linkedin", "auth");
+        const out = await republishPostCore(uid, ref.id, "linkedin", { publishers: { linkedin: li.publisher }, loadConnection: connected("linkedin") });
+        expect(out.status).toBe("FAILED");
+        expect((await read(ref)).status).toBe("FAILED");
+    });
+
+    it("leaves other networks' results alone", async () => {
+        const { uid, ref } = await seedPost({
+            status: "PUBLISHED", platforms: ["linkedin", "reddit"],
+            results: { linkedin: { status: "published", id: "li-old" }, reddit: { status: "published", id: "rd-1" } },
+        });
+        const li = fake("linkedin", "ok");
+        const rd = fake("reddit", "ok");
+        await republishPostCore(uid, ref.id, "linkedin", { publishers: { linkedin: li.publisher, reddit: rd.publisher }, loadConnection: connected("linkedin", "reddit") });
+        expect(li.calls).toHaveLength(1);
+        expect(rd.calls).toHaveLength(0);
+        expect((await read(ref)).results.reddit.id).toBe("rd-1");
     });
 });

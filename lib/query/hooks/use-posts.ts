@@ -19,7 +19,13 @@ export function usePosts(userId: string | undefined) {
 }
 
 /**
- * Derived query: returns only SCHEDULED posts.
+ * Derived query: posts waiting to be published. Includes overdue ones and posts held back as MISSED, so a post the
+ * scheduler didn't publish stays visible instead of vanishing once its time has passed.
+ */
+const QUEUED = ['SCHEDULED', 'RETRY_PENDING', 'MISSED'];
+
+/**
+ * Derived query: returns the queued posts (see above).
  * Uses `select` to filter from the same cache as usePosts — zero additional Firestore reads.
  */
 export function useScheduledPosts(userId: string | undefined) {
@@ -28,9 +34,7 @@ export function useScheduledPosts(userId: string | undefined) {
     queryFn: () => api.firebaseService.getAllPosts(userId!),
     enabled: !!userId,
     select: (posts: Post[]) =>
-      posts.filter(
-        (p) => p.status?.toUpperCase() === 'SCHEDULED' && p.scheduledFor && new Date(p.scheduledFor) > new Date()
-      ),
+      posts.filter((p) => QUEUED.includes(String(p.status).toUpperCase()) && p.scheduledFor),
   });
 }
 

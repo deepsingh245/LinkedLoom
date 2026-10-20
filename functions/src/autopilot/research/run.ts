@@ -111,7 +111,7 @@ export const updateContentItem = onCall(async (request) => {
             const postRef = getFirestore().collection("posts").doc(String(item.scheduledPostId ?? `autopilot_${contentId}`));
             const post = await tx.get(postRef);
             const status = String(post.data()?.status ?? "").toUpperCase();
-            if (post.exists && !["SCHEDULED", "RETRY_PENDING", "DRAFT"].includes(status)) {
+            if (post.exists && !["SCHEDULED", "RETRY_PENDING", "MISSED", "DRAFT"].includes(status)) {
                 throw new HttpsError("failed-precondition", "This post is already being published, so it can't be edited here.");
             }
             if (post.exists) {

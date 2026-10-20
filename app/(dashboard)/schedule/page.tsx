@@ -3,7 +3,8 @@
 import { Suspense, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { AlertTriangle, Bot, Calendar as CalendarIcon, Filter, List, Grid, Search, Plus, LayoutGrid, Clock, FileText, Type } from "lucide-react"
-import { isAutopilotPost, normalizeStatus, statusMeta, statusPillClass } from "@/lib/posts/status"
+import { isAutopilotPost, normalizeStatus, statusMeta, statusMetaFor, statusPillClass } from "@/lib/posts/status"
+import { PublishingHealthBanner } from "@/components/features/publishing/PublishingHealthBanner"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -49,7 +50,7 @@ function SchedulePageContent() {
     const { data: draftPosts = [] } = useDraftPosts(user?.uid);
     const loading = postsLoading || scheduledLoading;
     // Posts the publisher couldn't finish: failed, partly published, retrying, or waiting for the user's check.
-    const attention = posts.filter((post) => ["FAILED", "PARTIAL", "RETRY_PENDING", "RECONCILIATION_REQUIRED"].includes(normalizeStatus(post.status)));
+    const attention = posts.filter((post) => ["FAILED", "PARTIAL", "RETRY_PENDING", "RECONCILIATION_REQUIRED", "MISSED"].includes(normalizeStatus(post.status)));
     const [searchQuery, setSearchQuery] = useState("")
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
     const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest")
@@ -104,6 +105,8 @@ function SchedulePageContent() {
                     </Button>
                 </Link>
             </div>
+
+            <PublishingHealthBanner userId={user?.uid} />
 
             <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-white p-3.5 rounded-xl border border-[#e2e6ea] shadow-none">
                 <div className="relative w-full sm:w-96 group">
@@ -231,7 +234,7 @@ function PostDisplay({ posts, searchQuery, viewMode, label = "No posts found" }:
                                     <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                                         <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {post.date ? new Date(post.date).toLocaleDateString() : 'No date'}</span>
                                         <span>•</span>
-                                        <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${statusPillClass(statusMeta(post.status).tone)}`}>{statusMeta(post.status).label}</span>
+                                        <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${statusPillClass(statusMetaFor(post).tone)}`}>{statusMetaFor(post).label}</span>
                                         {isAutopilotPost(post) && <span className="inline-flex items-center gap-1"><Bot className="h-3 w-3" />Autopilot</span>}
                                     </div>
                                 </div>

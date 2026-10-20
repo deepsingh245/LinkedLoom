@@ -16,6 +16,9 @@ export const queryKeys = {
   analytics: {
     dashboard: (userId: string) => ['analytics', 'dashboard', userId] as const,
   },
+  publishing: {
+    heartbeat: () => ['publishing', 'heartbeat'] as const,
+  },
   integrations: {
     linkedinAuth: () => ['integrations', 'linkedin', 'authUrl'] as const,
     redditAuth: () => ['integrations', 'reddit', 'authUrl'] as const,

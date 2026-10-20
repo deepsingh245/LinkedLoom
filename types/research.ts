@@ -72,7 +72,7 @@ export interface ContentClaim {
 }
 
 export type ContentApprovalStatus = "pending" | "rejected" | "approved";
-export type ContentState = "PENDING_APPROVAL" | "REJECTED" | "SCHEDULED" | "PUBLISHING" | "PUBLISHED" | "FAILED" | "RECONCILIATION_REQUIRED";
+export type ContentState = "PENDING_APPROVAL" | "REJECTED" | "SCHEDULED" | "PUBLISHING" | "PUBLISHED" | "MISSED" | "FAILED" | "RECONCILIATION_REQUIRED";
 
 export interface ContentItem {
   id: string;

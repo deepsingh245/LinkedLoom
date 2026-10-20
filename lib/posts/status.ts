@@ -6,7 +6,7 @@ import type { Post, PostStatusValue } from "@/types";
  */
 export function normalizeStatus(status: Post["status"] | undefined | null): PostStatusValue | "UNKNOWN" {
     const value = String(status ?? "").toUpperCase();
-    const known: PostStatusValue[] = ["DRAFT", "SCHEDULED", "PUBLISHING", "RETRY_PENDING", "PUBLISHED", "PARTIAL", "FAILED", "RECONCILIATION_REQUIRED"];
+    const known: PostStatusValue[] = ["DRAFT", "SCHEDULED", "PUBLISHING", "RETRY_PENDING", "PUBLISHED", "MISSED", "PARTIAL", "FAILED", "RECONCILIATION_REQUIRED"];
     return (known as string[]).includes(value) ? (value as PostStatusValue) : "UNKNOWN";
 }
 
@@ -18,6 +18,7 @@ const META: Record<PostStatusValue | "UNKNOWN", { label: string; tone: StatusTon
     PUBLISHING: { label: "Publishing…", tone: "scheduled" },
     RETRY_PENDING: { label: "Retrying soon", tone: "warning" },
     PUBLISHED: { label: "Published", tone: "published" },
+    MISSED: { label: "Missed · your call", tone: "warning" },
     PARTIAL: { label: "Partly published", tone: "warning" },
     FAILED: { label: "Failed", tone: "danger" },
     RECONCILIATION_REQUIRED: { label: "Needs your check", tone: "warning" },
@@ -25,6 +26,36 @@ const META: Record<PostStatusValue | "UNKNOWN", { label: string; tone: StatusTon
 };
 
 export const statusMeta = (status: Post["status"] | undefined | null) => META[normalizeStatus(status)];
+
+/** A queued post this many minutes past its time is shown as "Overdue" (the scheduler runs every 10 minutes). */
+export const OVERDUE_AFTER_MIN = 30;
+
+/** Date | ISO string | ms | Firestore Timestamp → ms. */
+export function toMs(value: unknown): number | undefined {
+    if (value === null || value === undefined || value === "") return undefined;
+    const v = value as { toDate?: () => Date; seconds?: number };
+    if (typeof v.toDate === "function") return v.toDate().getTime();
+    if (typeof v.seconds === "number") return v.seconds * 1000;
+    const ms = value instanceof Date ? value.getTime() : typeof value === "number" ? value : Date.parse(String(value));
+    return Number.isFinite(ms) ? ms : undefined;
+}
+
+/** When the scheduler should have published this post (queued posts only). */
+export function dueAtMs(post: Pick<Post, "status" | "scheduledFor" | "nextAttemptAt">): number | undefined {
+    const status = normalizeStatus(post.status);
+    if (status === "SCHEDULED") return toMs(post.scheduledFor);
+    if (status === "RETRY_PENDING") return toMs(post.nextAttemptAt) ?? toMs(post.scheduledFor);
+    return undefined;
+}
+
+export function isOverdue(post: Pick<Post, "status" | "scheduledFor" | "nextAttemptAt">, now = Date.now()): boolean {
+    const due = dueAtMs(post);
+    return due !== undefined && now - due > OVERDUE_AFTER_MIN * 60_000;
+}
+
+/** Status pill for a post, including "Overdue" for queued posts the scheduler hasn't published. */
+export const statusMetaFor = (post: Pick<Post, "status" | "scheduledFor" | "nextAttemptAt">, now = Date.now()) =>
+    isOverdue(post, now) ? { label: "Overdue", tone: "warning" as StatusTone } : statusMeta(post.status);
 
 /** Tailwind classes for a small status pill. */
 export const statusPillClass = (tone: StatusTone) =>

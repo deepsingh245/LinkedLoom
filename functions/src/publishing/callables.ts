@@ -3,7 +3,7 @@ import { FieldValue, getFirestore, Timestamp } from "firebase-admin/firestore";
 import { z } from "zod";
 import { parse, requireUid } from "../shared/callable";
 import { writeAudit } from "../autopilot/workspace";
-import { mirrorToContent, normalizeStatus, postsRef, publishPost } from "./publish-post";
+import { mirrorToContent, normalizeStatus, postsRef, publishPost, republishPostCore } from "./publish-post";
 import { POST_STATUS, PUBLISH_PLATFORMS } from "./types";
 
 const idSchema = z.string().trim().min(1).max(128).regex(/^[A-Za-z0-9_-]+$/);
@@ -27,6 +27,11 @@ const publishNowSchema = z.object({
     subreddit: z.string().trim().max(100).optional(),
 }).strict().refine((v) => v.postId || v.content, { message: "Write something to publish." });
 
+const republishSchema = z.object({
+    postId: idSchema,
+    platform: z.enum(PUBLISH_PLATFORMS).default("linkedin"),
+}).strict();
+
 const resolveSchema = z.object({
     postId: idSchema,
     outcome: z.enum(["published", "retry", "failed"]),
@@ -34,7 +39,7 @@ const resolveSchema = z.object({
 }).strict();
 
 /** Statuses from which a user may publish a post right away. */
-const PUBLISHABLE_NOW: string[] = [POST_STATUS.DRAFT, POST_STATUS.SCHEDULED, POST_STATUS.RETRY_PENDING, POST_STATUS.FAILED, POST_STATUS.PARTIAL];
+const PUBLISHABLE_NOW: string[] = [POST_STATUS.DRAFT, POST_STATUS.SCHEDULED, POST_STATUS.RETRY_PENDING, POST_STATUS.MISSED, POST_STATUS.FAILED, POST_STATUS.PARTIAL];
 
 /**
  * Publish now, through the same claim/lease path as the scheduler (no double posting, results saved
@@ -152,4 +157,26 @@ export const resolvePublishCheck = onCall({ timeoutSeconds: 120 }, async (reques
     const status = outcome === "published" ? POST_STATUS.PUBLISHED : POST_STATUS.FAILED;
     await mirrorToContent(post, status, outcome === "published" ? { publishedUrl: postUrl } : { error: "You marked this post as not published." });
     return { postId, status };
+});
+
+/**
+ * "It's not on LinkedIn": a post we marked PUBLISHED is missing on the network. Publishes it again (only that
+ * platform). The app asks the user to check first, because this posts a duplicate if it is still live.
+ */
+export const republishPost = onCall({ timeoutSeconds: 120 }, async (request) => {
+    const uid = requireUid(request);
+    const { postId, platform } = parse(republishSchema, request.data);
+    let outcome;
+    try {
+        outcome = await republishPostCore(uid, postId, platform);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "";
+        if (message === "not-found") throw new HttpsError("not-found", "Post not found.");
+        if (message === "not-published") throw new HttpsError("failed-precondition", "Only published posts can be published again.");
+        if (message === "wrong-platform") throw new HttpsError("failed-precondition", "This post wasn't published to that network.");
+        throw error;
+    }
+    if (outcome.status === "skipped") throw new HttpsError("aborted", "This post is already being published. Refresh in a moment.");
+    await writeAudit(uid, uid, "post.republish", postId, { platform, status: outcome.status }).catch(() => undefined);
+    return outcome;
 });

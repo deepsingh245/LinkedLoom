@@ -188,5 +188,22 @@ describe("existing rules still behave", () => {
         await assertSucceeds(updateDoc(doc(db, "posts/auto"), { content: "edited" }));
         await assertFails(updateDoc(doc(db, "posts/auto"), { status: "DRAFT" }));
         await assertFails(updateDoc(doc(db, "posts/auto"), { scheduledFor: new Date() }));
+        await env.withSecurityRulesDisabled(async (ctx) => {
+            await setDoc(doc(ctx.firestore(), "posts/missed"), { user_id: ALICE, content: "x", status: "MISSED", source: "autopilot", contentItemId: "c2" });
+        });
+        // A held-back Autopilot post is rescheduled through the callables too; republish markers are server-only.
+        await assertFails(updateDoc(doc(db, "posts/missed"), { status: "SCHEDULED" }));
+        await assertFails(updateDoc(doc(db, "posts/d1"), { republishedFrom: { linkedin: { id: "x" } } }));
+    });
+
+    it("publisher heartbeat: signed-in users read it, nobody writes it", async () => {
+        await env.withSecurityRulesDisabled(async (ctx) => {
+            await setDoc(doc(ctx.firestore(), "system/publisher"), { lastRunAt: new Date() });
+            await setDoc(doc(ctx.firestore(), "system/other"), { secret: true });
+        });
+        await assertSucceeds(getDoc(doc(asAlice(), "system/publisher")));
+        await assertFails(getDoc(doc(asAnon(), "system/publisher")));
+        await assertFails(getDoc(doc(asAlice(), "system/other")));
+        await assertFails(setDoc(doc(asAlice(), "system/publisher"), { lastRunAt: new Date() }));
     });
 });

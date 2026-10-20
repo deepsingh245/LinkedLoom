@@ -22,7 +22,7 @@ const MAX_AHEAD_MS = 60 * 86_400_000;
 /** Posts that hold a slot (already scheduled, being published or out). */
 const SLOT_HOLDING: string[] = [POST_STATUS.SCHEDULED, POST_STATUS.RETRY_PENDING, POST_STATUS.PUBLISHING, POST_STATUS.PUBLISHED];
 /** Post statuses that can still be (re)scheduled or unscheduled. */
-const RESCHEDULABLE: string[] = [POST_STATUS.DRAFT, POST_STATUS.SCHEDULED, POST_STATUS.RETRY_PENDING, POST_STATUS.FAILED];
+const RESCHEDULABLE: string[] = [POST_STATUS.DRAFT, POST_STATUS.SCHEDULED, POST_STATUS.RETRY_PENDING, POST_STATUS.MISSED, POST_STATUS.FAILED];
 
 export const autopilotPostId = (contentId: string) => `autopilot_${contentId}`;
 const contentRef = (workspaceId: string, contentId: string) => workspaceRef(workspaceId).collection("contentItems").doc(contentId);
@@ -238,7 +238,7 @@ export const unscheduleContent = onCall(async (request) => {
             const post = pSnap.data()!;
             if (post.user_id !== uid) throw new HttpsError("permission-denied", "Post belongs to someone else.");
             const status = normalizeStatus(post.status);
-            if (![POST_STATUS.SCHEDULED, POST_STATUS.RETRY_PENDING, POST_STATUS.FAILED, POST_STATUS.DRAFT].includes(status as never)) {
+            if (![POST_STATUS.SCHEDULED, POST_STATUS.RETRY_PENDING, POST_STATUS.MISSED, POST_STATUS.FAILED, POST_STATUS.DRAFT].includes(status as never)) {
                 throw new HttpsError("failed-precondition", status === POST_STATUS.PUBLISHED ? "This post is already published." : "This post is being published right now.");
             }
             tx.update(pRef, { status: POST_STATUS.DRAFT, scheduledFor: null, nextAttemptAt: FieldValue.delete(), error: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() });

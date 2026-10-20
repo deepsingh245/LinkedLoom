@@ -22,7 +22,7 @@ service cloud.firestore {
     function serverPostFields() {
       return ['results', 'publishLease', 'attempts', 'lastAttemptAt', 'publishedAt', 'nextAttemptAt',
               'publishedUrl', 'redditUrl', 'error', 'source', 'contentItemId', 'personaId', 'workspaceId',
-              'approvedBy', 'resolvedBy'];
+              'approvedBy', 'resolvedBy', 'republishedFrom'];
     }
     function clientPostStatus(data) {
       return !('status' in data) || data.status in ['DRAFT', 'SCHEDULED', 'draft', 'scheduled'];
@@ -47,7 +47,7 @@ service cloud.firestore {
         // An approved Autopilot post in the queue is (re)scheduled through the Autopilot callables,
         // so its draft stays in sync.
         && !(resource.data.get('source', '') == 'autopilot'
-             && resource.data.get('status', '').upper() in ['SCHEDULED', 'RETRY_PENDING']
+             && resource.data.get('status', '').upper() in ['SCHEDULED', 'RETRY_PENDING', 'MISSED']
              && postChanges().hasAny(['status', 'scheduledFor', 'platforms']));
       allow delete: if request.auth != null
         && resource.data.user_id == request.auth.uid
@@ -134,6 +134,13 @@ service cloud.firestore {
         allow read: if isWorkspaceMember(workspaceId);
         allow write: if false;
       }
+    }
+
+    // Publisher heartbeat (last scheduler run). Written by the scheduler only; signed-in users read it so the app can warn
+    // when scheduled posts are overdue and the scheduler seems to be down. Contains no user data.
+    match /system/{docId} {
+      allow read: if request.auth != null && docId == 'publisher';
+      allow write: if false;
     }
 
     // Everything else (oauthStates, linkedinIdentities, analytics, ...) is backend-only.

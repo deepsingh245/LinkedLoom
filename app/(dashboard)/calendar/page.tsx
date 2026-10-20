@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { ArrowRight, Bot, CalendarDays, Clock3, FileText, Pencil, Plus } from "lucide-react";
-import { isAutopilotPost, normalizeStatus, statusMeta, statusPillClass } from "@/lib/posts/status";
+import { isAutopilotPost, normalizeStatus, statusMetaFor, statusPillClass } from "@/lib/posts/status";
+import { PublishingHealthBanner } from "@/components/features/publishing/PublishingHealthBanner";
 import { Post } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,8 @@ export default function CalendarPage() {
                     <Link href={Routes.CREATE_POST}><Plus className="mr-2 h-4 w-4" />Create post</Link>
                 </Button>
             </section>
+
+            <PublishingHealthBanner userId={user?.uid} />
 
             <section aria-label="Schedule summary" className="grid gap-3 sm:grid-cols-2">
                 <Card className="flex items-center gap-3 rounded-xl border border-[#e2e6ea] bg-white p-4 shadow-none">
@@ -124,7 +127,7 @@ export default function CalendarPage() {
                                                 </span>
                                             </span>
                                             <span className="flex shrink-0 flex-col items-end gap-2">
-                                                <span className={`rounded-md border px-2 py-0.5 text-[9px] font-semibold ${statusPillClass(statusMeta(post.status).tone)}`}>{statusMeta(post.status).label}</span>
+                                                <span className={`rounded-md border px-2 py-0.5 text-[9px] font-semibold ${statusPillClass(statusMetaFor(post).tone)}`}>{statusMetaFor(post).label}</span>
                                                 {canEdit(post) && (
                                                     <Button type="button" size="sm" variant="outline" onClick={() => { setSelectedPost(post); setShowEdit(true); }} className="h-7 rounded-lg border-[#b9cdc7] bg-white px-2.5 text-[10px] font-medium text-[#286c63] hover:bg-[#e8f3f0]">
                                                         <Pencil className="mr-1 h-3 w-3" />Edit

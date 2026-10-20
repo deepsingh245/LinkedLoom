@@ -8,6 +8,7 @@ export type PublishPlatform = (typeof PUBLISH_PLATFORMS)[number];
  * Clients may only write DRAFT and SCHEDULED; everything else is set by Cloud Functions.
  *
  *   DRAFT → SCHEDULED → PUBLISHING → PUBLISHED
+ *                           ├→ MISSED                          (more than PUBLISH_MAX_LATE_MS late: held for the user)
  *                           ├→ RETRY_PENDING → PUBLISHING …  (temporary error, before anything was sent)
  *                           ├→ PARTIAL / FAILED               (definite error)
  *                           └→ RECONCILIATION_REQUIRED        (we can't tell whether it went out – the user decides)
@@ -18,6 +19,8 @@ export const POST_STATUS = {
     PUBLISHING: "PUBLISHING",
     RETRY_PENDING: "RETRY_PENDING",
     PUBLISHED: "PUBLISHED",
+    /** Too late to publish on its own (the scheduler was down): the user decides – publish now or reschedule. */
+    MISSED: "MISSED",
     PARTIAL: "PARTIAL",
     FAILED: "FAILED",
     RECONCILIATION_REQUIRED: "RECONCILIATION_REQUIRED",

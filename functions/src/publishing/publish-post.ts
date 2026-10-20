@@ -20,8 +20,16 @@ export const PUBLISH_LEASE_MS = envNum("PUBLISH_LEASE_MS", 5 * 60_000);
 
 const DUE_STATUSES: string[] = [POST_STATUS.SCHEDULED, POST_STATUS.RETRY_PENDING];
 
+/**
+ * A post more than this late is not published automatically (a 9 am post must not appear at 11 pm because the
+ * scheduler was down). It becomes MISSED and the user chooses: publish now or reschedule. Default 3 hours.
+ */
+export const maxLateMs = () => envNum("PUBLISH_MAX_LATE_MS", 3 * 3_600_000);
+
 export interface PublishDeps {
     publishers?: Partial<Record<PublishPlatform, SocialPublisher>>;
+    /** Override the lateness limit (tests). */
+    maxLateMs?: number;
     now?: () => Date;
     /** Social connection lookup; defaults to users/{uid}/connections/{platform}. */
     loadConnection?: (uid: string, platform: PublishPlatform) => Promise<DocumentData | null>;
@@ -73,7 +81,9 @@ export async function targetPlatforms(uid: string, post: DocumentData, load: Non
  * Only one worker can win, so overlapping scheduler runs or a "publish now" click can't post twice.
  * `force` skips the due-time check (publish now).
  */
-export async function claimPost(ref: DocumentReference, now: Date, force = false): Promise<{ post: DocumentData; leaseId: string } | null> {
+export type Claim = { post: DocumentData; leaseId: string; missed?: undefined } | { post: DocumentData; missed: true; error: string; leaseId?: undefined };
+
+export async function claimPost(ref: DocumentReference, now: Date, force = false, lateLimitMs = maxLateMs()): Promise<Claim | null> {
     return getFirestore().runTransaction(async (tx) => {
         const snap = await tx.get(ref);
         if (!snap.exists) return null;
@@ -83,6 +93,20 @@ export async function claimPost(ref: DocumentReference, now: Date, force = false
         if (!force) {
             const dueAt = status === POST_STATUS.RETRY_PENDING ? toMs(post.nextAttemptAt) : toMs(post.scheduledFor);
             if (dueAt === undefined || dueAt > now.getTime()) return null;
+
+            // Far too late: hold it for the user instead of posting at a surprising time.
+            const scheduledAt = toMs(post.scheduledFor);
+            if (scheduledAt !== undefined && now.getTime() - scheduledAt > lateLimitMs) {
+                const hours = Math.round((lateLimitMs / 3_600_000) * 10) / 10;
+                const error = `This post was due ${new Date(scheduledAt).toISOString()} but couldn't be published for more than ${hours} hour${hours === 1 ? "" : "s"}, so it was held back. Publish it now or pick a new time.`;
+                tx.update(ref, {
+                    status: POST_STATUS.MISSED,
+                    error,
+                    nextAttemptAt: FieldValue.delete(),
+                    updatedAt: FieldValue.serverTimestamp(),
+                });
+                return { post, missed: true, error };
+            }
         }
         const leaseId = randomUUID();
         tx.update(ref, {
@@ -102,6 +126,7 @@ const CONTENT_STATE: Partial<Record<PostStatus, string>> = {
     [POST_STATUS.RETRY_PENDING]: "SCHEDULED",
     [POST_STATUS.PUBLISHING]: "PUBLISHING",
     [POST_STATUS.PUBLISHED]: "PUBLISHED",
+    [POST_STATUS.MISSED]: "MISSED",
     [POST_STATUS.PARTIAL]: "FAILED",
     [POST_STATUS.FAILED]: "FAILED",
     [POST_STATUS.RECONCILIATION_REQUIRED]: "RECONCILIATION_REQUIRED",
@@ -138,8 +163,13 @@ export async function publishPost(postId: string, deps: PublishDeps = {}, opts: 
     const publishers = { ...defaultPublishers, ...(deps.publishers ?? {}) };
     const ref = postsRef().doc(postId);
 
-    const claim = await claimPost(ref, now, !!opts.force);
+    const claim = await claimPost(ref, now, !!opts.force, deps.maxLateMs ?? maxLateMs());
     if (!claim) return { postId, status: "skipped", reason: "Not due, already taken, or not scheduled." };
+    if (claim.missed) {
+        await mirrorToContent(claim.post, POST_STATUS.MISSED, { error: claim.error });
+        logger.warn("Post held back: too late to publish automatically", { postId });
+        return { postId, status: POST_STATUS.MISSED, error: claim.error };
+    }
     const { post, leaseId } = claim;
     const uid = String(post.user_id);
     await mirrorToContent(post, POST_STATUS.PUBLISHING);
@@ -286,5 +316,52 @@ export async function runPublishSweep(deps: PublishDeps = {}, opts: { limit?: nu
         }
     });
     await Promise.all(workers);
+
+    // Heartbeat: written only when the whole sweep worked, so a stale value means "the scheduler isn't running
+    // (or keeps failing)". The app warns users who have overdue posts.
+    const byStatus = outcomes.reduce<Record<string, number>>((acc, o) => ({ ...acc, [o.status]: (acc[o.status] ?? 0) + 1 }), {});
+    await getFirestore().doc("system/publisher").set({
+        lastRunAt: Timestamp.fromDate(now),
+        due: ids.length,
+        recovered,
+        byStatus,
+    }).catch((error) => logger.warn("Could not write the publisher heartbeat", { error: String(error) }));
+
     return { recovered, due: ids.length, outcomes };
+}
+
+/**
+ * The user says a post marked PUBLISHED isn't on the network (the platform dropped it, or it was deleted). Puts the
+ * platform's result back to "not published" and publishes again right away. Only for the owner, only PUBLISHED posts.
+ * The user has been warned that this posts a second time if the post is in fact still live.
+ */
+export async function republishPostCore(uid: string, postId: string, platform: PublishPlatform = "linkedin", deps: PublishDeps = {}): Promise<PublishOutcome> {
+    const ref = postsRef().doc(postId);
+    const before = await getFirestore().runTransaction(async (tx) => {
+        const snap = await tx.get(ref);
+        if (!snap.exists || snap.data()!.user_id !== uid) throw new Error("not-found");
+        const data = snap.data()!;
+        if (normalizeStatus(data.status) !== POST_STATUS.PUBLISHED) throw new Error("not-published");
+        const results = (data.results ?? {}) as Record<string, PlatformResult>;
+        const chosen = Array.isArray(data.platforms) && data.platforms.length ? (data.platforms as string[]) : Object.keys(results);
+        if (!chosen.includes(platform) && !results[platform]) throw new Error("wrong-platform");
+
+        const now = Timestamp.now();
+        tx.update(ref, {
+            status: POST_STATUS.SCHEDULED,
+            scheduledFor: now,
+            [`results.${platform}`]: FieldValue.delete(),
+            ...(platform === "linkedin" ? { linkedinUrn: "", publishedUrl: FieldValue.delete() } : { redditUrl: FieldValue.delete() }),
+            publishedAt: FieldValue.delete(),
+            attempts: 0,
+            error: FieldValue.delete(),
+            nextAttemptAt: FieldValue.delete(),
+            // What the user said was missing, for the record.
+            [`republishedFrom.${platform}`]: { id: results[platform]?.id ?? null, url: results[platform]?.url ?? null, at: now },
+            updatedAt: FieldValue.serverTimestamp(),
+        });
+        return data;
+    });
+    await mirrorToContent(before, POST_STATUS.SCHEDULED);
+    return publishPost(postId, deps, { force: true });
 }

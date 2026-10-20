@@ -58,6 +58,7 @@ export type AuditAction =
     | "content.unschedule"
     | "persona.approvalMode"
     | "post.resolve"
+    | "post.republish"
     | "run.cancel"
     | "run.retry"
     | "schedule.sync";
