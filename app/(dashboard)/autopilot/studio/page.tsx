@@ -11,7 +11,7 @@ import { Inbox,
     Sparkles,
     UsersRound,
 } from "lucide-react";
-import { AutopilotNav } from "@/components/features/autopilot/AutopilotNav";
+import { AutopilotSubpage } from "@/components/features/autopilot/AutopilotSubpage";
 import { TestGenerateDialog } from "@/components/features/autopilot/TestGenerateDialog";
 import { PersonaDemoDialog } from "@/components/features/autopilot/PersonaDemoDialog";
 import { QueryError } from "@/components/features/autopilot/QueryError";
@@ -34,18 +34,12 @@ export default function PersonaStudioPage() {
     const canCreate = visiblePersonas.length < PERSONA_LIMITS.personasPerWorkspace;
 
     return (
-        <div className="mx-auto w-full max-w-[1440px] space-y-6 pb-6 text-[#20242b] md:space-y-7">
-            <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                    <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#7d898f]">
-                        <AudioLines className="h-3.5 w-3.5 text-[#357d72]" /> Workspace / Persona Studio
-                    </div>
-                    <h1 className="text-[26px] font-semibold tracking-[-0.035em] text-[#20242b] md:text-[30px]">Persona Studio</h1>
-                    <p className="mt-1 max-w-[650px] text-sm leading-6 text-[#748087]">
-                        Shape each writing voice, then preview a sample before research turns it into a draft. Every draft still waits for your approval.
-                    </p>
-                </div>
-                {canCreate ? (
+        <AutopilotSubpage
+            eyebrow={<><AudioLines className="h-3.5 w-3.5 text-[#357d72]" /> Autopilot / Persona Studio</>}
+            title="Persona Studio"
+            description="Shape each writing voice, then preview a sample before research turns it into a draft. Every draft still waits for your approval."
+            actions={
+                canCreate ? (
                     <Button asChild className="h-9 rounded-lg bg-[#357d72] px-3 text-xs font-semibold text-white hover:bg-[#286c63]">
                         <Link href={Routes.AUTOPILOT_NEW}><Plus className="mr-2 h-4 w-4" />New persona</Link>
                     </Button>
@@ -53,10 +47,9 @@ export default function PersonaStudioPage() {
                     <Button disabled title={`Maximum ${PERSONA_LIMITS.personasPerWorkspace} personas`} className="h-9 rounded-lg px-3 text-xs">
                         <Plus className="mr-2 h-4 w-4" />Persona limit reached
                     </Button>
-                )}
-            </header>
-
-            <AutopilotNav />
+                )
+            }
+        >
 
             <section aria-label="Persona studio summary" className="grid gap-3 sm:grid-cols-3">
                 <SummaryCard icon={<UsersRound className="h-4 w-4" />} label="Personas" value={isLoading ? "—" : `${visiblePersonas.length} / ${PERSONA_LIMITS.personasPerWorkspace}`} note={`${activeCount} active`} />
@@ -106,7 +99,7 @@ export default function PersonaStudioPage() {
 
             {demoing && <PersonaDemoDialog persona={demoing} userId={user?.uid} open={!!demoing} onOpenChange={(open) => !open && setDemoing(null)} />}
             {testing && <TestGenerateDialog persona={testing} userId={user?.uid} open={!!testing} onOpenChange={(open) => !open && setTesting(null)} />}
-        </div>
+        </AutopilotSubpage>
     );
 }
 

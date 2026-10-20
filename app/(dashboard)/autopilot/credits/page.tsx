@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/components/providers/auth-provider"
-import { AutopilotNav } from "@/components/features/autopilot/AutopilotNav"
+import { AutopilotSubpage } from "@/components/features/autopilot/AutopilotSubpage"
 import { useCreditLedger, useCreditWallet, useUsageRecords } from "@/lib/query/hooks/use-ai-billing"
 import { usePersonas } from "@/lib/query/hooks/use-autopilot"
 import type { LedgerEntry } from "@/types/ai"
@@ -70,13 +70,11 @@ export default function CreditsPage() {
     const personaName = (id?: string) => personas.find((p) => p.id === id)?.name
 
     return (
-        <div className="mx-auto w-full max-w-[1120px] space-y-6 pb-6 text-[#20242b]">
-            <div>
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#7d898f]">Autopilot / Account</p>
-                <h1 className="text-[26px] font-semibold tracking-[-0.035em] text-[#20242b] md:text-[30px]">Credits &amp; usage</h1>
-                <p className="mt-1 max-w-[650px] text-sm leading-6 text-[#748087]">Credits pay for AI that runs on LinkedLoom&apos;s keys. Your own keys and Create Post don&apos;t use credits.</p>
-            </div>
-            <AutopilotNav />
+        <AutopilotSubpage
+            eyebrow="Autopilot / Credits & usage"
+            title="Credits & usage"
+            description="Credits pay for AI that runs on LinkedLoom's keys. Your own keys and Create Post don't use credits."
+        >
 
             {walletLoading ? (
                 <div className="grid gap-4 md:grid-cols-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}</div>
@@ -157,6 +155,6 @@ export default function CreditsPage() {
                     </div>
                 )}
             </Card>
-        </div>
+        </AutopilotSubpage>
     )
 }

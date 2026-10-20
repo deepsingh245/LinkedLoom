@@ -201,7 +201,7 @@ export function DraftCard({ item, personaName, busy, onSave, onReject, onRestore
                     <Copy className="mr-1 h-3.5 w-3.5" />Copy
                 </Button>
                 {rejected && <Button size="sm" variant="outline" disabled={busy} onClick={onRestore} className={GHOST}><RotateCcw className="mr-1 h-3.5 w-3.5" />Restore</Button>}
-                {pending && <Button size="sm" variant="ghost" disabled={busy} onClick={onReject} className="h-8 rounded-lg px-3 text-[10px] text-[#9c5d5d] hover:bg-[#fff3f3]"><X className="mr-1 h-3.5 w-3.5" />Reject</Button>}
+                {pending && <Button size="sm" disabled={busy} onClick={onReject} className="h-8 rounded-lg bg-[#c0392b] px-3 text-[11px] font-medium text-white hover:bg-[#a93226]"><X className="mr-1 h-3.5 w-3.5" />Reject</Button>}
             </div>
             <SharedAlertDialog
                 open={confirmRepublish}

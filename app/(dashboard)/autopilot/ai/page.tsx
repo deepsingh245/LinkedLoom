@@ -21,7 +21,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useAuth } from "@/components/providers/auth-provider"
-import { AutopilotNav } from "@/components/features/autopilot/AutopilotNav"
+import { AutopilotSubpage } from "@/components/features/autopilot/AutopilotSubpage"
 import { useAddAIConnection, useAIConnections, useRevokeAIConnection, useTestAIConnection } from "@/lib/query/hooks/use-ai-billing"
 import { QueryError } from "@/components/features/autopilot/QueryError"
 import type { AIConnection, AIProviderId } from "@/types/ai"
@@ -160,13 +160,11 @@ export default function AIKeysPage() {
     const [open, setOpen] = useState(false)
 
     return (
-        <div className="mx-auto w-full max-w-[1120px] space-y-6 pb-6 text-[#20242b]">
-            <div>
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#7d898f]">Autopilot / AI connections</p>
-                <h1 className="text-[26px] font-semibold tracking-[-0.035em] text-[#20242b] md:text-[30px]">AI keys</h1>
-                <p className="mt-1 max-w-[650px] text-sm leading-6 text-[#748087]">Use your own Gemini or OpenAI key so personas bill your provider account instead of LinkedLoom credits.</p>
-            </div>
-            <AutopilotNav />
+        <AutopilotSubpage
+            eyebrow="Autopilot / AI keys"
+            title="AI keys"
+            description="Use your own Gemini or OpenAI key so personas bill your provider account instead of LinkedLoom credits."
+        >
 
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e2e6ea] bg-white p-4">
                 <div>
@@ -195,6 +193,6 @@ export default function AIKeysPage() {
             )}
 
             <AddKeyDialog open={open} onOpenChange={setOpen} userId={user?.uid} />
-        </div>
+        </AutopilotSubpage>
     )
 }
