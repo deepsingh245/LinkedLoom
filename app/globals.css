@@ -433,6 +433,71 @@
 .dark .dashboard-theme [class~="hover:border-[#b9d1ca]"]:hover,
 .dark .dashboard-theme [class~="hover:border-[#a8c8be]"]:hover { border-color: #68ad9e !important; }
 
+/* Public surfaces (home, login, register): Geist type and the DESIGN.md teal accent.
+   Tailwind theme colours resolve at :root, so overrides here set the --color-* names directly. */
+@theme inline {
+  --color-teal-ink: var(--teal-ink);
+  --color-teal-wash: var(--teal-wash);
+}
+
+.brand-surface {
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --color-muted-foreground: #5f6a74;
+  --teal-ink: #2b6a60;
+  --teal-wash: #e8f3f0;
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01";
+}
+
+.dark .brand-surface {
+  --color-muted-foreground: #a0b0ab;
+  --teal-ink: #8fcabd;
+  --teal-wash: #1a2b28;
+}
+
+.brand-surface :is(h1, h2, h3) {
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+/* Scroll reveal: only hide content when scripts can reveal it again. */
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .reveal {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 320ms ease-out, transform 320ms ease-out;
+  }
+  .reveal[data-visible="true"] {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Lifecycle strip: one stage highlighted at a time, mirroring how a run moves through them. */
+@keyframes stage-active {
+  0%, 15% { opacity: 1; }
+  18%, 100% { opacity: 0; }
+}
+
+.lifecycle-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid color-mix(in srgb, var(--teal-ink) 45%, transparent);
+  background: var(--teal-wash);
+  opacity: 0;
+  z-index: -1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lifecycle-stage::before {
+    animation: stage-active 12s linear infinite;
+    animation-delay: calc(var(--stage) * 2s);
+  }
+}
+
 @layer utilities {
   /* Scrollbar Styles */
   ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -447,15 +512,8 @@
   @keyframes glow { 0%,100% { box-shadow:0 0 20px rgba(99,212,150,.15); } 50% { box-shadow:0 0 40px rgba(99,212,150,.35); } }
   @keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
   @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
-  @keyframes blob {
-    0% { transform: translate(0px, 0px) scale(1); }
-    33% { transform: translate(30px, -50px) scale(1.1); }
-    66% { transform: translate(-20px, 20px) scale(0.9); }
-    100% { transform: translate(0px, 0px) scale(1); }
-  }
 
   .fade-up { animation: fadeUp .45s cubic-bezier(.16,1,.3,1) both; }
-  .animate-blob { animation: blob 7s infinite; }
   .fade-up-1 { animation-delay:.05s; }
   .fade-up-2 { animation-delay:.1s; }
   .fade-up-3 { animation-delay:.15s; }
@@ -468,44 +526,6 @@
     animation: shimmer 1.5s infinite;
   }
   
-  .gradient-text {
-    background:linear-gradient(135deg,#63d496,#4db8f0);
-    -webkit-background-clip:text; 
-    -webkit-text-fill-color:transparent;
-  }
-
-  .hero-gradient {
-    background: linear-gradient(135deg, #6ee7b7 0%, #3b82f6 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .hero-button-gradient {
-    background: linear-gradient(135deg, #6ee7b7 0%, #3b82f6 100%);
-    color: #000000;
-  }
-  .hero-button-glow {
-    box-shadow: 0 0 30px rgba(110, 231, 183, 0.3);
-  }
-  .badge-glow {
-    box-shadow: inset 0 0 10px rgba(184, 255, 82, 0.2);
-    border: 1px solid rgba(184, 255, 82, 0.3);
-  }
-  .mesh-glow {
-    background: radial-gradient(circle at 50% 50%, rgba(110, 231, 183, 0.1) 0%, rgba(59, 130, 246, 0.05) 50%, transparent 100%);
-  }
-  .celestial-glow {
-    background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.05) 0%, transparent 80%);
-  }
-  .glass-card {
-    background: rgba(10, 10, 10, 0.8);
-    backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-  }
-  .glass-panel {
-    background: rgba(15, 15, 15, 0.7);
-    backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-  }
   .bg-figma-lime {
     background-color: var(--figma-lime);
   }
@@ -514,24 +534,6 @@
   }
   .border-figma-lime {
     border-color: var(--figma-lime);
-  }
-
-  .tilted-mockup {
-    transform: perspective(1200px) rotateY(-10deg) rotateX(2deg);
-    transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  .tilted-mockup:hover {
-    transform: perspective(1200px) rotateY(-2deg) rotateX(1deg) scale(1.02);
-  }
-
-  .tilted-mockup-reverse {
-    transform: perspective(1200px) rotateY(10deg) rotateX(2deg);
-    transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  .tilted-mockup-reverse:hover {
-    transform: perspective(1200px) rotateY(2deg) rotateX(1deg) scale(1.02);
   }
 }
 

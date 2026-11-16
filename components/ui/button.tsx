@@ -19,7 +19,6 @@ const buttonVariants = cva(
           "border border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 font-sans font-medium transition-all",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        lime: "bg-[#b8ff52] text-black hover:bg-[#a6e64a] font-bold shadow-[0_0_20px_rgba(184,255,82,0.3)] hover:shadow-[0_0_30px_rgba(184,255,82,0.5)] transition-all border-none",
       },
       size: {
         default: "h-auto px-[20px] py-[10px] text-[14px] rounded-[10px]",

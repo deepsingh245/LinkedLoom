@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
@@ -10,9 +10,20 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
+// Public pages (home, auth) use Geist via the .brand-surface scope in globals.css.
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist",
+});
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
+});
+
 export const metadata: Metadata = {
   title: "LinkedLoom",
-  description: "AI-Powered LinkedIn Post Generator & Scheduler",
+  description: "Research, draft and schedule LinkedIn posts – published only when you approve them.",
 };
 
 export default function RootLayout({
@@ -23,11 +34,8 @@ export default function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
-      </head>
       <body
-        className={`${inter.variable} font-sans antialiased bg-background text-foreground overflow-x-hidden`}
+        className={`${inter.variable} ${geist.variable} ${geistMono.variable} font-sans antialiased bg-background text-foreground overflow-x-hidden`}
       >
         <ThemeProvider
           attribute="class"
