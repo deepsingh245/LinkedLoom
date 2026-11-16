@@ -16,8 +16,24 @@ export const queryKeys = {
   analytics: {
     dashboard: (userId: string) => ['analytics', 'dashboard', userId] as const,
   },
+  publishing: {
+    heartbeat: () => ['publishing', 'heartbeat'] as const,
+  },
   integrations: {
     linkedinAuth: () => ['integrations', 'linkedin', 'authUrl'] as const,
     redditAuth: () => ['integrations', 'reddit', 'authUrl'] as const,
+  },
+  autopilot: {
+    all: (userId: string) => ['autopilot', userId] as const,
+    personas: (userId: string) => ['autopilot', userId, 'personas'] as const,
+    persona: (userId: string, personaId: string) => ['autopilot', userId, 'personas', personaId] as const,
+    settings: (userId: string) => ['autopilot', userId, 'settings'] as const,
+    connections: (userId: string) => ['autopilot', userId, 'connections'] as const,
+    wallet: (userId: string) => ['autopilot', userId, 'wallet'] as const,
+    ledger: (userId: string) => ['autopilot', userId, 'ledger'] as const,
+    usage: (userId: string) => ['autopilot', userId, 'usage'] as const,
+    drafts: (userId: string) => ['autopilot', userId, 'drafts'] as const,
+    runs: (userId: string) => ['autopilot', userId, 'runs'] as const,
+    context: (userId: string) => ['autopilot', userId, 'context'] as const,
   },
 } as const;

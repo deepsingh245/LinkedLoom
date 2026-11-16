@@ -5,7 +5,7 @@
 
 ---
 
-## Current Status (re-verified against the code on 2026-10-12, branch `prod-v2`; production branch will be `prod-v3`)
+## Current Status (re-verified against the code on 2026-10-12, branch `prod-v2`, which is the production branch)
 
 Legend: ✅ done in code · ⏳ done in code but **not deployed yet** · ❌ still open · 🧑 manual step for you
 
@@ -20,7 +20,7 @@ Legend: ✅ done in code · ⏳ done in code but **not deployed yet** · ❌ sti
 | 5 | Auth on `publishToLinkedIn` / `getLinkedInAnalytics` | ❌ | No `verifyIdToken`; they trust `userId` from the body. Do what `reddit.ts` `authenticate()` does |
 | 6 | Auth on Reddit endpoints | ✅ | All verify the Firebase ID token; tokens refreshed + persisted |
 | 7 | Reddit: rate-limit handling, daily post cap, User-Agent, revoke on disconnect | ✅ | `functions/src/reddit.ts` |
-| 8 | Reddit API access approval | 🧑 | Submit the access request; app can't be used with Reddit until approved. See `REDDIT_INTEGRATION.md` |
+| 8 | Reddit API access approval | 🧑 | Submit the access request; app can't be used with Reddit until approved. See `docs/reddit-integration/` |
 | 9 | Privacy Policy + Terms pages | ✅ | `/privacy`, `/terms`. 🧑 set `NEXT_PUBLIC_CONTACT_EMAIL` (placeholder shown until set) |
 | 10 | `oauthStates` expiry | ◐ | Reddit rejects states > 10 min. Stale docs are never cleaned up (add a TTL policy or scheduled cleanup); LinkedIn flow not re-checked |
 | 11 | Next.js route-level auth (`middleware.ts`/`proxy.ts`) | ❌ | Not present |
@@ -33,13 +33,13 @@ Legend: ✅ done in code · ⏳ done in code but **not deployed yet** · ❌ sti
 | 18 | `maxInstances` / global function options | ❌ | Not set |
 | 19 | Security headers / CSP in `next.config.ts` | ❌ | Not set |
 | 20 | CI/CD | ❌ | No `.github/` |
-| 21 | Branch `prod-v3` | ❌ | Doesn't exist yet (see `docs/DEPLOYMENT.md` §1) |
+| 21 | Production branch | ✅ | `prod-v2` (see `docs/DEPLOYMENT.md` §1) |
 | 22 | Budget alerts, Firestore backups, App Check | 🧑 | Console settings |
 | 23 | `localStorage` draft cleared on logout | ❌ | `draft_post` is still written in `PostCard`/`EditPostDialog` |
 | 24 | Docs: README, deployment guide | ✅ | `README.md`, `docs/DEPLOYMENT.md` |
 
 ### Do these next (in order)
-1. Commit, create `prod-v3` (see `docs/DEPLOYMENT.md` §1).
+1. Merge the feature branch into `prod-v2` (see `docs/DEPLOYMENT.md` §1).
 2. Fix #4 and #5 (LinkedIn CORS + auth) – these break or expose production.
 3. `firebase deploy --only firestore:rules,firestore:indexes,storage` (test in the emulator first) then deploy functions.
 4. Set `NEXT_PUBLIC_CONTACT_EMAIL`, deploy the site, submit the Reddit access request with the `/privacy` link.
@@ -755,7 +755,7 @@ console.log(JSON.stringify({ event: 'post_published', postId: doc.id, timestamp:
 name: Deploy
 on:
   push:
-    branches: [main]
+    branches: [prod-v2]
 jobs:
   deploy-functions:
     runs-on: ubuntu-latest

@@ -7,7 +7,17 @@ export const Routes = {
     SCHEDULE: "/schedule",
     CALENDAR: "/calendar",
     ANALYTICS: "/analytics",
+    AUTOPILOT: "/autopilot",
+    AUTOPILOT_STUDIO: "/autopilot/studio",
+    AUTOPILOT_NEW: "/autopilot/new",
+    AUTOPILOT_AI: "/autopilot/ai",
+    // Approval inbox and research runs are sections of the single Autopilot page.
+    AUTOPILOT_DRAFTS: "/autopilot#approval",
+    AUTOPILOT_RUNS: "/autopilot#research",
+    AUTOPILOT_CREDITS: "/autopilot/credits",
     SETTINGS_PROFILE: "/settings/profile",
     SETTINGS_PREFERENCES: "/settings/preferences",
+    SETTINGS_CONNECTIONS: "/settings/connections",
+    SETTINGS_BILLING: "/settings/billing",
     SETTINGS: "/settings/profile",
 } as const;

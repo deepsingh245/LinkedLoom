@@ -21,6 +21,10 @@ export default function PrivacyPage() {
                 <ul>
                     <li><strong>Account data:</strong> name, email address and profile details you provide when you sign up or edit your profile.</li>
                     <li><strong>Content you create:</strong> drafts, scheduled and published posts, tone and platform settings, and images you upload or generate.</li>
+                    <li>
+                        <strong>AI Autopilot (research):</strong> persona settings you create (topics, feed URLs, schedule), research runs, and the drafts they
+                        produce, including titles, links, dates and short quoted excerpts of the public web pages used as sources. During a run, fetched article text may also be held in server-only temporary run artifacts. These are deleted when the run ends and marked to expire after 24 hours if the run does not finish.
+                    </li>
                     <li><strong>LinkedIn connection:</strong> when you connect LinkedIn, an access token and basic profile identifiers needed to publish on your behalf.</li>
                     <li>
                         <strong>Reddit connection:</strong> when you connect Reddit, your Reddit username and user ID, profile icon URL,
@@ -38,9 +42,17 @@ export default function PrivacyPage() {
             <section>
                 <h2>2. How we use it</h2>
                 <ul>
-                    <li>To publish and schedule posts you create, only at your request and only to the accounts you connected.</li>
+                    <li>To publish and schedule posts you create or approve, only at your request (or under auto-publish, if you turned it on for a persona) and only to the accounts you connected. We keep a record of each publish attempt and its result (for example the LinkedIn post id) so a post is never sent twice.</li>
                     <li>To show you post history and analytics for your own posts.</li>
-                    <li>To generate drafts and images with AI when you ask for it. Only the text you enter or the draft you select is sent to the AI provider.</li>
+                    <li>
+                        When you run research for a persona, or opt that persona into automatic research, to fetch the RSS feeds and public web pages you configured
+                        (and, if you turn it on, pages found through Google Search via Gemini) and to have AI write and fact-check sourced drafts for you to review.
+                        Automatic research runs before posting windows, uses LinkedLoom credits or your own AI key, and pauses when 6 drafts await review. You can turn it off for a persona or use Stop all to stop Autopilot activity. Drafts are published only when you approve them, or – if you separately turn on auto-publish for a persona and confirm it – when they pass fact-checking with a high quality score. Auto-publish is off by default, LinkedIn-only, and can be turned off at any time.
+                    </li>
+                    <li>
+                        To use the company information you upload to Autopilot (.md or .txt files such as company details, brand guidelines or product descriptions): the text is stored privately in your workspace and parts of it are sent to the selected AI provider when drafts are written. You can turn each file off or delete it at any time. Don&apos;t upload passwords, personal data of others or confidential material you aren&apos;t allowed to share with an AI provider.
+                    </li>
+                    <li>To generate drafts and images with AI when you ask for it, or when you opt into automatic research. Relevant persona settings, source excerpts and draft text may be sent to the selected AI provider.</li>
                     <li>To secure the service, prevent abuse (for example, a daily limit on Reddit posts per user) and fix problems.</li>
                 </ul>
                 <p className="mt-3">
@@ -54,7 +66,8 @@ export default function PrivacyPage() {
                 <p>We share data only with providers that run the service for us:</p>
                 <ul>
                     <li>Google Firebase / Google Cloud (authentication, database, file storage, hosting and server functions).</li>
-                    <li>Google AI services (Gemini / Vertex AI) to generate text and images when you request them.</li>
+                    <li>Google AI services (Gemini / Vertex AI) to generate text and images when you request them, and to search the web when you enable web search.</li>
+                    <li>OpenAI, only if you connect your own OpenAI API key; your key is stored in Google Cloud Secret Manager and used only to run your requests.</li>
                     <li>LinkedIn and Reddit, when you publish or sync through the accounts you connected.</li>
                 </ul>
                 <p className="mt-3">We may also disclose information if required by law.</p>
@@ -81,6 +94,7 @@ export default function PrivacyPage() {
                     </li>
                     <li>You can revoke LinkedLoom&apos;s access at any time at <a href="https://www.reddit.com/prefs/apps" target="_blank" rel="noreferrer">reddit.com/prefs/apps</a>.</li>
                     <li>You can delete drafts and posts inside the app.</li>
+                    <li>Temporary fetched article text in server-only research artifacts is deleted when its run ends; unfinished-run artifacts are marked to expire after 24 hours.</li>
                     <li>
                         To delete your whole account and all associated data, email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
                         We will process verified requests within 30 days.

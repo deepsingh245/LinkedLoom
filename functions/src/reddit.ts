@@ -1,8 +1,8 @@
 import { onRequest, HttpsError } from "firebase-functions/v2/https";
-import type { Request } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 import * as crypto from "crypto";
+import { ApiError, authenticate, sendError } from "./shared/http-auth";
 
 if (!admin.apps.length) {
     admin.initializeApp();
@@ -49,30 +49,6 @@ async function redditRequest<T = any>(config: AxiosRequestConfig): Promise<Axios
             throw err;
         }
     }
-}
-
-/** Verify the Firebase ID token sent as `Authorization: Bearer <token>` (or body.idToken). */
-async function authenticate(req: Request): Promise<string> {
-    const header = req.headers.authorization || "";
-    const token = header.startsWith("Bearer ") ? header.slice(7) : req.body?.idToken;
-    if (!token) throw new ApiError(401, "Firebase ID token is required.");
-    try {
-        return (await admin.auth().verifyIdToken(token)).uid;
-    } catch {
-        throw new ApiError(401, "Invalid or expired ID token.");
-    }
-}
-
-class ApiError extends Error {
-    constructor(public status: number, message: string) {
-        super(message);
-    }
-}
-
-function sendError(res: any, error: any, fallback: string) {
-    const status = error instanceof ApiError ? error.status : error instanceof HttpsError ? 400 : 500;
-    console.error(fallback, error.response?.data || error.message);
-    res.status(status).json({ success: false, message: error.message || fallback, error: { message: error.message || fallback } });
 }
 
 const getRedditConfig = () => {

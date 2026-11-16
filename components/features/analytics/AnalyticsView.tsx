@@ -1,242 +1,135 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    BarChart,
-    Bar
-} from 'recharts';
-
-import { BarChart3, Plus } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { Routes } from "@/lib/routes";
+import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { BarChart3, Eye, FileText, Heart, Plus } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useAnalyticsDashboard } from "@/lib/query/hooks/use-analytics";
+import { Routes } from "@/lib/routes";
+import { useRouter } from "next/navigation";
 
-const EmptyAnalyticsState = ({ router }: { router: ReturnType<typeof useRouter> }) => (
-    <div className="flex flex-col items-center justify-center h-100 border-2 border-dashed border-border rounded-xl relative z-10 bg-muted/30 group hover:border-primary/30 transition-all duration-500">
-        <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl" />
-        <div className="p-5 bg-card border border-border rounded-2xl mb-6 shadow-xl group-hover:scale-110 transition-transform duration-500">
-            <BarChart3 className="w-8 h-8 text-primary" />
+const tooltipStyle = {
+    backgroundColor: "#fff",
+    border: "1px solid #e2e6ea",
+    borderRadius: 10,
+    boxShadow: "0 8px 24px rgba(32,36,43,.08)",
+    color: "#303a40",
+    fontSize: 11,
+};
+
+function EmptyAnalyticsState({ onCreate }: { onCreate: () => void }) {
+    return (
+        <div className="flex min-h-[300px] flex-col items-center justify-center rounded-lg border border-dashed border-[#dfe5e7] bg-[#fbfcfc] px-5 text-center">
+            <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#e8f3f0] text-[#357d72]"><BarChart3 className="h-5 w-5" /></span>
+            <h3 className="text-sm font-semibold text-[#38434a]">No publishing data yet</h3>
+            <p className="mt-1 max-w-sm text-xs leading-relaxed text-[#7c878e]">Publish a post to start building your engagement and publishing activity history.</p>
+            <Button onClick={onCreate} className="mt-3 h-9 rounded-lg bg-[#357d72] px-3 text-xs text-white hover:bg-[#286c63]"><Plus className="mr-2 h-4 w-4" />Create a post</Button>
         </div>
-        <h3 className="text-xl font-bold text-foreground mb-2 tracking-tight">No Publishing Data Yet</h3>
-        <p className="text-muted-foreground text-center px-6 max-w-[320px] mb-8 leading-relaxed text-sm">
-            Your publishing activity will appear here. Start a new post to see your analytics.
-        </p>
-        <Button 
-            className="bg-primary hover:bg-primary/90 text-black font-bold h-11 px-8 rounded-xl shadow-[0_8px_30px_rgb(99,212,150,0.2)] hover:shadow-[0_8px_30px_rgb(99,212,150,0.4)] transition-all active:scale-95"
-            onClick={() => router.push(Routes.CREATE_POST)}
-        >
-            <Plus className="w-5 h-5 mr-2 stroke-3" />
-            Start a New Post
-        </Button>
-    </div>
-);
-
+    );
+}
 
 export function AnalyticsView() {
     const { user } = useAuth();
-    const { data: dashboardData, isLoading: loading } = useAnalyticsDashboard(user?.uid);
+    const { data, isLoading } = useAnalyticsDashboard(user?.uid);
     const router = useRouter();
-    const isChartEmpty = !loading && (!dashboardData || (dashboardData.totalPosts === 0 && (!dashboardData.chartData || dashboardData.chartData.length === 0)));
+    const hasPublishingData = (data?.totalPosts ?? 0) > 0;
+    const chartData = data?.chartData ?? [];
 
-    const chartData = dashboardData?.chartData || [];
-
-    if (loading) {
-        return (
-            <div className="p-6 space-y-8 animate-fade-in pb-10">
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                    {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="p-6 bg-card border border-border rounded-xl relative overflow-hidden">
-                            <Skeleton className="h-4 w-24 mb-4" />
-                            <div className="flex justify-between items-end">
-                                <Skeleton className="h-10 w-16" />
-                                <Skeleton className="h-6 w-12 rounded-full" />
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                <div className="space-y-6">
-                    <div className="bg-muted h-11 w-64 rounded-xl border border-border p-1 flex gap-1">
-                        <Skeleton className="h-full flex-1 rounded-lg" />
-                        <Skeleton className="h-full flex-1 bg-transparent rounded-lg" />
-                    </div>
-                    
-                    <div className="card bg-card border border-border rounded-xl p-6 h-125 relative overflow-hidden">
-                        <div className="space-y-2 mb-8">
-                            <Skeleton className="h-7 w-48" />
-                            <Skeleton className="h-4 w-72" />
-                        </div>
-                        <div className="flex items-end gap-2 h-75 mt-10">
-                            {[40, 70, 45, 90, 65, 80, 55, 85].map((height, i) => (
-                                <Skeleton key={i} className="flex-1" style={{ height: `${height}%` }} />
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
+    const metrics = [
+        { title: "Published posts", value: String(data?.totalPosts ?? 0), note: `${data?.postsThisWeek ?? 0} created this week`, icon: FileText, tone: "#357d72", tint: "#e8f3f0" },
+        { title: "Total views", value: data?.metrics?.views ?? "0", note: "Across published content", icon: Eye, tone: "#5578a8", tint: "#edf2fa" },
+        { title: "Engagement rate", value: data?.metrics?.engagement ?? "0%", note: "Interactions per view", icon: Heart, tone: "#a6647b", tint: "#f7eef1" },
+        { title: "Drafts", value: String(data?.totalDrafts ?? 0), note: "Waiting in your library", icon: FileText, tone: "#a67b37", tint: "#f7f2e9" },
+    ];
 
     return (
-        <div className="p-6 space-y-8 animate-fade-in pb-10">
-            {/* Stats Overview */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                <StatsMetric title="Total Impressions" value={dashboardData?.metrics?.impressions || "0"} change="Total Reach" color="text-chart-1" />
-                <StatsMetric title="Total Views" value={dashboardData?.metrics?.views || "0"} change="Active Views" color="text-chart-2" />
-                <StatsMetric title="Engagement Rate" value={dashboardData?.metrics?.engagement || "0%"} change="Avg. Interaction" color="text-chart-3" />
-                <StatsMetric title="Followers Grown" value={dashboardData?.metrics?.followers || "0"} change="Net Growth" color="text-chart-4" />
-            </div>
+        <div className="mx-auto w-full max-w-[1440px] space-y-6 pb-5 text-[#20242b] md:space-y-7">
+            <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#7d898f]">Insights / Analytics</div>
+                    <h1 className="text-[26px] font-semibold tracking-[-0.035em] text-[#20242b] md:text-[30px]">Analytics &amp; Learning Signals</h1>
+                    <p className="mt-1 text-sm text-[#748087]">Track publishing activity and audience engagement over the week.</p>
+                </div>
+                <span className="rounded-md border border-[#e4ebe8] bg-white px-2.5 py-1.5 text-[10px] font-medium text-[#667770]">Updated from your publishing data</span>
+            </section>
 
-            <Tabs defaultValue="engagement" className="space-y-6">
-                <TabsList className="bg-muted border border-border p-1 h-11 rounded-xl">
-                    <TabsTrigger value="engagement" className="rounded-lg px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold transition-all">Engagement</TabsTrigger>
-                    <TabsTrigger value="growth" className="rounded-lg px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold transition-all">Growth</TabsTrigger>
-                </TabsList>
+            <section aria-label="Analytics metrics" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {metrics.map(({ title, value, note, icon: Icon, tone, tint }) => (
+                    <Card key={title} className="rounded-xl border border-[#e2e6ea] bg-white p-4 shadow-none">
+                        <div className="flex items-start justify-between gap-2">
+                            <p className="text-xs font-medium text-[#6c777f]">{title}</p>
+                            <span className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: tint, color: tone }}><Icon className="h-4 w-4" /></span>
+                        </div>
+                        {isLoading ? <Skeleton className="mt-2 h-7 w-20 rounded-md" /> : <p className="mt-2 text-[25px] font-semibold leading-none tracking-[-0.04em] text-[#20242b]">{value}</p>}
+                        {isLoading ? <Skeleton className="mt-2 h-3 w-28 rounded" /> : <p className="mt-2 truncate text-[11px] text-[#89939a]">{note}</p>}
+                    </Card>
+                ))}
+            </section>
 
-                <TabsContent value="engagement">
-                    <Card className="bg-card/50 border-border backdrop-blur-sm overflow-hidden rounded-2xl">
-                        <CardHeader className="border-b border-border/50 bg-muted/20 p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <CardTitle className="text-xl font-display font-bold text-foreground">Engagement Over Time</CardTitle>
-                                    <CardDescription className="text-muted-foreground mt-1">Detailed breakdown of likes, comments, and shares</CardDescription>
-                                </div>
-                                <div className="flex gap-2">
-                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-                                        <div className="w-2 h-2 rounded-full bg-primary" />
-                                        <span className="text-[11px] font-bold text-primary uppercase tracking-wider">Active</span>
+            {isLoading ? (
+                <Card className="rounded-xl border border-[#e2e6ea] bg-white p-4 shadow-none md:p-5">
+                    <Skeleton className="mb-5 h-9 w-48 rounded-lg" />
+                    <Skeleton className="h-[360px] w-full rounded-lg" />
+                </Card>
+            ) : (
+                <Tabs defaultValue="engagement" className="space-y-4">
+                    <TabsList className="h-10 w-fit gap-1 rounded-lg border border-[#e2e6ea] bg-white p-1">
+                        <TabsTrigger value="engagement" className="h-full rounded-md px-4 text-[11px] font-semibold text-[#7b858c] data-[state=active]:bg-[#e8f3f0] data-[state=active]:text-[#286c63]">Engagement</TabsTrigger>
+                        <TabsTrigger value="publishing" className="h-full rounded-md px-4 text-[11px] font-semibold text-[#7b858c] data-[state=active]:bg-[#e8f3f0] data-[state=active]:text-[#286c63]">Publishing activity</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="engagement" className="mt-0">
+                        <Card className="overflow-hidden rounded-xl border border-[#e2e6ea] bg-white shadow-none">
+                            <CardHeader className="border-b border-[#edf0f2] bg-white px-4 py-4 md:px-5">
+                                <CardTitle className="text-sm font-semibold text-[#303a40]">Engagement over time</CardTitle>
+                                <CardDescription className="mt-1 text-[11px] text-[#89939a]">Likes, comments, and shares recorded on published posts by weekday.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-4 md:p-5">
+                                {!hasPublishingData ? <EmptyAnalyticsState onCreate={() => router.push(Routes.CREATE_POST)} /> : (
+                                    <div className="h-[320px] w-full" role="img" aria-label="Chart showing engagement on published posts by weekday">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <LineChart data={chartData} margin={{ top: 10, right: 8, bottom: 0, left: -22 }}>
+                                                <CartesianGrid stroke="#edf0f2" vertical={false} />
+                                                <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: "#89939a", fontSize: 10 }} dy={8} />
+                                                <YAxis tickLine={false} axisLine={false} tick={{ fill: "#89939a", fontSize: 10 }} />
+                                                <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: "#cfd9d6", strokeDasharray: "3 3" }} />
+                                                <Line type="monotone" dataKey="engagement" name="Interactions" stroke="#357d72" strokeWidth={2.5} dot={{ fill: "#357d72", strokeWidth: 2, r: 3, stroke: "#fff" }} activeDot={{ r: 5, strokeWidth: 0 }} />
+                                            </LineChart>
+                                        </ResponsiveContainer>
                                     </div>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="pt-8 px-6 pb-6">
-                            {isChartEmpty ? (
-                                <EmptyAnalyticsState router={router} />
-                            ) : (
-                                <div className="h-100 w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={chartData}>
-                                            <defs>
-                                                <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3}/>
-                                                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
-                                                </linearGradient>
-                                            </defs>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                                            <XAxis 
-                                                dataKey="name" 
-                                                stroke="var(--muted-foreground)" 
-                                                fontSize={11} 
-                                                tickLine={false} 
-                                                axisLine={false}
-                                                dy={10}
-                                            />
-                                            <YAxis 
-                                                stroke="var(--muted-foreground)" 
-                                                fontSize={11} 
-                                                tickLine={false} 
-                                                axisLine={false}
-                                                tickFormatter={(value) => `${value}`}
-                                            />
-                                            <Tooltip 
-                                                contentStyle={{ 
-                                                    backgroundColor: 'var(--card)', 
-                                                    border: '1px solid var(--border)',
-                                                    borderRadius: '12px',
-                                                    boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-                                                    color: 'var(--foreground)'
-                                                }}
-                                                itemStyle={{ color: 'var(--primary)' }}
-                                            />
-                                            <Line 
-                                                type="monotone" 
-                                                dataKey="engagement" 
-                                                stroke="var(--primary)" 
-                                                strokeWidth={3}
-                                                dot={{ fill: 'var(--primary)', strokeWidth: 2, r: 4, stroke: 'var(--background)' }}
-                                                activeDot={{ r: 6, strokeWidth: 0 }}
-                                            />
-                                        </LineChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </TabsContent>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
 
-                <TabsContent value="growth">
-                    <Card className="bg-card/50 border-border backdrop-blur-sm overflow-hidden rounded-2xl">
-                        <CardHeader className="border-b border-border/50 bg-muted/20 p-6">
-                            <CardTitle className="text-xl font-display font-bold text-foreground">Audience Growth</CardTitle>
-                            <CardDescription className="text-muted-foreground mt-1">Weekly new followers across platforms</CardDescription>
-                        </CardHeader>
-                        <CardContent className="pt-8 px-6 pb-6">
-                            {isChartEmpty ? (
-                                <EmptyAnalyticsState router={router} />
-                            ) : (
-                                <div className="h-100 w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={chartData}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                                            <XAxis 
-                                                dataKey="name" 
-                                                stroke="var(--muted-foreground)" 
-                                                fontSize={11} 
-                                                tickLine={false} 
-                                                axisLine={false}
-                                                dy={10}
-                                            />
-                                            <YAxis 
-                                                stroke="var(--muted-foreground)" 
-                                                fontSize={11} 
-                                                tickLine={false} 
-                                                axisLine={false} 
-                                            />
-                                            <Tooltip 
-                                                cursor={{fill: 'var(--muted)/10'}}
-                                                contentStyle={{ 
-                                                    backgroundColor: 'var(--card)', 
-                                                    border: '1px solid var(--border)',
-                                                    borderRadius: '12px',
-                                                    boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-                                                    color: 'var(--foreground)'
-                                                }}
-                                            />
-                                            <Bar dataKey="views" fill="var(--chart-2)" radius={[4, 4, 0, 0]} barSize={40} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-            </Tabs>
+                    <TabsContent value="publishing" className="mt-0">
+                        <Card className="overflow-hidden rounded-xl border border-[#e2e6ea] bg-white shadow-none">
+                            <CardHeader className="border-b border-[#edf0f2] bg-white px-4 py-4 md:px-5">
+                                <CardTitle className="text-sm font-semibold text-[#303a40]">Published posts by weekday</CardTitle>
+                                <CardDescription className="mt-1 text-[11px] text-[#89939a]">See when published content has been going out.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-4 md:p-5">
+                                {!hasPublishingData ? <EmptyAnalyticsState onCreate={() => router.push(Routes.CREATE_POST)} /> : (
+                                    <div className="h-[320px] w-full" role="img" aria-label="Chart showing published posts by weekday">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={chartData} margin={{ top: 10, right: 8, bottom: 0, left: -22 }}>
+                                                <CartesianGrid stroke="#edf0f2" vertical={false} />
+                                                <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: "#89939a", fontSize: 10 }} dy={8} />
+                                                <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: "#89939a", fontSize: 10 }} />
+                                                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgba(53,125,114,.06)" }} />
+                                                <Bar dataKey="posts" name="Published posts" fill="#5578a8" radius={[5, 5, 0, 0]} maxBarSize={36} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
+            )}
         </div>
-    )
-}
-
-function StatsMetric({ title, value, change, color }: { title: string, value: string, change: string, color: string }) {
-    return (
-        <Card className="p-6 bg-card border-border hover:border-accent transition-all rounded-2xl backdrop-blur-sm group">
-            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2 group-hover:text-muted-foreground/80 transition-colors">{title}</p>
-            <div className="flex justify-between items-end">
-                <h3 className="text-3xl font-display font-bold text-foreground tracking-tight">{value}</h3>
-                <span className={`text-[12px] font-bold ${color} bg-muted px-2.5 py-1 rounded-lg`}>{change}</span>
-            </div>
-            <div className="mt-4 h-1 w-full bg-muted rounded-full overflow-hidden">
-                <div className={`h-full bg-current ${color} opacity-30`} style={{ width: '65%' }} />
-            </div>
-        </Card>
-    )
+    );
 }

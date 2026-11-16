@@ -1,7 +1,10 @@
 "use client"
 
-import { useState } from "react"
-import { Calendar as CalendarIcon, Filter, List, Grid, Search, Plus, LayoutGrid, Clock, FileText, Type } from "lucide-react"
+import { Suspense, useState } from "react"
+import { useSearchParams } from "next/navigation"
+import { AlertTriangle, Bot, Calendar as CalendarIcon, Filter, List, Grid, Search, Plus, LayoutGrid, Clock, FileText, Type } from "lucide-react"
+import { isAutopilotPost, normalizeStatus, statusMeta, statusMetaFor, statusPillClass } from "@/lib/posts/status"
+import { PublishingHealthBanner } from "@/components/features/publishing/PublishingHealthBanner"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -28,11 +31,26 @@ import { SmartImage } from "@/components/ui/smart-image"
 import { Post } from "@/types"
 
 export default function SchedulePage() {
+    // useSearchParams needs a Suspense boundary during the production build.
+    return (
+        <Suspense fallback={null}>
+            <SchedulePageContent />
+        </Suspense>
+    )
+}
+
+const TABS = ["all", "scheduled", "attention", "drafts"] as const
+
+function SchedulePageContent() {
+    const requestedTab = useSearchParams().get("tab")
+    const initialTab = (TABS as readonly string[]).includes(requestedTab ?? "") ? (requestedTab as string) : "scheduled"
     const { user } = useAuth();
     const { data: posts = [], isLoading: postsLoading } = usePosts(user?.uid);
     const { data: scheduledPosts = [], isLoading: scheduledLoading } = useScheduledPosts(user?.uid);
     const { data: draftPosts = [] } = useDraftPosts(user?.uid);
     const loading = postsLoading || scheduledLoading;
+    // Posts the publisher couldn't finish: failed, partly published, retrying, or waiting for the user's check.
+    const attention = posts.filter((post) => ["FAILED", "PARTIAL", "RETRY_PENDING", "RECONCILIATION_REQUIRED", "MISSED"].includes(normalizeStatus(post.status)));
     const [searchQuery, setSearchQuery] = useState("")
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
     const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest")
@@ -58,7 +76,7 @@ export default function SchedulePage() {
 
     if (loading) {
         return (
-            <div className="p-4 sm:p-6 md:p-8 space-y-8 animate-fade-in max-w-400 mx-auto">
+            <div className="mx-auto w-full max-w-[1440px] space-y-6 pb-6 animate-fade-in">
                 <div className="flex justify-between items-center">
                     <Skeleton className="h-10 w-48" />
                     <Skeleton className="h-11 w-32 rounded-xl" />
@@ -73,22 +91,24 @@ export default function SchedulePage() {
     }
 
     return (
-        <div className="p-4 sm:p-6 md:p-8 space-y-8 animate-fade-in max-w-400 mx-auto">
+        <div className="mx-auto w-full max-w-[1440px] space-y-6 pb-6 animate-fade-in text-[#20242b]">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-display font-bold text-foreground tracking-tight">Schedule</h1>
-                    <p className="text-muted-foreground mt-1 font-medium">Manage and organize your publishing strategy</p>
+                    <h1 className="text-[26px] font-semibold tracking-[-0.04em] text-[#20242b] md:text-[30px]">Content Library</h1>
+                    <p className="mt-1 text-sm text-[#748087]">Manage drafts, scheduled posts, and published content.</p>
                 </div>
                 
                 <Link href={Routes.CREATE_POST}>
-                    <Button className="bg-linear-to-br from-[#63d496] to-[#3db87a] text-[#0a1a10] hover:-translate-y-px hover:shadow-[0_12px_28px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-bold border-none h-11 px-6 rounded-xl shadow-lg ring-1 ring-white/10 flex items-center gap-2">
-                        <Plus className="w-5 h-5 mr-2 stroke-[2.5]" />
-                        Create New Post
+                    <Button className="h-9 rounded-lg bg-[#357d72] px-3 text-xs font-semibold text-white hover:bg-[#286c63]">
+                        <Plus className="h-4 w-4" />
+                        Create post
                     </Button>
                 </Link>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-card p-4 rounded-2xl border border-border shadow-sm">
+            <PublishingHealthBanner userId={user?.uid} />
+
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-white p-3.5 rounded-xl border border-[#e2e6ea] shadow-none">
                 <div className="relative w-full sm:w-96 group">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60 group-focus-within:text-primary transition-colors" />
                     <Input 
@@ -142,17 +162,21 @@ export default function SchedulePage() {
                 </div>
             </div>
 
-            <Tabs defaultValue="scheduled" className="w-full space-y-8">
-                <TabsList className="bg-muted border border-border p-1 h-12 rounded-2xl w-full">
-                    <TabsTrigger value="all" className="flex-1 rounded-xl px-2 sm:px-6 md:px-8 h-10 data-[state=active]:bg-card data-[state=active]:text-primary font-bold transition-all flex items-center justify-center gap-1.5 min-w-0 text-xs sm:text-sm">
+            <Tabs key={initialTab} defaultValue={initialTab} className="w-full space-y-5">
+                <TabsList className="bg-[#eff3f2] border border-[#e2e6ea] p-1 h-11 rounded-xl w-full sm:w-fit">
+                    <TabsTrigger value="all" className="flex-1 sm:flex-none rounded-lg px-3 sm:px-5 h-9 data-[state=active]:bg-white data-[state=active]:text-[#286c63] data-[state=active]:shadow-sm font-semibold transition-all flex items-center justify-center gap-1.5 min-w-0 text-xs sm:text-sm">
                         <LayoutGrid className="w-4 h-4 shrink-0" />
                         <span className="truncate">All Content</span>
                     </TabsTrigger>
-                    <TabsTrigger value="scheduled" className="flex-1 rounded-xl px-2 sm:px-6 md:px-8 h-10 data-[state=active]:bg-card data-[state=active]:text-chart-2 font-bold transition-all flex items-center justify-center gap-1.5 min-w-0 text-xs sm:text-sm">
+                    <TabsTrigger value="scheduled" className="flex-1 sm:flex-none rounded-lg px-3 sm:px-5 h-9 data-[state=active]:bg-white data-[state=active]:text-[#286c63] data-[state=active]:shadow-sm font-semibold transition-all flex items-center justify-center gap-1.5 min-w-0 text-xs sm:text-sm">
                         <Clock className="w-4 h-4 shrink-0" />
                         <span className="truncate">Scheduled</span>
                     </TabsTrigger>
-                    <TabsTrigger value="drafts" className="flex-1 rounded-xl px-2 sm:px-6 md:px-8 h-10 data-[state=active]:bg-card data-[state=active]:text-chart-4 font-bold transition-all flex items-center justify-center gap-1.5 min-w-0 text-xs sm:text-sm">
+                    <TabsTrigger value="attention" className="flex-1 sm:flex-none rounded-lg px-3 sm:px-5 h-9 data-[state=active]:bg-white data-[state=active]:text-[#286c63] data-[state=active]:shadow-sm font-semibold transition-all flex items-center justify-center gap-1.5 min-w-0 text-xs sm:text-sm">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        <span className="truncate">Needs attention{attention.length ? ` (${attention.length})` : ""}</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="drafts" className="flex-1 sm:flex-none rounded-lg px-3 sm:px-5 h-9 data-[state=active]:bg-white data-[state=active]:text-[#286c63] data-[state=active]:shadow-sm font-semibold transition-all flex items-center justify-center gap-1.5 min-w-0 text-xs sm:text-sm">
                         <FileText className="w-4 h-4 shrink-0" />
                         <span className="truncate">Drafts</span>
                     </TabsTrigger>
@@ -168,6 +192,10 @@ export default function SchedulePage() {
                     <PostDisplay posts={processPosts(scheduledPosts)} searchQuery={searchQuery} viewMode={viewMode} label="No scheduled posts" />
                 </TabsContent>
 
+                <TabsContent value="attention" className="mt-0 outline-none">
+                    <PostDisplay posts={processPosts(attention)} searchQuery={searchQuery} viewMode={viewMode} label="Nothing needs your attention" />
+                </TabsContent>
+
                 <TabsContent value="drafts" className="mt-0 outline-none">
                     <PostDisplay posts={processPosts(draftPosts)} searchQuery={searchQuery} viewMode={viewMode} label="No drafts found" />
                 </TabsContent>
@@ -180,7 +208,7 @@ function PostDisplay({ posts, searchQuery, viewMode, label = "No posts found" }:
     if (posts.length > 0) {
         if (viewMode === "grid") {
             return (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
                     {posts.map((post) => (
                         <PostCard key={post.id} post={post} />
                     ))}
@@ -206,7 +234,8 @@ function PostDisplay({ posts, searchQuery, viewMode, label = "No posts found" }:
                                     <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                                         <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {post.date ? new Date(post.date).toLocaleDateString() : 'No date'}</span>
                                         <span>•</span>
-                                        <span className="uppercase font-bold tracking-wider">{post.status}</span>
+                                        <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${statusPillClass(statusMetaFor(post).tone)}`}>{statusMetaFor(post).label}</span>
+                                        {isAutopilotPost(post) && <span className="inline-flex items-center gap-1"><Bot className="h-3 w-3" />Autopilot</span>}
                                     </div>
                                 </div>
                             </div>
@@ -215,7 +244,7 @@ function PostDisplay({ posts, searchQuery, viewMode, label = "No posts found" }:
                                     <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-accent text-muted-foreground">Edit</Button>
                                 </Link>
                                 <div className="h-8 w-px bg-border mx-2" />
-                                <Badge variant="outline" className="border-border text-muted-foreground">{post.status}</Badge>
+                                <Badge variant="outline" className="border-border text-muted-foreground">{statusMeta(post.status).label}</Badge>
                             </div>
                         </div>
                     ))}
@@ -225,17 +254,17 @@ function PostDisplay({ posts, searchQuery, viewMode, label = "No posts found" }:
     }
 
     return (
-        <Card className="flex flex-col items-center justify-center p-20 bg-card border border-border rounded-3xl shadow-sm hover:border-accent transition-all">
-            <div className="w-20 h-20 bg-muted rounded-3xl flex items-center justify-center mb-8 border border-border shadow-md group-hover:scale-110 transition-transform">
-                <CalendarIcon className="w-10 h-10 text-muted-foreground" />
+        <Card className="flex min-h-[240px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#dfe5e7] bg-white p-8 text-center shadow-none transition hover:border-[#cbdcd6]">
+            <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-[#e2e6ea] bg-[#f3f6f5] text-[#78848b]">
+                <CalendarIcon className="h-5 w-5" />
             </div>
-            <h3 className="text-2xl font-bold text-foreground mb-3">{label}</h3>
-            <p className="text-muted-foreground text-center max-w-sm mb-10 leading-relaxed font-medium">
+            <h3 className="mb-1 text-sm font-semibold text-[#38434a]">{label}</h3>
+            <p className="mb-5 max-w-sm text-xs leading-5 text-[#7c878e]">
                 {searchQuery ? "We couldn't find any posts matching your search criteria." : "Start organizing your content strategy by creating your first post."}
             </p>
             {!searchQuery && (
                 <Link href={Routes.CREATE_POST}>
-                    <Button variant="outline" className="border-border text-foreground hover:bg-accent h-12 px-10 rounded-xl font-bold transition-all">
+                    <Button variant="outline" className="h-9 rounded-lg border-[#dfe5e7] px-3 text-xs font-semibold text-[#46525a] hover:bg-[#f7f9f9]">
                         Create your first post
                     </Button>
                 </Link>

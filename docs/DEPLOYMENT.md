@@ -3,7 +3,7 @@
 Private project. This is the "I forgot how to do X" doc.
 
 - Firebase project: `linkedloom` (alias `default` in `functions/.firebaserc`)
-- **Production branch: `prod-v3`** (see §1 – it doesn't exist yet as of 2026-10-12)
+- **Production branch: `prod-v2`** (see §1)
 - All `firebase` commands run from the **`functions/`** folder (that's where `firebase.json` lives, there is none in the repo root).
 
 ---
@@ -12,21 +12,14 @@ Private project. This is the "I forgot how to do X" doc.
 
 | Branch | Purpose |
 |---|---|
-| `prod-v3` | **Production.** Only deploy from here. |
-| `prod-v2` | Previous production line (currently checked out; all the Reddit work is here). |
-| `dev` | Integration/testing |
-| `main` | Stable base |
-| `feature/*` | Feature work |
+| `prod-v2` | **Production.** Only deploy from here. |
+| `feature/*` | Feature work, merged into `prod-v2` when tested. |
+| `dev` | Not used for releases; everything on it is already in `prod-v2`. |
+| `main` | Not used for deploys. Stale since 2026-08-06 (it only holds the tanstack merge and its revert); don't merge feature branches into it. |
 
-> `prod-v3` is **not created yet** (only `prod-v2` exists locally and on origin). To create it from the current state:
-> ```bash
-> git checkout prod-v2
-> git checkout -b prod-v3
-> git push -u origin prod-v3
-> ```
-> Before that, commit the pending changes (`git status`).
+Flow: `feature/x` → `prod-v2` → deploy. Never deploy functions/rules from a feature branch.
 
-Flow: `feature/x` → `dev` → `prod-v3` → deploy. Never deploy functions/rules from a feature branch.
+(A separate `prod-v3` branch was planned on 2026-10-12 but never created; `prod-v2` stays the production branch.)
 
 ---
 
@@ -57,6 +50,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=
 NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=
 NEXT_PUBLIC_API_URL=https://us-central1-linkedloom.cloudfunctions.net   # local emulator: http://127.0.0.1:5001/linkedloom/us-central1
 NEXT_PUBLIC_CONTACT_EMAIL=you@yourdomain.com                            # shown on /privacy and /terms
+NEXT_PUBLIC_AUTOPILOT_ENABLED=false                                      # "true" shows the AI Autopilot nav + /autopilot pages (keep false in prod until launch)
 ```
 
 Where the frontend env goes in prod: set the same variables in your host's dashboard (Vercel etc.), then redeploy – `NEXT_PUBLIC_*` values are baked in at build time.
@@ -76,11 +70,35 @@ REDDIT_CLIENT_SECRET=
 REDDIT_REDIRECT_URI=https://<prod-domain>/integrations/reddit/callback
 REDDIT_USER_AGENT=web:linkedloom:1.0 (by /u/<your_reddit_username>)
 REDDIT_MAX_POSTS_PER_DAY=5
+
+# AI (Autopilot Phase 2) – managed keys LinkedLoom pays for
+OPENAI_API_KEY=                 # only needed if managed calls use OpenAI (default managed provider is Gemini)
+AUTOPILOT_TRIAL_CREDITS=200     # credits every new workspace starts with
+EDITOR_TEXT_DAILY_CAP=100       # Create Post text generations per user per day (metered, free)
+EDITOR_IMAGE_DAILY_CAP=30       # Create Post images per user per day
+BYOK_DAILY_CALL_CAP=200         # AI calls per workspace per day on users' own keys
+AUTOPILOT_DAILY_RUNS=10         # research runs per workspace per day
+AUTOPILOT_RUN_MAX_AI_CALLS=12    # hard cap of AI calls inside one research run
+# Scheduled + durable runs (Phase 4)
+AUTOPILOT_MAX_PENDING_DRAFTS=6              # scheduled research pauses while this many drafts wait for review
+AUTOPILOT_MIN_CREDITS_TO_RUN=20             # scheduled runs are skipped below this many available credits (managed billing only)
+AUTOPILOT_RESEARCH_LEAD_MINUTES=90          # research starts this long before each posting window
+AUTOPILOT_MAX_SCHEDULE_LATENESS_MINUTES=240 # a scheduled run overdue by more than this is skipped (window passed)
+AUTOPILOT_STUCK_AFTER_MINUTES=20            # a run with no progress this long is re-queued/failed by the reaper
+RESEARCH_RETRY_MIN_BACKOFF=15               # seconds before Cloud Tasks retries a failed step (Firebase param; 1 in the test env)
+AUTOPILOT_AUTO_PUBLISH_MIN_QUALITY=70       # opt-in auto-publish only schedules drafts at or above this quality score
+PUBLISH_MAX_ATTEMPTS=3                      # automatic attempts for temporary publish errors before FAILED
+PUBLISH_LEASE_MS=300000                     # a post stuck in PUBLISHING longer than this goes to RECONCILIATION_REQUIRED
+PUBLISH_MAX_LATE_MS=10800000                # a scheduled post more than 3 h late is NOT auto-published: status MISSED, the user decides
+# LINKEDIN_API_BASE=http://127.0.0.1:9xxx   # TESTS ONLY: honoured only inside the emulator
+# LINKEDIN_OAUTH_BASE=http://127.0.0.1:9xxx # TESTS ONLY (token endpoint), emulator only
 ```
+
+Users' own keys (BYOK) are **not** in `.env`: they go to Google Cloud Secret Manager at runtime (see §7.1). Managed keys still come from `.env`; moving them to `firebase functions:secrets:set` is a later hardening step (remove them from `.env` at the same time, or deploy fails on the name clash).
 
 `firebase deploy --only functions` uploads `functions/.env` with the code. Using different values for prod vs dev: create `functions/.env.linkedloom` (loaded for project id `linkedloom`) – it overrides `.env`.
 
-Redirect URIs must match **exactly** what is registered in the LinkedIn app and the Reddit app (see `REDDIT_INTEGRATION.md`).
+Redirect URIs must match **exactly** what is registered in the LinkedIn app and the Reddit app (see `docs/reddit-integration/`).
 
 ---
 
@@ -144,9 +162,41 @@ Whole "release" in one go:
 firebase deploy --only functions,firestore:rules,firestore:indexes,storage
 ```
 
-Functions in this repo: `generatePost`, `generateImage`, `enhanceImagePrompt` (ai.ts) · LinkedIn: `getLinkedInAuthUrl`, `exchangeLinkedInToken`, `publishToLinkedIn`, `getLinkedInAnalytics` · Reddit: `getRedditAuthUrl`, `exchangeRedditToken`, `publishToReddit`, `disconnectReddit`, `getRedditAnalytics` · `checkScheduledPosts` (every 10 min) · `generateResizedImages` (Storage trigger).
+Functions in this repo: `generatePost`, `generateImage`, `enhanceImagePrompt` (ai.ts) · LinkedIn: `getLinkedInAuthUrl`, `exchangeLinkedInToken`, `publishToLinkedIn`, `getLinkedInAnalytics` · Reddit: `getRedditAuthUrl`, `exchangeRedditToken`, `publishToReddit`, `disconnectReddit`, `getRedditAnalytics` · `checkScheduledPosts` (every 10 min; claims each due post, publishes once per platform, retries only safe errors) · publishing callables `publishNow`, `resolvePublishCheck`, `republishPost` · `generateResizedImages` (Storage trigger).
+
+AI Autopilot: personas `createPersona`, `updatePersona`, `setPersonaStatus`, `deletePersona`, `setAutopilotEnabled` · AI `addAIConnection`, `testAIConnection`, `revokeAIConnection`, `testPersonaGeneration` · credits `adminGrantCredits`, `sweepCreditReservations` (every 15 min) · research `runResearch` (queues a run and returns its id), `retryRun`, `cancelRun`, `updateContentItem`, `setContentStatus`, `exportContentToDraft`, company context `addContextDoc`, `updateContextDoc`, `deleteContextDoc`, approval `previewApproval`, `approveContent`, `unscheduleContent`, `setPersonaApprovalMode` (opt-in auto-publish), task worker `researchStep` (Cloud Tasks, one step per task), schedulers `dispatchResearch` (every 10 min), `reapResearchRuns` (every 15 min), `reconcileResearchSchedule` (daily), admin hooks `adminDispatchResearch` and `adminReapResearchRuns` (need the `admin: true` claim).
 
 Requirements: project on the **Blaze** plan; Node 22; Cloud Scheduler + Pub/Sub APIs are enabled automatically on first deploy of `checkScheduledPosts`.
+
+### 7.2 One-time setup for scheduled/durable research (Phase 4)
+
+1. Enable **Cloud Tasks**: `gcloud services enable cloudtasks.googleapis.com --project linkedloom`. The first deploy of `researchStep` creates its queue automatically.
+2. The functions runtime service account must be allowed to queue tasks: grant it `roles/cloudtasks.enqueuer` and `roles/iam.serviceAccountUser` on itself (without these `runResearch` fails with a permission error).
+3. Firestore **TTL policies** (Console → Firestore → Time-to-live): collection group `artifacts`, field `expireAt` (temporary fetched article text; the app also deletes it when a run ends), and `researchItems.expireAt`.
+4. Indexes: `firebase deploy --only firestore:indexes` adds collection-group overrides for `personas.research.autoRun` and `workflowRuns.status` (used by the reconcile job and the reaper). They take a few minutes to build.
+5. Automatic research is **opt-in per persona** and runs only for `active` personas with a feed or web search; the kill switch ("Stop all") stops everything. Check logs with `firebase functions:log --only dispatchResearch,researchStep`.
+6. Ops: with the admin claim you can call `adminDispatchResearch` (`{ reconcile: true }` rebuilds the schedule index) and `adminReapResearchRuns` by hand.
+7. Scheduler health: `checkScheduledPosts` writes `system/publisher.lastRunAt` after every successful run; the app warns users with overdue posts when it is older than 30 min. If those warnings appear in production, check Cloud Scheduler for the `checkScheduledPosts` job and `firebase functions:log --only checkScheduledPosts`. (The Firestore emulator does not run scheduled functions by itself, so locally the warning is expected.)
+8. A5 publishing: deploy `firestore:rules` (clients can no longer set publish statuses/fields) and `firestore:indexes` (`posts (status, nextAttemptAt)` for retries) **before** the functions. Auto-publish is opt-in per persona (confirmation dialog) and off by default.
+9. Privacy: `/privacy` and `/terms` explain opt-in automatic research, approval/auto-publish, the Stop all switch, and temporary fetched article text (deleted when a run ends; unfinished-run artifacts marked to expire after 24 hours).
+
+### 7.1 One-time setup for AI Autopilot (BYOK keys in Secret Manager)
+
+1. Enable the API: `gcloud services enable secretmanager.googleapis.com --project linkedloom`.
+2. Find the runtime service account of the functions (Console → Cloud Run → a function → Security; for 2nd-gen functions it's usually `PROJECT_NUMBER-compute@developer.gserviceaccount.com`).
+3. Let it manage only BYOK secrets (names start with `byok-`):
+   ```bash
+   gcloud projects add-iam-policy-binding linkedloom \
+     --member="serviceAccount:<RUNTIME_SA>" --role="roles/secretmanager.admin" \
+     --condition='expression=resource.name.startsWith("projects/<PROJECT_NUMBER>/secrets/byok-"),title=byok-secrets-only'
+   ```
+   (`secrets.create` is checked on the project, so if creation is denied with the condition, use a custom role with `secretmanager.secrets.create` on the project plus the conditional binding for access/delete.)
+4. Cost: Secret Manager bills per active secret version and per access; resolved keys are cached in memory for 5 minutes per instance.
+5. Index: deploy `firestore:indexes` – the sweeper needs the `creditReservations (status, expiresAt)` collection-group index.
+6. Admin grants: give your own account the admin claim once with the Admin SDK (`getAuth().setCustomUserClaims(uid, { admin: true })`), then call `adminGrantCredits`.
+7. Research (Phase 3): set a Firestore **TTL policy** on collection group `researchItems`, field `expireAt` (Console → Firestore → Time-to-live) so dedupe memory is deleted after 30 days. Without it nothing breaks, the collection just grows.
+8. ⚠️ Web search uses Gemini Google Search grounding, billed per query (`GROUNDING_COST_MICRO_USD_PER_QUERY` in `pricing.ts` is a placeholder) and its availability/pricing must be verified for the project. Research fetches third-party pages from Cloud Functions: `safe-fetch.ts` blocks private/metadata addresses; never loosen it, and `RESEARCH_ALLOW_LOCALHOST` must never be set outside the emulator test project.
+9. ⚠️ Prices in `functions/src/ai-core/pricing.ts` and model ids in `registry.ts` are placeholders – verify against the official Gemini/OpenAI pages and bump `PRICE_VERSION` before charging anyone.
 
 Logs:
 ```bash
@@ -163,7 +213,7 @@ Delete a function that no longer exists in code: `firebase functions:delete <nam
 npm run lint
 npm run build          # must pass before every deploy
 ```
-Deploy to your host (Vercel/other) from `prod-v3`. Set env vars there (§3). After first deploy:
+Deploy to your host (Vercel/other) from `prod-v2`. Set env vars there (§3). After first deploy:
 1. Add the domain to Firebase Auth → Settings → **Authorized domains**.
 2. Update LinkedIn/Reddit redirect URIs to the prod domain.
 3. Set `REDDIT_REDIRECT_URI`/`LINKEDIN_REDIRECT_URI` in `functions/.env` and redeploy functions.
@@ -178,10 +228,21 @@ npm run dev
 ```
 Point `NEXT_PUBLIC_API_URL` at `http://127.0.0.1:5001/linkedloom/us-central1` while using emulators.
 
+### Tests (functions folder)
+
+```bash
+npm test             # 178 unit tests (persona validation, pricing, redaction, SSRF guard, research, schedule math, workflow logic, publishing slots/errors), no emulator needed
+npm run test:rules   # Firestore rules tests in the emulator (needs Java)
+npm run test:e2e     # builds, then the emulator suites (78 + A5 publishing.process/publishing.e2e): callables, credits ledger, research, scheduling, durability, approval & publishing
+```
+`test:e2e` runs on the offline project `demo-linkedloom-test`; `functions/.env.demo-linkedloom-test` switches AI providers to a deterministic mock (no real AI calls, no keys needed) and lowers the editor daily cap to 3 so the cap can be tested.
+Windows gotcha: run the test scripts from PowerShell or cmd, not Git Bash. Under Git Bash every vitest file failed before running with `TypeError: Cannot read properties of undefined (reading 'config')` (seen 2026-11-17, vitest 5.0.4, Node 24); the same commands pass from PowerShell.
+Windows gotcha: after `emulators:exec` finishes, the Firestore emulator (a `java` process on port 8080) sometimes keeps running, and the next run fails with "port taken". Find it with `Get-NetTCPConnection -LocalPort 8080 -State Listen` and stop that `java` process.
+
 ## 10. Release checklist (copy/paste)
 
 ```text
-[ ] git status clean, on prod-v3, merged from dev
+[ ] git status clean, on prod-v2, feature branch merged in
 [ ] npm run lint && npm run build          (root)
 [ ] cd functions && npm run build
 [ ] functions/.env has all prod values (§3), redirect URIs = prod URLs
@@ -199,6 +260,7 @@ Point `NEXT_PUBLIC_API_URL` at `http://127.0.0.1:5001/linkedloom/us-central1` wh
 ## 12. Related docs
 
 - `README.md` – overview
-- `REDDIT_INTEGRATION.md` – Reddit setup + policy compliance
+- `docs/reddit-integration/` – Reddit setup + policy compliance
+- `docs/ai-autopilot/` – AI Autopilot architecture, MVP plan and milestones
 - `PRODUCTION_READINESS_CHECKLIST.md` – launch blockers and status
 - `AGENT.md` – codebase map for AI assistants

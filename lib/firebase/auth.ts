@@ -69,9 +69,3 @@ export const logout = async (): Promise<void> => {
         throw error;
     }
 };
-
-export const getLinkedInAuthUrl = async () => {
-    return {
-        url: `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${process.env.NEXT_PUBLIC_LINKEDIN_CLIENT_ID}&redirect_uri=${process.env.NEXT_PUBLIC_LINKEDIN_REDIRECT_URI}&state=${crypto.randomUUID()}&scope=r_liteprofile%20r_emailaddress`,
-    };
-};

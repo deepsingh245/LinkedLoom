@@ -16,13 +16,134 @@ service cloud.firestore {
       }
     }
 
-    // Posts: owner only.
-    match /posts/{postId} {
-      allow create: if request.auth != null && request.resource.data.user_id == request.auth.uid;
-      allow read, update, delete: if request.auth != null && resource.data.user_id == request.auth.uid;
+    // Posts: owner only. Publishing state is written by Cloud Functions only (functions/src/publishing):
+    // clients may create/edit drafts and schedule them, but never mark a post published, touch publish
+    // results/leases, or forge Autopilot links.
+    function serverPostFields() {
+      return ['results', 'publishLease', 'attempts', 'lastAttemptAt', 'publishedAt', 'nextAttemptAt',
+              'publishedUrl', 'redditUrl', 'error', 'source', 'contentItemId', 'personaId', 'workspaceId',
+              'approvedBy', 'resolvedBy', 'republishedFrom'];
+    }
+    function clientPostStatus(data) {
+      return !('status' in data) || data.status in ['DRAFT', 'SCHEDULED', 'draft', 'scheduled'];
+    }
+    function postChanges() {
+      return request.resource.data.diff(resource.data).affectedKeys();
     }
 
-    // Everything else (oauthStates, analytics, ...) is backend-only.
+    match /posts/{postId} {
+      allow read: if request.auth != null && resource.data.user_id == request.auth.uid;
+      allow create: if request.auth != null
+        && request.resource.data.user_id == request.auth.uid
+        && clientPostStatus(request.resource.data)
+        && !request.resource.data.keys().hasAny(serverPostFields())
+        && request.resource.data.get('linkedinUrn', '') in ['', null];
+      allow update: if request.auth != null
+        && resource.data.user_id == request.auth.uid
+        && request.resource.data.user_id == resource.data.user_id
+        && clientPostStatus(request.resource.data)
+        && !(resource.data.get('status', '').upper() in ['PUBLISHING', 'PUBLISHED', 'RECONCILIATION_REQUIRED'])
+        && !postChanges().hasAny(serverPostFields().concat(['linkedinUrn']))
+        // An approved Autopilot post in the queue is (re)scheduled through the Autopilot callables,
+        // so its draft stays in sync.
+        && !(resource.data.get('source', '') == 'autopilot'
+             && resource.data.get('status', '').upper() in ['SCHEDULED', 'RETRY_PENDING', 'MISSED']
+             && postChanges().hasAny(['status', 'scheduledFor', 'platforms']));
+      allow delete: if request.auth != null
+        && resource.data.user_id == request.auth.uid
+        && resource.data.get('status', '').upper() != 'PUBLISHING';
+    }
+
+    // AI Autopilot workspaces. Personal workspace id == owner uid; members/{uid}
+    // prepares for teams. Clients only read: every write goes through callable
+    // Cloud Functions (functions/src/autopilot), which validate and audit.
+    function isWorkspaceMember(workspaceId) {
+      return request.auth != null && (
+        request.auth.uid == workspaceId ||
+        exists(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid))
+      );
+    }
+
+    match /workspaces/{workspaceId} {
+      allow read: if isWorkspaceMember(workspaceId);
+      allow write: if false;
+
+      match /members/{memberId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+      match /personas/{personaId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+      match /settings/{settingId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+      match /auditLogs/{logId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+
+      // AI + billing (Phase 2). Readable metadata only; written by Cloud Functions.
+      // BYOK key references (aiConnectionSecrets) are deliberately absent here,
+      // so the catch-all below denies them to every client.
+      match /aiConnections/{connectionId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+      match /creditWallets/{walletId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+      match /creditLedger/{entryId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+      match /creditReservations/{reservationId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+      match /usageRecords/{recordId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+      match /personaUsage/{usageId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+
+      // Research & drafts (Phase 3). Written by Cloud Functions only.
+      // runLocks is intentionally absent: the catch-all denies it to clients.
+      match /workflowRuns/{runId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+      match /contentItems/{contentId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+      match /researchItems/{itemId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+
+      // Company context files: readable metadata only (name, size, preview, scope, enabled).
+      // The full text lives in contextTexts, which is intentionally absent here (catch-all denies it).
+      match /contextDocs/{docId} {
+        allow read: if isWorkspaceMember(workspaceId);
+        allow write: if false;
+      }
+    }
+
+    // Publisher heartbeat (last scheduler run). Written by the scheduler only; signed-in users read it so the app can warn
+    // when scheduled posts are overdue and the scheduler seems to be down. Contains no user data.
+    match /system/{docId} {
+      allow read: if request.auth != null && docId == 'publisher';
+      allow write: if false;
+    }
+
+    // Everything else (oauthStates, linkedinIdentities, analytics, ...) is backend-only.
     match /{document=**} {
       allow read, write: if false;
     }

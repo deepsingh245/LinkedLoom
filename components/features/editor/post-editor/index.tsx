@@ -1,6 +1,9 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
+import { Routes } from "@/lib/routes"
+import { mergePreferences } from "@/lib/preferences"
 import { format, set, isBefore } from "date-fns"
 import { Save } from "lucide-react"
 
@@ -12,10 +15,11 @@ import { api } from "@/lib/api"
 import { successToast, dangerToast } from "@/lib/toast"
 import { useAuth } from "@/components/providers/auth-provider"
 import { PostPreview } from "../PostPreview"
-import { Post } from "@/types"
+import { Post, type PublishPlatform } from "@/types"
 import { httpsCallable } from "firebase/functions"
 import { functions } from "@/lib/firebase"
 import { FirebaseFunctions } from "@/lib/firebase/functions"
+import { callableErrorMessage } from "@/lib/firebase/errors"
 import { uploadPostAttachment } from "@/lib/firebase/storage"
 import { useCreatePost, useUpdatePost, useSchedulePost } from "@/lib/query/hooks/use-posts"
 
@@ -58,10 +62,22 @@ export function PostEditor() {
     const [enhancingPrompt, setEnhancingPrompt] = React.useState(false)
     const [activePlatform, setActivePlatform] = React.useState<string>("linkedin")
 
+    // Start from the tone chosen in Preferences (once, when the profile arrives).
+    const toneFromPrefs = React.useRef(false)
+    React.useEffect(() => {
+        const preferred = profile?.preferences?.ai?.defaultTone
+        if (!toneFromPrefs.current && preferred) {
+            toneFromPrefs.current = true
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setTone(preferred.toLowerCase())
+        }
+    }, [profile?.preferences?.ai?.defaultTone])
+
     // TanStack Query mutations for CRUD operations
     const createMutation = useCreatePost();
     const updateMutation = useUpdatePost(user?.uid);
     const scheduleMutation = useSchedulePost(user?.uid);
+    const router = useRouter();
     const saving = createMutation.isPending || updateMutation.isPending || scheduleMutation.isPending;
 
     const [excludeIcons, setExcludeIcons] = React.useState(false)
@@ -127,7 +143,9 @@ export function PostEditor() {
                 tone, 
                 length: length[0],
                 excludeIcons,
-                creativeExpansion
+                creativeExpansion,
+                language: mergePreferences(profile?.preferences).ai.language,
+                autoHashtags: mergePreferences(profile?.preferences).ai.autoHashtags
             });
             
             const data = result.data as { content: string };
@@ -139,7 +157,7 @@ export function PostEditor() {
             }
         } catch (error) {
             console.error("Generate failed:", error)
-            dangerToast("Failed to generate content.")
+            dangerToast(callableErrorMessage(error, "Failed to generate content."))
         } finally {
             setGenerating(false)
         }
@@ -168,7 +186,7 @@ export function PostEditor() {
             }
         } catch (error) {
             console.error("Image generation failed:", error)
-            dangerToast("Failed to generate image.")
+            dangerToast(callableErrorMessage(error, "Failed to generate image."))
         } finally {
             setGeneratingImage(false)
         }
@@ -247,7 +265,7 @@ export function PostEditor() {
             }
         } catch (error) {
             console.error("Enhance prompt failed:", error);
-            dangerToast("Failed to enhance prompt.");
+            dangerToast(callableErrorMessage(error, "Failed to enhance prompt."));
         } finally {
             setEnhancingPrompt(false);
         }
@@ -287,24 +305,29 @@ export function PostEditor() {
             }
         } catch (error) {
             console.error("Context-based image generation failed:", error);
-            dangerToast("Failed to generate image from context.");
+            dangerToast(callableErrorMessage(error, "Failed to generate image from context."));
         } finally {
             setGeneratingImage(false);
         }
     }
 
+    // The post goes to the network whose tab is selected (posts without `platforms` went to every connected network).
+    const targetPlatforms = (): PublishPlatform[] => (activePlatform === "reddit" ? ["reddit"] : ["linkedin"]);
+
     const createBasePayload = (): Partial<Post> => {
         if (!user?.uid) throw new Error("User not authenticated");
         return {
             content,
-            status: "draft",
+            status: "DRAFT",
+            platforms: targetPlatforms(),
             user_id: user.uid,
             tone: tone.toUpperCase() as string,
             date: new Date().toISOString(),
             mediaUrls: imageUrl ? [imageUrl] : [],
             imageUrl: imageUrl || null,
             linkedinUrn: "",
-            subreddit: subreddit.trim() || undefined,
+            // Firestore rejects `undefined` values.
+            ...(subreddit.trim() ? { subreddit: subreddit.trim() } : {}),
             versions: []
         };
     }
@@ -329,6 +352,8 @@ export function PostEditor() {
             payload.mediaUrls = storageUrl ? [storageUrl] : [];
 
             if (editingPostId) {
+                // Updating keeps the post's status (a scheduled post stays scheduled).
+                delete payload.status;
                 updateMutation.mutate(
                     { postId: editingPostId, data: payload },
                     { onSuccess: () => successToast("Post updated successfully!") }
@@ -369,6 +394,8 @@ export function PostEditor() {
                             onSuccess: () => {
                                 successToast(`Post scheduled for ${format(finalDate, "PPP 'at' p")}!`);
                                 setDate(undefined);
+                                // Take the user to the queue so they can see the scheduled post.
+                                router.push(`${Routes.SCHEDULE}?tab=scheduled`);
                             },
                         }
                     );
@@ -381,17 +408,21 @@ export function PostEditor() {
     }
 
     return (
-        <div className="p-4 md:p-8 bg-background text-foreground">
-            <div className="animate-fadeUp mb-7">
-                <h1 className="font-display text-[26px] font-semibold text-foreground tracking-[-0.4px] mb-1.5">
-                    Create Post
-                </h1>
-                <p className="text-muted-foreground/80 text-3.5">Generate with AI or write from scratch.</p>
+        <div className="mx-auto w-full max-w-[1440px] space-y-5 pb-5 text-[#20242b] md:space-y-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#7d898f]">Create / Content Studio</div>
+                    <h1 className="text-[26px] font-semibold tracking-[-0.035em] text-[#20242b] md:text-[30px]">Content Studio</h1>
+                    <p className="mt-1 text-sm text-[#748087]">Draft for LinkedIn, shape the voice, then preview and schedule.</p>
+                </div>
+                <div className="flex items-center gap-2 text-[10px] text-[#7c878e]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#4c9a70]" />Drafts save to your workspace
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(300px,0.8fr)_minmax(0,1.6fr)] xl:gap-5">
                 {/* Controls */}
-                <div className="flex flex-col gap-4 lg:col-span-1">
+                <div className="flex flex-col gap-3 xl:col-span-1">
                     <AIGeneration
                         topic={topic}
                         setTopic={setTopic}
@@ -463,7 +494,7 @@ export function PostEditor() {
                 </div>
 
                 {/* Editor & Preview */}
-                <div className="animate-fadeUp animation-delay-200 lg:col-span-2 flex flex-col gap-0">
+                <div className="animate-fadeUp animation-delay-200 flex min-w-0 flex-col gap-0">
                     <Tabs value={activePlatform} onValueChange={setActivePlatform} className="w-full h-full flex flex-col">
                         <PlatformTabs
                             connectedPlatforms={connectedPlatforms}
@@ -471,8 +502,8 @@ export function PostEditor() {
                             setActivePlatform={setActivePlatform}
                         />
 
-                        <Card className="flex-1 p-5 rounded-3xl border border-border bg-card shadow-xl transition-all hover:border-border/80 flex flex-col min-h-125">
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full flex-1">
+                        <Card className="flex min-h-[520px] flex-1 flex-col rounded-xl border border-[#e2e6ea] bg-white p-4 shadow-none md:p-5">
+                            <div className="grid h-full flex-1 grid-cols-1 gap-5 lg:grid-cols-2">
                                 
                                 {/* Editor Side */}
                                 <EditorTextArea
@@ -483,11 +514,11 @@ export function PostEditor() {
                                 />
                                 
                                 {/* Preview Side */}
-                                <div className="hidden lg:flex flex-col border-l border-border pl-6 h-full">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-[0.8px]">Social Preview</h3>
+                                <div className="hidden min-h-0 flex-col border-l border-[#edf0f2] pl-5 lg:flex">
+                                    <div className="mb-3 flex items-center justify-between">
+                                        <h3 className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#7c878e]">Social Preview</h3>
                                     </div>
-                                    <div className="flex-1 bg-background rounded-[10px] border border-border/50 flex justify-center p-4 min-h-100">
+                                    <div className="flex min-h-[390px] flex-1 justify-center rounded-lg border border-[#edf0f2] bg-[#f7f8fa] p-3">
                                         <div className="w-full h-full">
                                             {(user || profile) && (
                                                 <PostPreview 
@@ -508,17 +539,17 @@ export function PostEditor() {
                         </Card>
                     </Tabs>
 
-                    <div className="flex gap-2.5 justify-end mt-4">
+                    <div className="mt-3 flex flex-wrap justify-end gap-2">
                         <Button 
                             variant="outline"
-                            className="bg-card border border-border text-foreground hover:bg-accent/80 hover:border-border/80 transition-all font-sans font-medium h-11 px-5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed shadow-sm" 
+                            className="h-10 rounded-lg border border-[#dfe4e7] bg-white px-4 text-xs font-medium text-[#46515a] shadow-none transition hover:bg-[#f5f7f7] disabled:cursor-not-allowed disabled:opacity-50"
                             onClick={handleSave} 
                             disabled={saving || !content.trim()}
                         >
                             {editingPostId ? "Update Post" : "Save Draft"}
                         </Button>
                         <Button 
-                            className="bg-primary hover:bg-primary/90 text-primary-foreground hover:-translate-y-px hover:shadow-[0_8px_24px_rgba(99,212,150,0.35)] active:translate-y-0 transition-all font-sans font-bold border-none h-11 px-6 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed shadow-lg" 
+                            className="h-10 rounded-lg bg-[#357d72] px-4 text-xs font-semibold text-white shadow-none transition hover:bg-[#286c63] disabled:cursor-not-allowed disabled:opacity-50"
                             onClick={handleSchedule} 
                             disabled={saving || !content.trim() || !date}
                         >
@@ -529,10 +560,10 @@ export function PostEditor() {
             </div>
 
             {/* Mobile Tabs for Preview */}
-            <div className="lg:hidden mt-10">
-                <Card className="p-4 bg-card border-border rounded-2xl">
-                    <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-[0.8px] mb-4">Mobile Preview</h3>
-                    <div className="bg-background rounded-xl border border-border p-4">
+            <div className="mt-5 lg:hidden">
+                <Card className="rounded-xl border border-[#e2e6ea] bg-white p-4 shadow-none">
+                    <h3 className="mb-3 text-[10px] font-semibold uppercase tracking-[0.13em] text-[#7c878e]">Mobile Preview</h3>
+                    <div className="rounded-lg border border-[#edf0f2] bg-[#f7f8fa] p-3">
                         {(user || profile) && (
                             <PostPreview 
                                 platform={activePlatform}

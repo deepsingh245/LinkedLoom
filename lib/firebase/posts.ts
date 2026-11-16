@@ -1,5 +1,8 @@
 import { collection, query, where, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
-import { db, auth } from "../firebase";
+import { httpsCallable } from "firebase/functions";
+import { db, functions } from "../firebase";
+import { FirebaseFunctions } from "./functions";
+import type { PublishOutcome } from "@/types/research";
 import { Post } from "@/types";
 import { DashboardData } from "./interfaces";
 import { Collections } from "./collections";
@@ -140,85 +143,32 @@ export const unschedulePost = async (postId: string): Promise<void> => {
 };
 
 /**
- * Instantly publish a post to LinkedIn via the backend HTTP endpoint
- * and record it in Firestore as PUBLISHED.
+ * Publish right away through the `publishNow` callable. The server creates the post, claims it and
+ * publishes it once per platform (same safe path as scheduled posts) and records the result.
+ * Returns the outcome; throws when it didn't go out.
  */
 export const publishPostNow = async (
-  userId: string,
+  _userId: string,
   content: string,
   articleUrl?: string,
   imageUrl?: string,
-  options: { linkedin?: boolean; reddit?: boolean; subreddit?: string } = { linkedin: true }
-): Promise<any> => {
-  try {
-    const { linkedin = false, reddit = false, subreddit } = options;
-    if (!linkedin && !reddit) throw new Error("No platform selected.");
+  options: { linkedin?: boolean; reddit?: boolean; subreddit?: string; postId?: string } = { linkedin: true }
+): Promise<PublishOutcome> => {
+  const { linkedin = false, reddit = false, subreddit, postId } = options;
+  const platforms = [...(linkedin ? ["linkedin"] : []), ...(reddit ? ["reddit"] : [])];
+  if (!platforms.length) throw new Error("No platform selected.");
 
-    let linkedinData: any = null;
-    let redditData: any = null;
-
-    // 1. Call the backend HTTP endpoints to perform the actual platform API requests
-    if (linkedin) {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/publishToLinkedIn`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId,
-          content,
-          articleUrl,
-          imageUrl,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || "Failed to publish to LinkedIn");
-      }
-      linkedinData = result.data;
-    }
-
-    if (reddit) {
-      const idToken = await auth.currentUser?.getIdToken();
-      if (!idToken) throw new Error("You must be logged in to publish to Reddit.");
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/publishToReddit`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({ content, subreddit, imageUrl }),
-      });
-
-      const result = await response.json().catch(() => ({}));
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || "Failed to publish to Reddit");
-      }
-      redditData = result.data;
-    }
-
-    // 2. Save the successful post to Firestore history
-    await addDoc(collection(db, "posts"), {
-      user_id: userId,
-      content,
-      articleUrl: articleUrl || null,
-      imageUrl: imageUrl || null,
-      linkedinUrn: linkedinData?.id || null, // URN tracking
-      subreddit: subreddit || null,
-      redditUrl: redditData?.postUrl || null,
-      status: "PUBLISHED",
-      publishedAt: new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    return { linkedin: linkedinData, reddit: redditData, ...(linkedinData || {}) };
-  } catch (error) {
-    console.error("Error publishing post immediately: ", error);
-    throw error;
+  const call = httpsCallable<Record<string, unknown>, PublishOutcome>(functions, FirebaseFunctions.PUBLISH_NOW, { timeout: 130_000 });
+  const { data } = await call({
+    ...(postId ? { postId } : {}),
+    content,
+    platforms,
+    ...(articleUrl ? { articleUrl } : {}),
+    ...(imageUrl ? { imageUrl } : {}),
+    ...(subreddit ? { subreddit } : {}),
+  });
+  if (data.status !== "PUBLISHED") {
+    throw new Error(data.error || (data.status === "RETRY_PENDING" ? "The network is busy. We'll retry shortly." : "Publishing failed."));
   }
+  return data;
 };

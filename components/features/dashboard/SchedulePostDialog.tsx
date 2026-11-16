@@ -22,6 +22,8 @@ import { Post } from "@/types";
 import { format, set, isBefore } from "date-fns";
 import { Loader2, Linkedin } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Routes } from "@/lib/routes";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useSchedulePost } from "@/lib/query/hooks/use-posts";
@@ -41,6 +43,7 @@ export function SchedulePostDialog({
 }: SchedulePostDialogProps) {
     const { user, profile } = useAuth();
     const scheduleMutation = useSchedulePost(user?.uid);
+    const router = useRouter();
     
     const defaultDate = post.scheduledFor ? new Date(post.scheduledFor) : undefined;
     
@@ -74,7 +77,13 @@ export function SchedulePostDialog({
 
         scheduleMutation.mutate(
             { postId: post.id, scheduledFor: finalDate.toISOString() },
-            { onSuccess: () => onOpenChange(false) }
+            {
+                onSuccess: () => {
+                    onOpenChange(false);
+                    // Show the user their scheduled post in the Content Library queue.
+                    router.push(`${Routes.SCHEDULE}?tab=scheduled`);
+                },
+            }
         );
     };
 
