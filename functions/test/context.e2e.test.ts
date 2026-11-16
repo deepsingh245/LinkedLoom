@@ -51,14 +51,12 @@ afterAll(async () => {
     await fx?.close();
 });
 
-const at = (host: string, path: string) => `http://${host}${path}`;
-
 async function seedPersona(uid: string, name = "Context tester"): Promise<string> {
     const ref = adminDb().collection(`workspaces/${uid}/personas`).doc();
     await ref.set({
         id: ref.id, workspaceId: uid, name, status: "active", version: 1, createdBy: uid, createdAt: Timestamp.now(), updatedAt: Timestamp.now(),
         identity: { role: "Engineer", targetAudience: "Developers", tone: "technical", language: "English" },
-        research: { topics: ["AI agents", "developer tools"], keywords: ["agents"], excludedTopics: ["crypto"], feedUrls: [at(HOSTS[0], "/feed.xml")], freshnessHours: 48, minSourceCount: 2, webSearch: false, sourceIds: [] },
+        research: { topics: ["AI agents", "developer tools"], keywords: ["agents"], excludedTopics: ["crypto"], feedUrls: [fx.at(HOSTS[0], "/feed.xml")], freshnessHours: 48, minSourceCount: 2, webSearch: false, sourceIds: [] },
         publishing: { accountIds: ["linkedin"], postsPerDay: 1, timezone: "UTC", postingWindows: [{ start: "09:00", end: "10:00" }], approvalMode: "manual", allowImages: false },
         ai: { modelProfile: "balanced", monthlyCreditLimit: 1000 },
     });

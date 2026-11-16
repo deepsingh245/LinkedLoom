@@ -16,6 +16,8 @@ node_modules/
 /functions/.runtimeconfig.json
 /functions/lib/
 firebase-debug.log
+# Emulator logs (firestore, database, pubsub, ui) wherever the emulators were started from
+*-debug.log
 /functions/npm-debug.log*
 
 # Testing

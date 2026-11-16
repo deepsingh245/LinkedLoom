@@ -3,7 +3,7 @@
 Private project. This is the "I forgot how to do X" doc.
 
 - Firebase project: `linkedloom` (alias `default` in `functions/.firebaserc`)
-- **Production branch: `prod-v3`** (see §1 – it doesn't exist yet as of 2026-10-12)
+- **Production branch: `prod-v2`** (see §1)
 - All `firebase` commands run from the **`functions/`** folder (that's where `firebase.json` lives, there is none in the repo root).
 
 ---
@@ -12,21 +12,14 @@ Private project. This is the "I forgot how to do X" doc.
 
 | Branch | Purpose |
 |---|---|
-| `prod-v3` | **Production.** Only deploy from here. |
-| `prod-v2` | Previous production line (currently checked out; all the Reddit work is here). |
-| `dev` | Integration/testing |
-| `main` | Stable base |
-| `feature/*` | Feature work |
+| `prod-v2` | **Production.** Only deploy from here. |
+| `feature/*` | Feature work, merged into `prod-v2` when tested. |
+| `dev` | Not used for releases; everything on it is already in `prod-v2`. |
+| `main` | Not used for deploys. Stale since 2026-08-06 (it only holds the tanstack merge and its revert); don't merge feature branches into it. |
 
-> `prod-v3` is **not created yet** (only `prod-v2` exists locally and on origin). To create it from the current state:
-> ```bash
-> git checkout prod-v2
-> git checkout -b prod-v3
-> git push -u origin prod-v3
-> ```
-> Before that, commit the pending changes (`git status`).
+Flow: `feature/x` → `prod-v2` → deploy. Never deploy functions/rules from a feature branch.
 
-Flow: `feature/x` → `dev` → `prod-v3` → deploy. Never deploy functions/rules from a feature branch.
+(A separate `prod-v3` branch was planned on 2026-10-12 but never created; `prod-v2` stays the production branch.)
 
 ---
 
@@ -220,7 +213,7 @@ Delete a function that no longer exists in code: `firebase functions:delete <nam
 npm run lint
 npm run build          # must pass before every deploy
 ```
-Deploy to your host (Vercel/other) from `prod-v3`. Set env vars there (§3). After first deploy:
+Deploy to your host (Vercel/other) from `prod-v2`. Set env vars there (§3). After first deploy:
 1. Add the domain to Firebase Auth → Settings → **Authorized domains**.
 2. Update LinkedIn/Reddit redirect URIs to the prod domain.
 3. Set `REDDIT_REDIRECT_URI`/`LINKEDIN_REDIRECT_URI` in `functions/.env` and redeploy functions.
@@ -243,12 +236,13 @@ npm run test:rules   # Firestore rules tests in the emulator (needs Java)
 npm run test:e2e     # builds, then the emulator suites (78 + A5 publishing.process/publishing.e2e): callables, credits ledger, research, scheduling, durability, approval & publishing
 ```
 `test:e2e` runs on the offline project `demo-linkedloom-test`; `functions/.env.demo-linkedloom-test` switches AI providers to a deterministic mock (no real AI calls, no keys needed) and lowers the editor daily cap to 3 so the cap can be tested.
+Windows gotcha: run the test scripts from PowerShell or cmd, not Git Bash. Under Git Bash every vitest file failed before running with `TypeError: Cannot read properties of undefined (reading 'config')` (seen 2026-11-17, vitest 5.0.4, Node 24); the same commands pass from PowerShell.
 Windows gotcha: after `emulators:exec` finishes, the Firestore emulator (a `java` process on port 8080) sometimes keeps running, and the next run fails with "port taken". Find it with `Get-NetTCPConnection -LocalPort 8080 -State Listen` and stop that `java` process.
 
 ## 10. Release checklist (copy/paste)
 
 ```text
-[ ] git status clean, on prod-v3, merged from dev
+[ ] git status clean, on prod-v2, feature branch merged in
 [ ] npm run lint && npm run build          (root)
 [ ] cd functions && npm run build
 [ ] functions/.env has all prod values (§3), redirect URIs = prod URLs

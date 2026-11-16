@@ -6,6 +6,8 @@ Private SaaS (Next.js 16 + Firebase). Code map: [`AGENT.md`](AGENT.md). Deploy/o
 
 **Start with [`docs/ai-autopilot/HANDOFF.md`](docs/ai-autopilot/HANDOFF.md)** – it states exactly where the last session stopped, the immediate TODO (A4 frontend), commands, gotchas and decisions. (`docs/ai-autopilot/` and `docs/reddit-integration/` are local, gitignored planning folders; they exist on the owner's machine.)
 
+**Next build (agreed, not started): multiple workspaces per user** – plan in [`docs/PLAN.md`](docs/PLAN.md) §1; do it before billing (A6).
+
 Short version: A1–A4 are built and tested in emulators with mocked AI. **A5** (approve → next free slot → exactly-once LinkedIn publishing, opt-in auto-publish, reconciliation, LinkedIn endpoint auth, per-post platforms) is **code complete but its rules/e2e suites have not been run yet** – see HANDOFF §13. Nothing is deployed.
 
 ## Rules

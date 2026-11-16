@@ -6,7 +6,7 @@ AI-powered post writer, scheduler and analytics for **LinkedIn** and **Reddit**.
 
 | | |
 |---|---|
-| **Production branch** | `prod-v3` |
+| **Production branch** | `prod-v2` |
 | **Firebase project** | `linkedloom` |
 | **Status** | Pre-launch – see [`PRODUCTION_READINESS_CHECKLIST.md`](PRODUCTION_READINESS_CHECKLIST.md) |
 
@@ -98,7 +98,7 @@ types/             shared TypeScript types
 
 ## Branch & release workflow
 
-`feature/*` → `dev` → **`prod-v3`** → deploy. Deploy commands and the release checklist are in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+`feature/*` → **`prod-v2`** → deploy. Deploy commands and the release checklist are in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ## License
 
